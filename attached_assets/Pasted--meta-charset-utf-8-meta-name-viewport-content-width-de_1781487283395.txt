@@ -1,0 +1,1011 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kickoff & Intake — Production Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2330;--ink-2:#28323F;--paper:#F5F6F8;--surface:#FFFFFF;
+    --line:#E4E7EC;--line-2:#EEF1F4;--muted:#5C6573;--muted-2:#828B98;
+    --viridian:#12695F;--viridian-press:#0E544B;--viridian-soft:#E3F0EE;
+    --brass:#8F6418;--brass-ink:#6E4D12;--brass-soft:#F4ECDA;--brass-line:#E3D2AC;
+    --pass:#1E7A4D;--pass-soft:#E5F2EA;--attention:#A9791E;--attention-soft:#F6EDD7;
+    --info:#2B5B8A;--info-soft:#E6EEF6;--danger:#B23A48;--danger-soft:#F8E7E9;
+    --a11y:#5A3FA0;--a11y-soft:#EEE9F7;--a11y-line:#D6CBEF;
+    --soc:#3E5AA8;--soc-soft:#E8EDF7;--soc-line:#CBD8EE;
+    --r:11px;--shadow:0 1px 2px rgba(27,35,48,.06),0 8px 26px rgba(27,35,48,.07);
+  }
+  *{box-sizing:border-box}html,body{margin:0}
+  body{font-family:'Hanken Grotesk',system-ui,sans-serif;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5}
+  .icon{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .top{background:var(--ink);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:14px}
+  .mark{width:26px;height:26px;border-radius:7px;background:linear-gradient(150deg,var(--viridian),#1A8C7E);display:grid;place-items:center;flex:none}
+  .mark span{width:11px;height:11px;border:2px solid #fff;border-radius:3px;transform:rotate(45deg)}
+  .top b{font-size:14px}.top small{color:#8B94A2;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;font-weight:600;display:block;margin-top:-2px}
+  .top .spacer{flex:1}.av{width:26px;height:26px;border-radius:50%;background:#3A4658;display:grid;place-items:center;font-size:11px;font-weight:600}
+
+  .strip{background:var(--surface);border-bottom:1px solid var(--line-2);padding:10px 24px 4px;display:flex;gap:8px;align-items:center;overflow-x:auto}
+  .schip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--muted-2);padding:5px 11px;border-radius:99px;white-space:nowrap}
+  .schip .n{width:18px;height:18px;border-radius:50%;border:1.5px solid currentColor;display:grid;place-items:center;font-size:10px}
+  .schip.active{color:#fff;background:var(--viridian)}.schip.active .n{border-color:#fff}
+  .arr{color:var(--line);flex:none}
+  /* accessibility thread — continuous across all stages */
+  .thread{background:var(--surface);border-bottom:1px solid var(--line);padding:6px 24px 12px;display:flex;align-items:center;gap:10px;overflow-x:auto}
+  .thread .tlbl{font-size:11px;font-weight:700;color:var(--a11y);text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .threadline{flex:1;height:3px;border-radius:99px;background:linear-gradient(90deg,var(--a11y),var(--a11y-line));min-width:120px;position:relative}
+  .threadline::after{content:"";position:absolute;right:0;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:var(--a11y)}
+  .thread .tnote{font-size:11.5px;color:var(--muted);white-space:nowrap}
+
+  .wrap{padding:24px;max-width:1160px;margin:0 auto}
+  .head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+  .head h1{font-size:22px;font-weight:800;letter-spacing:-.3px;margin:0}
+  .head .meta{color:var(--muted);font-size:13.5px}
+  .lede{color:var(--muted);margin:0 0 18px;max-width:74ch}
+  .cols{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:18px}
+  .card.a11y{border-color:var(--a11y-line)}
+  .card-h{padding:14px 18px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:10px}
+  .card-h h3{margin:0;font-size:14.5px;font-weight:700}
+  .card-h .sub{color:var(--muted);font-size:12.5px;font-weight:500;margin-left:auto}
+  .card-b{padding:16px 18px}
+
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:600;border:1px solid transparent;white-space:nowrap}
+  .pill .dot{width:7px;height:7px;border-radius:50%}
+  .pill.pass{background:var(--pass-soft);color:var(--pass);border-color:#CBE6D6}.pill.pass .dot{background:var(--pass)}
+  .pill.warn{background:var(--attention-soft);color:var(--attention);border-color:#EBDCB7}.pill.warn .dot{background:var(--attention)}
+  .pill.draft{background:#F4F2EC;color:var(--brass-ink);border-color:var(--brass-line)}
+  .pill.info{background:var(--info-soft);color:var(--info)}.pill.info .dot{background:var(--info)}
+  .pill.a11y{background:var(--a11y-soft);color:var(--a11y);border-color:var(--a11y-line)}.pill.a11y .dot{background:var(--a11y)}
+  .btn{all:unset;display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;border:1px solid var(--line);background:#fff}
+  .btn:hover{background:#FAFBFC}.btn.primary{background:var(--viridian);color:#fff;border-color:var(--viridian)}.btn.primary:hover{background:var(--viridian-press)}
+  .btn.sm{padding:4px 9px;font-size:12px}.btn:focus-visible,textarea:focus-visible,.seg-btn:focus-visible{outline:2px solid var(--viridian);outline-offset:2px}
+  .muted{color:var(--muted)}.mono{font-family:'IBM Plex Mono',monospace}
+
+  /* docs parse */
+  .doc{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line-2)}
+  .doc:last-of-type{border:none}
+  .ft{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;flex:none;font-size:9.5px;font-weight:700}
+  .ft.pdf{background:var(--danger-soft);color:var(--danger)}.ft.pp{background:#F4E7DE;color:#B5622C}.ft.vid{background:#EAE3F2;color:#6B4E9C}.ft.doc{background:var(--info-soft);color:var(--info)}.ft.img{background:var(--pass-soft);color:var(--pass)}.ft.crs{background:var(--viridian-soft);color:var(--viridian)}.ft.aud{background:#F3E3EC;color:#9C3E6E}.ft.xls{background:#E3F0E6;color:#2E7D4F}.ft.zip{background:#ECEEF1;color:#5C6573}.ft.cc{background:var(--a11y-soft);color:var(--a11y)}.ft.gen{background:#ECEEF1;color:#5C6573}
+  .drop{display:flex;align-items:center;gap:12px;border:1.5px dashed var(--line);border-radius:10px;padding:13px 15px;cursor:pointer;background:#FAFBFC;margin-bottom:14px;transition:.15s}
+  .drop:hover,.drop:focus-visible{border-color:var(--viridian);background:var(--viridian-soft);outline:none}
+  .drop.over{border-color:var(--viridian);background:var(--viridian-soft)}
+  .drop .di{width:34px;height:34px;border-radius:8px;background:var(--viridian-soft);color:var(--viridian);display:grid;place-items:center;flex:none}
+  .drop .dt b{font-size:13px;display:block}.drop .dt span{font-size:12px;color:var(--muted)}
+  .drop input{display:none}
+  .doc b{font-weight:600}.doc small{display:block;color:var(--muted);font-size:12px}
+  .parsebar{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+  .parsed-note{display:none;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--viridian)}.parsed-note.on{display:inline-flex}
+
+  /* agenda */
+  .agenda-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+  .progress{flex:1;min-width:160px}.pbar{height:7px;border-radius:99px;background:var(--line);overflow:hidden}.pbar i{display:block;height:100%;background:var(--viridian);width:0;transition:width .25s}
+  .pcount{font-size:12px;color:var(--muted);font-weight:600;margin-top:5px}
+  .seg{border:1px solid var(--line);border-radius:10px;margin-bottom:9px;overflow:hidden;background:#fff}
+  .seg.captured{border-color:#CBE6D6}.seg.a11yseg{border-color:var(--a11y-line)}
+  .seg-h{display:flex;align-items:center;gap:12px;padding:11px 13px;cursor:pointer}.seg-h:hover{background:#FAFBFC}
+  .time{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted-2);width:62px;flex:none}
+  .seg-h .tt{flex:1;font-weight:600;font-size:13.5px}.seg-h .tt small{display:block;font-weight:500;color:var(--muted);font-size:12px;margin-top:1px}
+  .pf{font-size:10.5px;font-weight:700;color:var(--brass-ink);background:var(--brass-soft);border:1px solid var(--brass-line);border-radius:99px;padding:2px 7px;display:none}.pf.on{display:inline-block}
+  .a11ytag{font-size:10px;font-weight:700;color:var(--a11y);background:var(--a11y-soft);border:1px solid var(--a11y-line);border-radius:99px;padding:2px 7px;display:inline-flex;align-items:center;gap:4px}
+  .segcount{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted-2);font-weight:600;flex:none}
+  .cap{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;flex:none;color:var(--muted-2)}.cap.on{background:var(--pass);border-color:var(--pass);color:#fff}
+  .chev{color:var(--muted-2);transition:.2s;flex:none}.seg.open .chev{transform:rotate(90deg)}
+  .seg-b{display:none;padding:2px 14px 14px 76px}.seg.open .seg-b{display:block}
+  .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted-2);font-weight:700;margin:10px 0 5px}
+  .checklist{list-style:none;margin:0;padding:0}
+  .chk{display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-size:13px;cursor:pointer}
+  .chk .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line);flex:none;margin-top:1px;display:grid;place-items:center;color:#fff;transition:.12s}
+  .chk.done .box{background:var(--viridian);border-color:var(--viridian)}.chk .box svg{width:12px;height:12px;opacity:0}.chk.done .box svg{opacity:1}
+  .chk.done .txt{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
+  .chk:hover .box{border-color:var(--viridian)}
+  .captures{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .captures span{font-size:11.5px;font-weight:600;color:var(--viridian);background:var(--viridian-soft);border:1px solid #BFE0DA;border-radius:99px;padding:3px 9px}
+  .pre{display:flex;align-items:center;gap:9px;border:1px solid var(--brass-line);background:#FFFDF8;border-radius:8px;padding:7px 10px;font-size:13px;margin-bottom:6px}
+  .pre .src-tag{font-size:10px;font-weight:700;color:var(--brass-ink);text-transform:uppercase;flex:none}.pre .txt{flex:1}.pre.confd{background:var(--pass-soft);border-color:#CBE6D6}
+  .pre button{all:unset;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--viridian);padding:3px 8px;border:1px solid #BFE0DA;border-radius:7px;background:#fff}.pre.confd button{display:none}
+  .pre .ok{display:none;color:var(--pass);font-weight:700;font-size:12px}.pre.confd .ok{display:inline}
+  textarea{width:100%;font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical;min-height:40px;background:#fff}
+
+  /* content inventory */
+  .inv-h{display:grid;grid-template-columns:1.7fr 1.4fr 1fr 1.3fr;gap:10px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted-2);font-weight:700;padding:0 0 8px;border-bottom:1px solid var(--line-2)}
+  .inv-r{display:grid;grid-template-columns:1.7fr 1.4fr 1fr 1.3fr;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line-2);font-size:12.5px}
+  .inv-r:last-child{border:none}
+  .inv-r .nm{font-weight:600}.inv-r .nm small{display:block;color:var(--muted);font-weight:500;font-size:11.5px}
+  .seg-ctl{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .seg-btn{all:unset;padding:4px 8px;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted)}
+  .seg-btn[aria-pressed="true"]{background:var(--viridian);color:#fff}
+
+  /* accessibility process */
+  .a11y-audit{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .a11y-stat{flex:1;min-width:120px;border:1px solid var(--a11y-line);background:var(--a11y-soft);border-radius:9px;padding:10px 12px}
+  .a11y-stat b{font-size:20px;display:block;color:var(--a11y)}.a11y-stat small{font-size:11px;color:var(--muted);font-weight:600}
+  .a11y-flow{display:flex;align-items:stretch;gap:6px;overflow-x:auto}
+  .afstep{flex:1;min-width:96px;border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#FAFBFC}
+  .afstep .as{font-size:10px;font-weight:700;color:var(--a11y);text-transform:uppercase;letter-spacing:.3px}
+  .afstep b{font-size:12.5px;display:block;margin-top:3px}
+  .afstep p{margin:3px 0 0;font-size:11.5px;color:var(--muted)}
+  .afstep.now{border-color:var(--a11y);background:var(--a11y-soft)}
+  .afarr{display:flex;align-items:center;color:var(--a11y-line);flex:none}
+
+  /* course structure */
+  .field label{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted-2);font-weight:700;display:block;margin-bottom:5px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .stat{border:1px solid var(--line);border-radius:9px;padding:10px;text-align:center}.stat b{font-size:18px;display:block}.stat small{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+  .weekmap{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+  .wk{flex:1;min-width:48px;border:1px solid var(--line);border-radius:8px;padding:6px 4px;text-align:center;background:#FAFBFC}
+  .wk .wn{font-size:9.5px;color:var(--muted-2);font-weight:700}.wk .mn{font-size:11px;font-weight:700;color:var(--viridian);margin-top:2px}
+  .wk.special{background:var(--brass-soft);border-color:var(--brass-line)}.wk.special .mn{color:var(--brass-ink)}
+  .wk.special2{background:var(--info-soft)}.wk.special2 .mn{color:var(--info)}
+
+  .brief{list-style:none;margin:0;padding:0}
+  .brief li{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid var(--line-2);font-size:13px;align-items:flex-start}.brief li:last-child{border:none}
+  .bdot{width:8px;height:8px;border-radius:50%;background:var(--viridian);margin-top:6px;flex:none}
+  .brief .empty{color:var(--muted-2);font-style:italic;font-size:13px}.brief b{font-weight:600}
+
+  /* meeting recorder */
+  .rec-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .recbtn{all:unset;display:inline-flex;align-items:center;gap:9px;background:var(--ink);color:#fff;padding:9px 16px;border-radius:99px;font-weight:700;font-size:13px;cursor:pointer}
+  .recbtn:focus-visible{outline:2px solid var(--viridian);outline-offset:2px}
+  .recbtn .rdot{width:11px;height:11px;border-radius:50%;background:var(--danger)}
+  .recbtn.recording{background:var(--danger)}.recbtn.recording .rdot{background:#fff;animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.3}}
+  .recclock{font-size:16px;font-weight:600;color:var(--ink)}
+  .meter{display:inline-flex;align-items:flex-end;gap:3px;height:22px;opacity:.25}.meter.on{opacity:1}
+  .meter i{width:3px;height:6px;background:var(--viridian);border-radius:2px}
+  .meter.on i{animation:bar .8s ease-in-out infinite}
+  .meter.on i:nth-child(2){animation-delay:.1s}.meter.on i:nth-child(3){animation-delay:.25s}.meter.on i:nth-child(4){animation-delay:.15s}.meter.on i:nth-child(5){animation-delay:.3s}.meter.on i:nth-child(6){animation-delay:.05s}.meter.on i:nth-child(7){animation-delay:.2s}
+  @keyframes bar{0%,100%{height:5px}50%{height:20px}}
+  .recstatus{font-size:13px;color:var(--muted);font-weight:600}
+  .transcript{border:1px solid var(--line);border-radius:9px;padding:12px 14px;max-height:210px;overflow:auto;background:#FAFBFC}
+  .tline{display:flex;gap:10px;padding:5px 0;font-size:13px}
+  .tline .spk{flex:none;width:104px;font-weight:700;color:var(--viridian);font-size:12px}
+  .extracted{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .exblock{border:1px solid var(--line);border-radius:9px;padding:11px 12px}
+  .exblock>b{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted-2);display:block;margin-bottom:7px}
+  .exchip{display:block;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--line-2)}.exchip:last-child{border:none}
+  .exchip .who{color:var(--muted);font-size:11.5px}
+  .naseg{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-2)}.naseg:last-child{border:none}
+  .natime{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted-2);width:46px;flex:none}
+  .naseg b{font-size:13.5px;font-weight:600}.naseg small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}
+  @media (max-width:760px){.extracted{grid-template-columns:1fr}}
+
+  /* goals & timeline */
+  .goals{list-style:none;margin:0 0 16px;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}
+  .goals li{display:flex;gap:9px;font-size:13px;align-items:flex-start}
+  .goals .gk{width:18px;height:18px;border-radius:5px;background:var(--viridian);color:#fff;display:grid;place-items:center;flex:none;margin-top:1px;font-size:11px}
+  .tl{display:flex;align-items:stretch;gap:6px;overflow-x:auto;margin-top:4px}
+  .tlstep{flex:1;min-width:120px;border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:#FAFBFC}
+  .tlstep .wk{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--soc);font-weight:700}
+  .tlstep b{font-size:12.5px;display:block;margin-top:3px}
+  .tlstep .gate{font-size:11px;color:var(--muted);margin-top:4px;display:block}
+  .tlstep.now{border-color:var(--viridian);background:var(--viridian-soft)}
+
+  /* socratic probes */
+  .soc{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+  .soc-toggle{all:unset;cursor:pointer;font-size:12px;font-weight:700;color:var(--soc);display:inline-flex;align-items:center;gap:5px}
+  .soc-toggle:hover{text-decoration:underline}.soc-toggle:focus-visible{outline:2px solid var(--soc);outline-offset:2px;border-radius:4px}
+  .soc-list{margin:9px 0 10px;padding-left:18px;font-size:12.5px;color:var(--ink)}
+  .soc-list li{margin:5px 0;font-style:italic}
+  .soc-ai{margin-top:8px}
+  .soc-q{background:var(--soc-soft);border:1px solid var(--soc-line);border-radius:8px;padding:9px 11px;font-size:13px;font-style:italic;color:var(--ink);display:flex;gap:8px;align-items:flex-start}
+  .soc-q .sm{font-size:10px;font-weight:700;color:var(--soc);text-transform:uppercase;letter-spacing:.3px;flex:none;font-style:normal;margin-top:2px}
+  @media (max-width:760px){.goals{grid-template-columns:1fr}}
+
+  /* status + per-part timer (Wrike-style) */
+  .stat-pill{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:99px;border:1px solid;flex:none}
+  .stat-pill.todo{color:var(--muted);background:#F1F3F5;border-color:var(--line)}
+  .stat-pill.doing{color:var(--info);background:var(--info-soft);border-color:#CFE0F0}
+  .stat-pill.done{color:var(--pass);background:var(--pass-soft);border-color:#CBE6D6}
+  .tmr{all:unset;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:7px;padding:3px 7px;cursor:pointer;flex:none}
+  .tmr:hover{border-color:var(--viridian);color:var(--viridian)}.tmr:focus-visible{outline:2px solid var(--viridian);outline-offset:1px}
+  .tmr .tri{width:0;height:0;border-left:6px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent}
+  .tmr.running{color:var(--danger);border-color:var(--danger)}.tmr.running .tri{width:7px;height:8px;border:0;background:currentColor;border-radius:1px}
+  .active-timer{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--danger);white-space:nowrap}
+  .active-timer .ad{width:8px;height:8px;border-radius:50%;background:var(--danger);animation:pulse 1s infinite}
+
+  /* automation rules + activity feed */
+  .rules{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}
+  .rule{display:flex;gap:8px;font-size:12.5px;align-items:flex-start;cursor:pointer;color:var(--ink)}
+  .rule input{margin-top:2px;accent-color:var(--viridian);flex:none}
+  .feed{border:1px solid var(--line);border-radius:9px;max-height:180px;overflow:auto;background:#FAFBFC}
+  .fitem{display:flex;gap:9px;padding:7px 11px;border-bottom:1px solid var(--line-2);font-size:12.5px}.fitem:last-child{border:none}
+  .ftime{color:var(--muted-2);flex:none}.feed-empty{padding:12px;color:var(--muted-2);font-size:12.5px;font-style:italic}
+
+  /* design lens */
+  .lens{display:flex;gap:8px;align-items:flex-start;background:var(--brass-soft);border:1px solid var(--brass-line);border-radius:8px;padding:8px 10px;font-size:12.5px;margin:2px 0 4px}
+  .lens .lk{font-size:10px;font-weight:700;color:var(--brass-ink);text-transform:uppercase;letter-spacing:.3px;flex:none;margin-top:1px}
+  .lens b{color:var(--ink)}
+
+  /* SMART goals */
+  .goal{padding:11px 0;border-bottom:1px solid var(--line-2)}.goal:last-child{border:none}
+  .goal .gt{font-size:13px;font-weight:600;display:flex;gap:8px;align-items:baseline}
+  .goal .gdue{font-size:10px;font-weight:700;color:var(--soc);background:var(--soc-soft);border:1px solid var(--soc-line);border-radius:99px;padding:1px 7px;margin-left:auto;flex:none}
+  .goal .gm{font-size:12px;color:var(--muted);margin-top:3px}
+  .goal .gbar{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:7px}.goal .gbar i{display:block;height:100%;background:var(--viridian);width:0;transition:width .3s}
+  .goal .gpct{font-size:11px;color:var(--muted);font-weight:600;margin-top:4px}
+
+  /* foundations */
+  .foundations{display:flex;flex-direction:column;gap:9px}
+  .fgrp{font-size:12.5px}.fgrp .fl{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted-2);font-weight:700;display:block;margin-bottom:2px}.fgrp b{font-weight:600}
+
+  /* phase eyebrows + sidebar label */
+  .phase{display:flex;align-items:center;gap:9px;margin:4px 0 12px;font-size:12.5px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.6px}
+  .phase:not(:first-child){margin-top:8px}
+  .phase .pnum{width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:12px;flex:none}
+  .phase small{font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted)}
+  .side-label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted-2);font-weight:700;margin:4px 0 12px}
+
+  /* accessibility tracker — conformance reporting */
+  .lvlb{font-size:9.5px;font-weight:700;color:var(--ink-2);background:var(--line-2);border-radius:4px;padding:1px 5px;flex:none}
+  .acr{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:1px 7px;border-radius:99px;margin-left:auto;flex:none}
+  .acr.supports{color:var(--pass);background:var(--pass-soft)}
+  .acr.partial{color:var(--attention);background:var(--attention-soft)}
+  .acr.na{color:var(--muted);background:#F1F3F5}
+  .q-meta{font-size:10.5px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+  .q-own{font-weight:600;color:var(--soc)}
+  .acrbtn{all:unset;cursor:pointer;font-size:12px;font-weight:700;color:#fff;background:var(--a11y);border-radius:8px;padding:7px 12px;display:inline-flex;align-items:center;gap:7px;margin-top:10px}.acrbtn:hover{filter:brightness(1.06)}.acrbtn:focus-visible{outline:2px solid var(--a11y);outline-offset:2px}
+  #acrOut{display:none;margin-top:12px;border:1px solid var(--a11y-line);background:#fff;border-radius:9px;padding:12px 14px}
+  .acr-h{font-size:11px;font-weight:800;color:var(--a11y);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+  .acr-line{font-size:13px;margin-bottom:2px}.acr-sub{font-size:11.5px;font-weight:700;color:var(--muted);margin:8px 0 3px}
+  .acr-ul{margin:0;padding-left:18px;font-size:12px}.acr-ul li{margin:2px 0}
+  .acr-foot{font-size:11px;color:var(--muted);margin-top:9px;font-style:italic}
+
+  /* accessibility tracker */
+  .actrack-top{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .confbar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin:10px 0 0}.confbar i{display:block;height:100%;background:var(--pass);width:100%;transition:width .35s}
+  .a11y2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .crit-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-2);font-size:12.5px}.crit-row:last-child{border:none}
+  .crit-id{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted-2);width:42px;flex:none}
+  .crit-name{flex:1}
+  .q-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-2);font-size:12.5px}.q-row:last-child{border:none}
+  .q-row.res{opacity:.5}
+  .q-main{flex:1;min-width:0}.q-main b{font-weight:600}.q-main small{display:block;color:var(--muted);font-size:11.5px}
+  .q-crit{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--a11y);background:var(--a11y-soft);border:1px solid var(--a11y-line);border-radius:99px;padding:1px 6px;flex:none}
+  .sev{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:1px 6px;border-radius:99px;flex:none}
+  .sev.high{color:var(--danger);background:var(--danger-soft)}.sev.med{color:var(--attention);background:var(--attention-soft)}
+  .q-resolve{all:unset;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--viridian);border:1px solid #BFE0DA;background:#fff;border-radius:7px;padding:3px 9px;flex:none}.q-resolve:hover{background:var(--viridian-soft)}.q-resolve:focus-visible{outline:2px solid var(--viridian);outline-offset:1px}
+  .q-done{color:var(--pass);font-weight:700;font-size:12px;flex:none}
+  .method{list-style:none;margin:0;padding:0;font-size:12.5px}
+  .method li{padding:5px 0;display:flex;gap:9px}.method .mt{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted-2);width:74px;flex:none;margin-top:2px;letter-spacing:.3px}
+  @media (max-width:760px){.actrack-top{grid-template-columns:1fr 1fr}.a11y2{grid-template-columns:1fr}}
+
+  @media (max-width:940px){.cols{grid-template-columns:1fr}.row3{grid-template-columns:1fr 1fr}.inv-h,.inv-r{grid-template-columns:1.4fr 1.2fr;gap:8px}.inv-h span:nth-child(3),.inv-h span:nth-child(4),.inv-r .ipc{display:none}.seg-b{padding-left:14px}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="mark"><span></span></div><div><b>Production Engine</b><small>Internal · v0.7</small></div>
+  <div class="spacer"></div><span class="av">MR</span>
+</header>
+
+<div class="strip">
+  <span class="schip active"><span class="n">1</span>Kickoff &amp; Intake</span><svg class="arr icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+  <span class="schip"><span class="n">2</span>Backward Design</span><svg class="arr icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+  <span class="schip"><span class="n">3</span>Prototype</span><svg class="arr icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+  <span class="schip"><span class="n">4</span>Production</span><svg class="arr icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+  <span class="schip"><span class="n">5</span>QA</span><svg class="arr icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+  <span class="schip"><span class="n">6</span>Handoff</span>
+</div>
+<div class="thread">
+  <span class="tlbl"><svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Accessibility — continuous</span>
+  <span class="threadline"></span>
+  <span class="tnote">Audited at intake · built in by design · verified at every gate — never bolted on at the end.</span>
+</div>
+
+<div class="wrap">
+  <div class="head"><h1>Kickoff &amp; Intake</h1><span class="meta">BIOL 3050 — Cellular Foundations · Dr. L. Okafor · Tier 2</span></div>
+  <p class="lede">A logical path through the kickoff: <b>prepare</b> the materials, <b>meet</b> and work the agenda, then <b>wrap</b> by planning what's next. The goals up top keep us aimed; the panel on the right tracks status as we go — and accessibility is audited the moment materials arrive.</p>
+
+  <!-- FRAME · goals & timeline -->
+  <div class="card">
+    <div class="card-h"><h3>Goals &amp; timeline</h3><span class="sub">~17 weeks · stage-gated</span></div>
+    <div class="card-b">
+      <div class="lbl" style="margin-top:0">Goals — specific, measurable, time-bound</div>
+      <div class="goal">
+        <div class="gt">Kickoff completeness <span class="gdue">due today · Wk 0</span></div>
+        <div class="gm">100% of intake parts covered and the accessibility audit run before we close.</div>
+        <div class="gbar"><i id="goal1bar"></i></div>
+        <div class="gpct" id="goal1pct">0% complete</div>
+      </div>
+      <div class="goal">
+        <div class="gt">Aligned, measurable outcomes <span class="gdue">due Wk 3</span></div>
+        <div class="gm">100% of module objectives mapped to a course outcome and ≥1 assessment — zero orphans on the alignment chart.</div>
+        <div class="gbar"><i style="width:0"></i></div><div class="gpct">target · Backward Design gate</div>
+      </div>
+      <div class="goal">
+        <div class="gt">Accessibility conformance <span class="gdue">Wk 0 → 16</span></div>
+        <div class="gm">100% of incoming assets audited at intake; 0 critical WCAG 2.1 AA issues at QA; remediation backlog cleared by Wk 14.</div>
+        <div class="gbar"><i style="width:0"></i></div><div class="gpct">target · verified at every gate</div>
+      </div>
+      <div class="goal">
+        <div class="gt">Faculty-approved prototype <span class="gdue">due Wk 4</span></div>
+        <div class="gm">1 prototype module signed off by faculty before any scaled production begins.</div>
+        <div class="gbar"><i style="width:0"></i></div><div class="gpct">target · prototype gate</div>
+      </div>
+      <div class="goal">
+        <div class="gt">Evidence-based media <span class="gdue">Wk 5 → 14</span></div>
+        <div class="gm">Every module ships ≥1 retrieval/practice check and ≥1 dual-coded visual; lecture video segmented to ≤6 min.</div>
+        <div class="gbar"><i style="width:0"></i></div><div class="gpct">target · across production</div>
+      </div>
+      <div class="goal">
+        <div class="gt">On-time Canvas delivery <span class="gdue">due Wk 17</span></div>
+        <div class="gm">14 of 14 modules built in Canvas with 6 of 6 stage gates passed.</div>
+        <div class="gbar"><i style="width:0"></i></div><div class="gpct">target · handoff</div>
+      </div>
+      <div class="lbl">Timeline &amp; gates</div>
+      <div class="tl">
+        <div class="tlstep now"><span class="wk">Wk 0</span><b>Kickoff &amp; intake</b><span class="gate">Gate: intake brief + a11y audit</span></div>
+        <div class="tlstep"><span class="wk">Wk 1–3</span><b>Backward design</b><span class="gate">Gate: alignment, no gaps</span></div>
+        <div class="tlstep"><span class="wk">Wk 4</span><b>Prototype module</b><span class="gate">Gate: faculty sign-off</span></div>
+        <div class="tlstep"><span class="wk">Wk 5–14</span><b>Production</b><span class="gate">Born-accessible build + media</span></div>
+        <div class="tlstep"><span class="wk">Wk 15–16</span><b>QA &amp; accessibility</b><span class="gate">Gate: conformance</span></div>
+        <div class="tlstep"><span class="wk">Wk 17</span><b>Handoff</b><span class="gate">Canvas + proof artifacts</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCESSIBILITY TRACKER (transparent · auditable) -->
+  <div class="card a11y">
+    <div class="card-h"><h3>Accessibility tracker</h3><span class="sub pill a11y"><span class="dot"></span>WCAG 2.1 AA · transparent &amp; auditable</span></div>
+    <div class="card-b">
+      <div class="actrack-top">
+        <div class="a11y-stat"><b id="a11yConf">100%</b><small>conformance</small></div>
+        <div class="a11y-stat"><b id="a11ySources">0</b><small>sources audited</small></div>
+        <div class="a11y-stat"><b id="a11yOpen">0</b><small>open issues</small></div>
+        <div class="a11y-stat"><b id="a11yResolved">0</b><small>resolved</small></div>
+      </div>
+      <div class="confbar"><i id="a11yConfBar"></i></div>
+      <p class="muted" id="a11ySummary" style="font-size:12.5px;margin:0 0 16px">Upload or parse materials to run the intake audit. Every issue is tracked to a specific WCAG criterion, scheduled for remediation, and logged — nothing is deferred to QA.</p>
+
+      <div class="a11y2">
+        <div>
+          <div class="lbl" style="margin-top:0">WCAG 2.1 AA success criteria tracked</div>
+          <div class="crit" id="a11yCriteria"></div>
+        </div>
+        <div>
+          <div class="lbl" style="margin-top:0">Remediation queue · per asset, scheduled into Production</div>
+          <div id="a11yQueue"><div class="muted" style="font-size:12.5px;font-style:italic">No issues yet — run the audit.</div></div>
+        </div>
+      </div>
+
+      <div class="a11y2" style="margin-top:16px">
+        <div>
+          <div class="lbl" style="margin-top:0">How it's checked · method disclosure</div>
+          <ul class="method">
+            <li><span class="mt">Automated</span><span>axe-core &amp; IBM Equal Access on every page; contrast and structure linting in the editor.</span></li>
+            <li><span class="mt">Manual</span><span>Keyboard-only pass, screen-reader spot-check (NVDA / VoiceOver), caption &amp; transcript QA, reading-level review.</span></li>
+            <li><span class="mt">Standard</span><span>WCAG 2.1 AA, no exceptions; methodology documented for the accessibility conformance report.</span></li>
+          </ul>
+          <button class="acrbtn" onclick="genACR()"><svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>Generate conformance report (ACR)</button>
+          <div id="acrOut"></div>
+        </div>
+        <div>
+          <div class="lbl" style="margin-top:0">Audit trail · Evidence Ledger</div>
+          <div class="feed" id="a11yLedger"><div class="feed-empty">Audit checks and resolutions are logged here with a timestamp.</div></div>
+        </div>
+      </div>
+
+      <div class="lbl">Continuous — verified at every gate</div>
+      <div class="a11y-flow">
+        <div class="afstep now"><div class="as">Intake</div><b>Audit</b><p>Flag incoming asset gaps</p></div>
+        <div class="afarr"><svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="afstep"><div class="as">Design</div><b>Born-accessible</b><p>Editor can't emit non-compliant</p></div>
+        <div class="afarr"><svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="afstep"><div class="as">Production</div><b>Remediate</b><p>Caption, tag, alt-text</p></div>
+        <div class="afarr"><svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="afstep"><div class="as">QA</div><b>Verify</b><p>axe + manual audit</p></div>
+        <div class="afarr"><svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M9 6l6 6-6 6"/></svg></div>
+        <div class="afstep"><div class="as">Handoff</div><b>Conformance</b><p>Report from the ledger</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <!-- ===== MAIN WORKFLOW ===== -->
+    <div>
+      <div class="phase"><span class="pnum">1</span> Prepare <small>· gather &amp; audit materials</small></div>
+
+      <!-- MATERIALS -->
+      <div class="card">
+        <div class="card-h"><h3>Materials</h3><span class="sub">upload · parse · inventory</span></div>
+        <div class="card-b">
+          <div class="lbl" style="margin-top:0">Source documents · parse to pre-fill the agenda</div>
+          <div class="doc"><span class="ft pdf">PDF</span><div><b>BIOL3050_Syllabus_F23.pdf</b><small>Outcomes · 15-week schedule · grading · policies</small></div></div>
+          <div class="doc"><span class="ft doc">DOC</span><div><b>Course_Outline_v2.docx</b><small>Topic sequence &amp; weekly breakdown</small></div></div>
+          <div id="docList"></div>
+          <div class="drop" id="dropDoc" tabindex="0" role="button" aria-label="Upload syllabus or course outline" style="margin-top:12px">
+            <span class="di"><svg class="icon" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 16v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg></span>
+            <span class="dt"><b>Upload syllabus / outline</b><span>Drop or browse — PDF, Word, text</span></span>
+          </div>
+          <input type="file" id="fileDoc" multiple accept=".pdf,.doc,.docx,.txt,.md,.rtf,.odt">
+          <div class="parsebar">
+            <button class="btn primary" id="parseBtn" onclick="parse()"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M3 12h3M18 12h3"/><circle cx="12" cy="12" r="3.2"/></svg>Parse &amp; pre-fill</button>
+            <span class="parsed-note" id="pnote"><svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>Pre-filled 9 fields and ran an accessibility audit on incoming materials.</span>
+          </div>
+
+          <div class="lbl">All media &amp; assets · type-detected and accessibility-flagged on arrival</div>
+          <div class="drop" id="dropInv" tabindex="0" role="button" aria-label="Upload media and documents">
+            <span class="di"><svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg></span>
+            <span class="dt"><b>Upload media &amp; documents</b><span>Drop or browse — video, audio, images, PDF, Word, PowerPoint, Excel, captions, and more</span></span>
+          </div>
+          <input type="file" id="fileInv" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.md,.rtf,.odt,.odp,.vtt,.srt,.zip">
+          <div class="inv-h"><span>Asset</span><span>Decision</span><span class="ipc">IP / rights</span><span>Accessibility</span></div>
+          <div id="inventory"></div>
+          <p class="muted" style="font-size:12px;margin:12px 0 0">Reuse / refresh / rebuild is decided per asset, with rights and accessibility captured on arrival.</p>
+        </div>
+      </div>
+
+      <div class="phase"><span class="pnum">2</span> Meet <small>· record &amp; work the agenda</small></div>
+
+      <!-- RECORDER -->
+      <div class="card">
+        <div class="card-h"><h3>Meeting recorder</h3><span class="sub">capture · transcribe · draft the next agenda</span></div>
+        <div class="card-b">
+          <div class="rec-row">
+            <button class="recbtn" id="recBtn" onclick="toggleRec()"><span class="rdot"></span><span class="rlbl">Record</span></button>
+            <span class="recclock mono" id="recClock">00:00</span>
+            <span class="meter" id="meter"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="recstatus" id="recStatus">Ready to record the kickoff</span>
+          </div>
+          <p class="muted" style="font-size:12px;margin:10px 0 0">Demo capture — in production this records the live session (or ingests the Zoom/Teams recording) and transcribes through the governed AI gateway. AI drafts; you review before anything is sent.</p>
+
+          <div id="transcriptPane" style="display:none;margin-top:16px">
+            <div class="lbl">Transcript</div>
+            <div class="transcript" id="transcriptText">
+              <div class="tline"><span class="spk">Reyes (LXD)</span><span>The north star is keeping your seminar's discussion energy in an async format.</span></div>
+              <div class="tline"><span class="spk">Dr. Okafor</span><span>Right — and I want students predicting outcomes, not just restating definitions.</span></div>
+              <div class="tline"><span class="spk">Reyes (LXD)</span><span>Then we lift the outcomes from "explain" to "predict and evaluate." I'll reflect that in the alignment map.</span></div>
+              <div class="tline"><span class="spk">Dr. Okafor</span><span>Good. Reuse the four recordings but rebuild the slide deck — it's dated.</span></div>
+              <div class="tline"><span class="spk">Reyes (LXD)</span><span>Agreed. Two open items: the AI voiceover scope, and confirming accommodations in the cohort.</span></div>
+            </div>
+            <div class="lbl" style="margin-top:14px">Auto-extracted</div>
+            <div class="extracted" id="extracted">
+              <div class="exblock"><b>Decisions</b>
+                <span class="exchip">Online async + 2 live sessions</span>
+                <span class="exchip">14 modules · wk 8 review · wk 15 final</span>
+                <span class="exchip">Lift Bloom to predict/evaluate</span>
+                <span class="exchip">Reuse recordings · rebuild deck</span>
+              </div>
+              <div class="exblock"><b>Open questions</b>
+                <span class="exchip">Add learnersourcing peer review?</span>
+                <span class="exchip">AI voiceover scope (pending disclosure)</span>
+                <span class="exchip">Cohort accommodations to confirm</span>
+              </div>
+              <div class="exblock"><b>Action items</b>
+                <span class="exchip">Send CV + 2 permissions <span class="who">· Dr. Okafor · Fri</span></span>
+                <span class="exchip">Draft Module 4 prototype <span class="who">· LXD · Wed</span></span>
+                <span class="exchip">Caption 4 recordings <span class="who">· Media · queued</span></span>
+              </div>
+            </div>
+            <button class="btn primary" style="margin-top:14px" onclick="genNextAgenda()"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M3 12h3M18 12h3"/><circle cx="12" cy="12" r="3.2"/></svg>Generate next-meeting agenda</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENDA -->
+      <div class="card">
+        <div class="card-h"><h3>Discovery &amp; Design agenda</h3><span class="sub">complete intake · interactive</span></div>
+        <div class="card-b">
+          <div class="agenda-top">
+            <div class="progress"><div class="pbar"><i id="pbar"></i></div><div class="pcount" id="pcount">0 points covered</div></div>
+            <span class="active-timer" id="activeTimer" style="display:none"><span class="ad"></span>Tracking&nbsp;<b id="activeName"></b></span>
+            <button class="btn sm" onclick="window.print()"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4v-5h16v5h-2M8 14h8v7H8z"/></svg>Print</button>
+          </div>
+          <div id="agenda"></div>
+        </div>
+      </div>
+
+      <div class="phase"><span class="pnum">3</span> Wrap <small>· plan the next meeting</small></div>
+
+      <!-- NEXT MEETING AGENDA -->
+      <div class="card" id="nextAgendaEmpty">
+        <div class="card-b" style="color:var(--muted-2);font-size:13px;font-style:italic">The next-meeting agenda appears here once you record the kickoff and generate it from the transcript.</div>
+      </div>
+      <div class="card" id="nextAgenda" style="display:none">
+        <div class="card-h"><h3>Next meeting — Design Review &amp; Prototype Walkthrough</h3><span class="sub pill brass">AI-drafted from transcript · review before sending</span></div>
+        <div class="card-b" id="nextAgendaBody"></div>
+        <div class="card-b" style="border-top:1px solid var(--line-2);display:flex;gap:8px;flex-wrap:wrap;padding-top:14px">
+          <button class="btn sm" onclick="window.print()">Print</button>
+          <button class="btn sm">Send to faculty (draft)</button>
+          <button class="btn sm">Add to calendar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SIDEBAR · live status & reference ===== -->
+    <div>
+      <div class="side-label">Live status &amp; reference</div>
+
+      <!-- INTAKE BRIEF -->
+      <div class="card">
+        <div class="card-h"><h3>Intake Brief</h3><span class="sub" id="briefCount">building…</span></div>
+        <div class="card-b"><ul class="brief" id="brief"><li class="empty">Confirm a field, cover a checklist, or set a content decision to start the brief.</li></ul></div>
+      </div>
+
+      <!-- AUTOMATION & TIME -->
+      <div class="card">
+        <div class="card-h"><h3>Automation &amp; time</h3><span class="sub" id="totalTime">0:00 logged</span></div>
+        <div class="card-b">
+          <div class="lbl" style="margin-top:0">Automation rules</div>
+          <div class="rules">
+            <label class="rule"><input type="checkbox" id="rule_status" checked> When a timer starts → mark the part <b>In&nbsp;progress</b>.</label>
+            <label class="rule"><input type="checkbox" id="rule_done" checked> When a part's checklist is fully covered → mark <b>Done</b>, stop its timer, log the time.</label>
+            <label class="rule"><input type="checkbox" id="rule_advance" checked> When a part is Done → open the next part and start its timer.</label>
+            <label class="rule"><input type="checkbox" id="rule_notify"> When action items are captured → draft a note to faculty.</label>
+          </div>
+          <div class="lbl">Activity</div>
+          <div class="feed" id="feed"><div class="feed-empty">Start a timer or finish a part to see automations fire.</div></div>
+          <p class="muted" style="font-size:11.5px;margin:10px 0 0">One timer runs at a time — starting a new part pauses the last. In the build these log to the Evidence Ledger as real effort data.</p>
+        </div>
+      </div>
+
+      <!-- COURSE STRUCTURE -->
+      <div class="card">
+        <div class="card-h"><h3>Course structure &amp; pacing</h3><span class="sub" id="structSrc"></span></div>
+        <div class="card-b">
+          <div class="row3"><div class="stat"><b>3</b><small>credits</small></div><div class="stat"><b>15</b><small>weeks</small></div><div class="stat"><b>14</b><small>modules</small></div></div>
+          <div class="field" style="margin-top:13px"><label>Module ↔ week map</label>
+            <div class="muted" style="font-size:12.5px;margin-bottom:6px">1 module/week; week 8 review, week 15 final.</div>
+            <div class="weekmap" id="weekmap"></div></div>
+        </div>
+      </div>
+
+      <!-- DESIGN FOUNDATIONS -->
+      <div class="card">
+        <div class="card-h"><h3>Design foundations</h3><span class="sub">what the build rests on</span></div>
+        <div class="card-b">
+          <div class="foundations">
+            <div class="fgrp"><span class="fl">Adult learning</span><b>Andragogy (Knowles)</b> · Experiential learning (Kolb)</div>
+            <div class="fgrp"><span class="fl">Design process</span><b>Backward Design (UbD)</b> · ADDIE / SAM</div>
+            <div class="fgrp"><span class="fl">Outcomes</span>Bloom's taxonomy · Constructive alignment (Biggs)</div>
+            <div class="fgrp"><span class="fl">Cognition</span>Cognitive Load (Sweller) · Multimedia learning (Mayer) · Retrieval &amp; spaced practice</div>
+            <div class="fgrp"><span class="fl">Instruction</span>Gagné's Nine Events · Merrill's First Principles</div>
+            <div class="fgrp"><span class="fl">Access</span>Universal Design for Learning (CAST)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------- AGENDA (comprehensive) ----------
+  const SEG=[
+    {t:"0:00",title:"Welcome, roles & how we work",sub:"Partnership and cadence",
+      q:["Introduce the team; faculty hold academic authority — we build alongside.","Confirm communication cadence and decision-makers.","Set the approach: prototype-first, accessible by construction, transparent AI."],cap:["Roles","Cadence"]},
+    {t:"0:05",title:"Vision & teaching philosophy",sub:"What success looks like",
+      q:["What does a great version feel like for students?","Signature teaching moves to preserve from the in-person course?","What frustrates you about the current version?"],cap:["Philosophy","Vision"]},
+    {t:"0:13",title:"Learners & context",sub:"Who we're designing for",pre:[{k:"Prerequisites",v:"BIOL 2010 + CHEM 1410"}],
+      q:["Level and prior knowledge; confirm prerequisites.","Where do students typically struggle or hold misconceptions?","Known accommodations or access needs in the cohort (feeds the accessibility plan)."],cap:["Learner profile","Access needs"]},
+    {t:"0:21",title:"Course structure & pacing",sub:"Term length, modules, mapping",pre:[{k:"Term",v:"15-week · 3 credits"},{k:"Schedule",v:"Weekly; midterm wk 8, final wk 15"}],
+      q:["Confirm term format and length.","Module count and module↔week mapping; review/exam weeks.","Seat-time and modality (async + live sessions?)."],cap:["Term & weeks","Module map","Modality"]},
+    {t:"0:31",title:"Outcomes & alignment",sub:"Objectives cascade, backward design",pre:[{k:"Course LO",v:"4 outcomes in syllabus"}],
+      q:["Confirm course outcomes inherit University & Program LOs.","Refine for measurability — what should students DO?","Any programmatic accreditor or state licensure standards in play?"],cap:["Course LOs","Standards"]},
+    {t:"0:43",title:"Content & materials inventory",sub:"Complete source gathering",pre:[{k:"Textbook",v:"Alberts, Essential Cell Biology (5th)"},{k:"Readings",v:"6 articles + reading list"}],
+      q:["List every source: text, slides, readings, recordings, prior build, images.","Per asset: reuse, refresh, or rebuild? (set in the inventory)","IP / permissions and currency of each source."],cap:["Source inventory","Reuse decisions","IP & rights"]},
+    {t:"0:55",title:"Accessibility audit & plan",sub:"Start the process — not an afterthought",a11y:true,pre:[{k:"Incoming audit",v:"5 of 7 sources need remediation"}],
+      q:["Review the incoming-asset audit: captions, transcripts, tagged PDFs, alt text, contrast.","Set captioning/transcript plan for all video and the alt-text plan for images/diagrams.","Confirm document accessibility (heading structure, reading order, tables) and plain-language/reading-level targets.","Confirm born-accessible authoring + the learner accommodations from the cohort.","Agree the standard: WCAG 2.1 AA, no exceptions, verified at every gate."],cap:["Incoming audit reviewed","Captioning plan","Alt-text plan","Document a11y","WCAG 2.1 AA confirmed"]},
+    {t:"1:08",title:"Lecture & media plan",sub:"Video and the assets that make it stick",pre:[{k:"Existing media",v:"4 raw recordings"}],
+      q:["Edit existing footage or record new?","Assets for retain / understand / apply (diagrams, worked examples, retrieval checks, scenarios)?","AI-assisted media appetite — disclosure + closed-model rules."],cap:["Lecture approach","Retain/understand/apply"]},
+    {t:"1:18",title:"Assessments, activities & discussions",sub:"How learning is practiced and proven",pre:[{k:"Grading",v:"exams 40 · labs 30 · quizzes 20 · participation 10"}],
+      q:["Confirm or rethink the grading scheme; existing rubrics?","Interactives, assignments, discussion, and any learnersourcing.","Academic integrity and feedback approach."],cap:["Assessment plan","Activities"]},
+    {t:"1:27",title:"Technology, tools & integrations",sub:"The build environment",
+      q:["Canvas template/shell availability; OEDI master shell.","Authoring & interactive tools (H5P, Articulate), LTI integrations.","Data, privacy, and any restricted-content considerations."],cap:["Canvas/template","Tools & LTI"]},
+    {t:"1:33",title:"Timeline, roles & faculty availability",sub:"A realistic schedule",
+      q:["Development window and target launch (4–5 months).","Faculty time commitment & responsiveness — the biggest schedule risk.","Milestones, review cadence, prototype checkpoint."],cap:["Timeline","Faculty availability"]},
+    {t:"1:41",title:"Recap & next steps",sub:"Confirm and assign",
+      q:["Read back the captured intake and the accessibility plan.","Immediate to-dos: who sends what, by when.","Schedule the prototype-module review."],cap:["Confirmed intake","Actions"]}
+  ];
+
+  // Socratic probes per segment — go past the surface answer, anticipate what faculty raise
+  const SOC={
+    0:["What does 'faculty in charge' mean in practice — which decisions are always theirs?","Where has a past course build broken down, and what would prevent that here?"],
+    1:["When a student succeeds in your course, what specifically can they now do?","If we could preserve only one thing from your in-person course, what would it be — and why that?","What are you assuming students already believe coming in?"],
+    2:["Who is most likely to struggle, and what does their struggle actually look like?","Which misconception is most stubborn — and why does it persist?","What access barrier, left unaddressed, would quietly exclude part of this cohort?"],
+    3:["Does a module map to a week, or to an idea? What breaks if we force them to match?","Where in the term do students fall behind — and how should pacing respond?","If we compressed this to 8 weeks, what would have to give?"],
+    4:["What evidence would convince a skeptic that a student has met this outcome?","Is this outcome written at the level we want — recall, or judgment?","If an assessment doesn't map to an outcome, why is it here?"],
+    5:["What are we keeping out of habit rather than because it earns its place?","Which 'must-cover' content is actually assessed — and which just gets mentioned?","What would a student lose if we cut this source entirely?"],
+    6:["If a screen-reader user took this course tomorrow, where would they get stuck?","Which 'temporary' accessibility shortcut tends to become permanent — and how do we prevent it?","What are we assuming about how students reach this material?"],
+    7:["What should a student be able to do after this video that they couldn't before?","Where does this lecture lose people — and what asset would re-engage them there?","If we cut this video in half, which half is worth keeping?"],
+    8:["Does this assessment measure learning, or compliance?","What would a student who games this assessment do — and what does that reveal?","Where could students learn from each other instead of only from us?"],
+    9:["What's the simplest tool that does the job — are we over-reaching?","What happens to the learning experience if a tool fails mid-term?"],
+    10:["What's the single most likely cause of this build slipping — and how do we de-risk it now?","How much faculty time is realistic, honestly — and what do we do when it's less?"],
+    11:["Of everything we discussed, what's the one decision that shapes all the others?","What did we not ask that we should have?"]
+  };
+
+  // Design lens per segment — the ID / adult-learning principle behind each part
+  const LENS={
+    0:{f:"Co-design",a:"faculty hold academic authority; the engine assists, never replaces."},
+    1:{f:"Backward Design (Wiggins &amp; McTighe)",a:"start from the results you want, then plan backward."},
+    2:{f:"Andragogy (Knowles) + UDL",a:"adults bring experience and need relevance; design for learner variability."},
+    3:{f:"Cognitive load + spaced practice",a:"segment content and distribute it across the term."},
+    4:{f:"Bloom + constructive alignment (Biggs)",a:"write outcomes at the right level; align assessment to them."},
+    5:{f:"Cognitive Load Theory (Sweller)",a:"cut extraneous load; keep what the assessment actually requires."},
+    6:{f:"Universal Design for Learning (CAST)",a:"multiple means of representation, action, and engagement."},
+    7:{f:"Multimedia learning (Mayer) + Gagné",a:"design video to manage load and cue the events of instruction."},
+    8:{f:"Constructive alignment + retrieval practice",a:"assess what was taught; use testing to build durable memory."},
+    9:{f:"Merrill's First Principles",a:"task-centered, real application; tools serve learning, not the reverse."},
+    10:{f:"ADDIE / SAM realities",a:"iterative production; protect the faculty effort budget."},
+    11:{f:"Experiential learning (Kolb)",a:"reflect, consolidate, and commit to the next action."}
+  };
+
+  const wrap=document.getElementById('agenda');
+  SEG.forEach((s,i)=>{
+    const el=document.createElement('div'); el.className='seg'+(s.a11y?' a11yseg':'');
+    const preHtml = s.pre ? `<div class="prefill" id="pre${i}" style="display:none">`+
+      s.pre.map((p,j)=>`<div class="pre" id="pre${i}_${j}"><span class="src-tag">syllabus</span><span class="txt"><b>${p.k}:</b> ${p.v}</span><button onclick="confirmPre(${i},${j},'${p.k.replace(/'/g,'')}')">Confirm</button><span class="ok">✓</span></div>`).join('')+`</div>` : '';
+    el.innerHTML=`<div class="seg-h">
+      <span class="time">${s.t}</span>
+      <div class="tt" onclick="toggle(${i})">${s.title}<small>${s.sub}</small></div>
+      ${s.a11y?'<span class="a11ytag"><svg class="icon" viewBox="0 0 24 24" style="width:11px;height:11px"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>a11y</span>':''}
+      ${s.pre?`<span class="pf" id="pf${i}">${s.pre.length} pre-filled</span>`:''}
+      <span class="stat-pill todo" id="st${i}">To do</span>
+      <button class="tmr" id="tmr${i}" onclick="toggleTimer(${i},event)" aria-label="Track time on this part"><span class="tri"></span><span class="mono" id="tt${i}">0:00</span></button>
+      <span class="segcount" id="sc${i}">0/${s.q.length}</span>
+      <span class="cap" id="cap${i}" aria-hidden="true">✓</span>
+      <svg class="chev icon" viewBox="0 0 24 24" onclick="toggle(${i})"><path d="M9 6l6 6-6 6"/></svg>
+    </div>
+    <div class="seg-b">
+      ${s.pre?`<div class="lbl">From existing syllabus · confirm</div>${preHtml.replace('display:none','display:block')}`:''}
+      <div class="lens"><span class="lk">lens</span><span><b>${LENS[i]?LENS[i].f:''}</b> — ${LENS[i]?LENS[i].a:''}</span></div>
+      <div class="lbl">Discussion checklist · tick as you cover</div>
+      <ul class="checklist">${s.q.map((x,j)=>`<li class="chk" onclick="chk(${i},${j})"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg></span><span class="txt">${x}</span></li>`).join('')}</ul>
+      <div class="lbl">Capture notes</div><textarea placeholder="What we agreed / decisions / open questions…"></textarea>
+      <div class="captures">${s.cap.map(x=>`<span>${x}</span>`).join('')}</div>
+      <div class="soc">
+        <button class="soc-toggle" onclick="toggleSoc(${i})"><svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M7 17l-4 4V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2Z"/><path d="M9.2 9.3a2.8 2.8 0 0 1 5.4 1c0 1.9-2.8 2.8-2.8 2.8M12 16h.01"/></svg>Dig deeper · Socratic probes</button>
+        <div class="soc-body" id="soc${i}" style="display:none">
+          <ul class="soc-list">${(SOC[i]||[]).map(q=>`<li>${q}</li>`).join('')}</ul>
+          <button class="btn sm" onclick="socFollow(${i})"><svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M12 3v3M12 18v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M3 12h3M18 12h3"/><circle cx="12" cy="12" r="3.2"/></svg>Socratic follow-up from your notes</button>
+          <div class="soc-ai" id="socAi${i}"></div>
+        </div>
+      </div>
+    </div>`;
+    wrap.appendChild(el);
+  });
+
+  const checks=SEG.map(s=>s.q.map(()=>false));
+  const totalItems=SEG.reduce((a,s)=>a+s.q.length,0);
+  function toggle(i){wrap.children[i].classList.toggle('open');}
+  function chk(i,j){
+    checks[i][j]=!checks[i][j];
+    const seg=wrap.children[i];
+    seg.querySelectorAll('.checklist .chk')[j].classList.toggle('done',checks[i][j]);
+    const done=checks[i].filter(Boolean).length,tot=SEG[i].q.length;
+    document.getElementById('sc'+i).textContent=done+'/'+tot;
+    const complete=done===tot;
+    document.getElementById('cap'+i).classList.toggle('on',complete);
+    seg.classList.toggle('captured',complete);
+    if(complete)addBrief('seg'+i,'<b>'+SEG[i].title+'</b> — covered'); else removeBrief('seg'+i);
+    autoComplete(i,complete);
+    prog();
+  }
+  function prog(){const n=checks.reduce((a,r)=>a+r.filter(Boolean).length,0);
+    document.getElementById('pbar').style.width=(n/totalItems*100)+'%';
+    const segDone=checks.filter(r=>r.length&&r.every(Boolean)).length;
+    document.getElementById('pcount').textContent=n+' of '+totalItems+' points covered · '+segDone+'/'+SEG.length+' segments complete';
+    const g1=Math.round(n/totalItems*100), g1b=document.getElementById('goal1bar');
+    if(g1b){g1b.style.width=g1+'%';document.getElementById('goal1pct').textContent=g1+'% complete';}}
+
+  // ---------- CONTENT INVENTORY + UPLOADS ----------
+  const decLabels={reuse:"Reuse",refresh:"Refresh",rebuild:"Rebuild"};
+  const INV=[
+    {n:"Lecture-deck.pptx",d:"58 slides",dec:"rebuild",ip:"Own",a:"warn",al:"low-contrast + alt text",ft:"pp",tag:"PPT",cat:"slides"},
+    {n:"4 lecture recordings",d:"~72 min",dec:"reuse",ip:"Own",a:"warn",al:"needs captions + transcript",ft:"vid",tag:"VID",cat:"video"},
+    {n:"Syllabus_F23.pdf",d:"prior",dec:"refresh",ip:"Own",a:"warn",al:"untagged structure",ft:"pdf",tag:"PDF",cat:"pdf"},
+    {n:"Alberts textbook",d:"5th ed.",dec:"reuse",ip:"Licensed",a:"pass",al:"publisher VPAT",ft:"doc",tag:"TXT",cat:"doc"},
+    {n:"6 article PDFs",d:"reading list",dec:"reuse",ip:"Permissions",a:"warn",al:"2 untagged",ft:"pdf",tag:"PDF",cat:"pdf"},
+    {n:"Prior Canvas build",d:"F23",dec:"refresh",ip:"Own",a:"warn",al:"mixed",ft:"crs",tag:"LMS",cat:"course"},
+    {n:"12 diagrams / images",d:"figures",dec:"refresh",ip:"Own",a:"warn",al:"alt text needed",ft:"img",tag:"IMG",cat:"image"}
+  ];
+
+  function detectType(name){
+    const e=(name.split('.').pop()||'').toLowerCase();
+    const map={
+      mp4:['vid','VID','video'],mov:['vid','VID','video'],webm:['vid','VID','video'],avi:['vid','VID','video'],mkv:['vid','VID','video'],m4v:['vid','VID','video'],
+      mp3:['aud','AUD','audio'],wav:['aud','WAV','audio'],m4a:['aud','M4A','audio'],aac:['aud','AAC','audio'],ogg:['aud','OGG','audio'],
+      png:['img','PNG','image'],jpg:['img','JPG','image'],jpeg:['img','JPG','image'],gif:['img','GIF','image'],webp:['img','WEBP','image'],svg:['img','SVG','image'],bmp:['img','BMP','image'],tiff:['img','TIFF','image'],
+      ppt:['pp','PPT','slides'],pptx:['pp','PPT','slides'],odp:['pp','ODP','slides'],
+      pdf:['pdf','PDF','pdf'],
+      doc:['doc','DOC','doc'],docx:['doc','DOC','doc'],odt:['doc','ODT','doc'],rtf:['doc','RTF','doc'],txt:['doc','TXT','doc'],md:['doc','MD','doc'],
+      xls:['xls','XLS','sheet'],xlsx:['xls','XLSX','sheet'],csv:['xls','CSV','sheet'],
+      vtt:['cc','VTT','captions'],srt:['cc','SRT','captions'],
+      zip:['zip','ZIP','archive']
+    };
+    const m=map[e]||['gen','FILE','file'];
+    const a={video:['warn','needs captions + transcript'],audio:['warn','needs transcript'],image:['warn','alt text needed'],
+      slides:['warn','check contrast + alt text'],pdf:['warn','check tagging/structure'],doc:['warn','check heading structure'],
+      sheet:['warn','check table headers'],captions:['pass','captions'],archive:['info','expand to audit'],file:['warn','audit on import']}[m[2]];
+    return {ft:m[0],tag:m[1],cat:m[2],a:a[0],al:a[1]};
+  }
+  function fmtSize(b){if(b==null)return'';const u=['B','KB','MB','GB'];let i=0,n=b;while(n>=1024&&i<u.length-1){n/=1024;i++;}return (n<10&&i>0?n.toFixed(1):Math.round(n))+' '+u[i];}
+
+  const invWrap=document.getElementById('inventory');
+  function aPillFor(a,al){return a==='pass'?`<span class="pill pass" style="font-size:10.5px"><span class="dot"></span>compliant</span>`
+    :a==='info'?`<span class="pill info" style="font-size:10.5px"><span class="dot"></span>${al}</span>`
+    :`<span class="pill a11y" style="font-size:10.5px"><span class="dot"></span>${al}</span>`;}
+  function makeInvRow(it,i){
+    const r=document.createElement('div'); r.className='inv-r';
+    r.innerHTML=`<div class="nm"><span class="ft ${it.ft}" style="display:inline-flex;width:24px;height:24px;font-size:8px;vertical-align:-7px;margin-right:7px">${it.tag}</span>${it.n}<small>${it.d||''}</small></div>
+      <div><div class="seg-ctl" role="group">${['reuse','refresh','rebuild'].map(d=>`<button class="seg-btn" aria-pressed="${it.dec===d}" onclick="setDec(${i},'${d}',this)">${decLabels[d]}</button>`).join('')}</div></div>
+      <div class="ipc"><span class="pill draft" style="font-size:10.5px">${it.ip||'—'}</span></div>
+      <div>${aPillFor(it.a,it.al)}</div>`;
+    return r;
+  }
+  INV.forEach((it,i)=>invWrap.appendChild(makeInvRow(it,i)));
+
+  let invTouched=false;
+  function setDec(i,d,btn){
+    btn.parentElement.querySelectorAll('.seg-btn').forEach(b=>b.setAttribute('aria-pressed','false'));
+    btn.setAttribute('aria-pressed','true'); INV[i].dec=d;
+    if(!invTouched){invTouched=true;addBrief('inv','<b>Content decisions</b> — reuse / refresh / rebuild set per asset');}
+  }
+
+  function addFiles(list){
+    if(!list||!list.length)return;
+    [...list].forEach(f=>{
+      const dt=detectType(f.name);
+      const it={n:f.name,d:fmtSize(f.size),dec:'reuse',ip:'Own',a:dt.a,al:dt.al,ft:dt.ft,tag:dt.tag,cat:dt.cat};
+      INV.push(it); invWrap.appendChild(makeInvRow(it,INV.length-1));
+    });
+    runA11yAudit();
+    removeBrief('upload'); addBrief('upload','<b>'+INV.length+' assets</b> in inventory · uploaded &amp; cataloged');
+  }
+  function addDocs(list){
+    if(!list||!list.length)return;
+    const dl=document.getElementById('docList');
+    [...list].forEach(f=>{const dt=detectType(f.name);const row=document.createElement('div');row.className='doc';
+      row.innerHTML=`<span class="ft ${dt.ft}">${dt.tag}</span><div><b>${f.name}</b><small>${fmtSize(f.size)} · ready to parse</small></div>`;dl.appendChild(row);
+      INV.push({n:f.name,d:fmtSize(f.size),dec:'refresh',ip:'Own',a:dt.a,al:dt.al,ft:dt.ft,tag:dt.tag,cat:dt.cat});invWrap.appendChild(makeInvRow(INV[INV.length-1],INV.length-1));});
+    removeBrief('docs'); addBrief('docs','<b>Course documents</b> — syllabus/outline uploaded'); runA11yAudit();
+  }
+
+  // ---------- ACCESSIBILITY TRACKER (transparent · auditable) ----------
+  const A11Y_CRIT=[
+    {id:"1.1.1",lvl:"A",name:"Non-text content (alt text)",cat:"image"},
+    {id:"1.2.1",lvl:"A",name:"Audio-only & transcripts",cat:"audio"},
+    {id:"1.2.2",lvl:"A",name:"Captions (prerecorded video)",cat:"video"},
+    {id:"1.3.1",lvl:"A",name:"Info & relationships (structure/tags)",cat:"structure"},
+    {id:"1.4.3",lvl:"AA",name:"Contrast (minimum)",cat:"slides"},
+    {id:"2.1.1",lvl:"A",name:"Keyboard accessible",fixed:"pass"},
+    {id:"2.4.6",lvl:"AA",name:"Headings & labels",fixed:"pass"},
+    {id:"3.1.5",lvl:"AAA",name:"Reading level",fixed:"monitor"},
+    {id:"4.1.2",lvl:"A",name:"Name, role, value",fixed:"pass"}
+  ];
+  const CAT2CRIT={image:{id:"1.1.1",s:"Add alt text",sev:"med",own:"Design",tgt:"Wk 6"},slides:{id:"1.4.3",s:"Fix contrast + slide alt text",sev:"high",own:"Design",tgt:"Wk 5"},video:{id:"1.2.2",s:"Add captions + transcript",sev:"high",own:"Media",tgt:"Wk 7"},audio:{id:"1.2.1",s:"Add transcript",sev:"high",own:"Media",tgt:"Wk 7"},pdf:{id:"1.3.1",s:"Tag document structure",sev:"med",own:"Production",tgt:"Wk 8"},doc:{id:"1.3.1",s:"Fix heading structure",sev:"med",own:"Production",tgt:"Wk 8"},sheet:{id:"1.3.1",s:"Add table headers",sev:"med",own:"Production",tgt:"Wk 9"},course:{id:"1.3.1",s:"Repair mixed structure",sev:"med",own:"Production",tgt:"Wk 10"}};
+  const STRUCT_CATS=new Set(["pdf","doc","sheet","course"]);
+  const resolvedKeys=new Set();
+  let ISSUES=[], a11yAuditedOnce=false;
+  function a11yLog(msg){
+    const f=document.getElementById('a11yLedger'); const e=f.querySelector('.feed-empty'); if(e)f.innerHTML='';
+    const d=new Date(), hh=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    const it=document.createElement('div'); it.className='fitem'; it.innerHTML='<span class="ftime mono">'+hh+'</span><span>'+msg+'</span>'; f.prepend(it);
+  }
+  function buildIssues(){
+    ISSUES=INV.filter(x=>x.a!=='pass').map(x=>{const m=CAT2CRIT[x.cat]||{id:"1.3.1",s:"Review",sev:"med",own:"Production",tgt:"Wk 10"};const key=x.n+'|'+m.id;return{key,asset:x.n,cat:x.cat,crit:m.id,label:m.s,sev:m.sev,own:m.own,tgt:m.tgt,resolved:resolvedKeys.has(key)};});
+  }
+  function critOpen(c){
+    if(c.fixed)return -1;
+    return ISSUES.filter(i=>!i.resolved && (i.crit===c.id || (c.cat==='structure'&&STRUCT_CATS.has(i.cat)&&i.crit==='1.3.1'))).length;
+  }
+  function renderA11y(){
+    buildIssues();
+    const total=ISSUES.length, resolved=ISSUES.filter(i=>i.resolved).length, open=total-resolved;
+    const conf= total? Math.round(resolved/total*100):100;
+    document.getElementById('a11ySources').textContent=INV.length;
+    document.getElementById('a11yOpen').textContent=open;
+    document.getElementById('a11yResolved').textContent=resolved;
+    document.getElementById('a11yConf').textContent=conf+'%';
+    const bar=document.getElementById('a11yConfBar'); bar.style.width=conf+'%';
+    bar.style.background = conf===100?'var(--pass)':conf>=50?'var(--attention)':'var(--danger)';
+    const critN=ISSUES.filter(i=>!i.resolved&&i.sev==='high').length, medN=open-critN;
+    document.getElementById('a11ySummary').innerHTML = total
+      ? '<b>'+open+' open issue'+(open===1?'':'s')+'</b> ('+critN+' critical, '+medN+' moderate) across '+INV.length+' sources — each mapped to a WCAG criterion with an owner and target week, scheduled into Production. Resolve as remediation completes; conformance and the audit trail update live.'
+      : 'No accessibility issues open. All audited sources conform to WCAG 2.1 AA.';
+    // criteria — WCAG level + formal ACR conformance status
+    document.getElementById('a11yCriteria').innerHTML = A11Y_CRIT.map(c=>{
+      const o=critOpen(c);
+      let acr,cls;
+      if(c.fixed==='pass'){acr='Supports';cls='supports';}
+      else if(c.fixed==='monitor'){acr='Supports*';cls='supports';}
+      else if(o>0){acr='Partially supports';cls='partial';}
+      else{acr='Supports';cls='supports';}
+      const note=o>0?' <span class="muted" style="font-size:10.5px">('+o+' open)</span>':'';
+      return '<div class="crit-row"><span class="crit-id">'+c.id+'</span><span class="lvlb">'+c.lvl+'</span><span class="crit-name">'+c.name+note+'</span><span class="acr '+cls+'">'+acr+'</span></div>';
+    }).join('');
+    // queue — per asset, with owner + target week
+    const q=document.getElementById('a11yQueue');
+    if(!ISSUES.length){q.innerHTML='<div class="muted" style="font-size:12.5px;font-style:italic">No issues — sources conform.</div>';}
+    else{
+      const ordered=[...ISSUES].sort((a,b)=>(a.resolved-b.resolved)||(a.sev<b.sev?1:-1));
+      q.innerHTML=ordered.map(i=>`<div class="q-row${i.resolved?' res':''}">
+        <div class="q-main"><b>${i.asset}</b><small>${i.label}</small><div class="q-meta"><span class="q-own">${i.own}</span><span>· target ${i.tgt}</span><span>· WCAG ${i.crit}</span></div></div>
+        <span class="sev ${i.sev}">${i.sev==='high'?'Critical':'Moderate'}</span>
+        ${i.resolved?'<span class="q-done">✓ resolved</span>':'<button class="q-resolve" onclick="resolveA11y(\''+i.key.replace(/'/g,"\\'")+'\')">Resolve</button>'}
+      </div>`).join('');
+    }
+  }
+  function resolveA11y(key){
+    resolvedKeys.add(key);
+    const it=ISSUES.find(i=>i.key===key);
+    renderA11y();
+    if(it)a11yLog('✓ Resolved · '+it.asset+' ('+it.crit+')');
+    const open=ISSUES.filter(i=>!i.resolved).length;
+    if(open===0)a11yLog('★ All tracked issues resolved · WCAG 2.1 AA conformance reached');
+  }
+  function runA11yAudit(){
+    const before=ISSUES.length; buildIssues();
+    renderA11y();
+    const total=ISSUES.length;
+    a11yLog((a11yAuditedOnce?'Re-audited ':'Audited ')+INV.length+' sources · '+total+' issue'+(total===1?'':'s')+' logged against WCAG 2.1 AA');
+    a11yAuditedOnce=true;
+    removeBrief('a11y'); addBrief('a11y','<b>Accessibility audit</b> — '+ISSUES.filter(i=>!i.resolved).length+' open of '+total+' tracked');
+  }
+  function genACR(){
+    buildIssues();
+    let supports=0, partial=0; const partials=[];
+    A11Y_CRIT.forEach(c=>{
+      if(c.fixed==='pass'||c.fixed==='monitor'){supports++;return;}
+      const o=critOpen(c);
+      if(o>0){partial++;partials.push(c.id+' '+c.lvl+' · '+c.name+' — '+o+' open');}
+      else supports++;
+    });
+    const total=ISSUES.length, resolved=ISSUES.filter(i=>i.resolved).length, conf=total?Math.round(resolved/total*100):100;
+    const out=document.getElementById('acrOut'); out.style.display='block';
+    out.innerHTML='<div class="acr-h">Accessibility Conformance Report · WCAG 2.1 Level AA</div>'+
+      '<div class="acr-line"><b>'+(partial===0?'Conforms':'Partially conforms')+'</b> — '+supports+' criteria Support, '+partial+' Partially Support. Remediation '+conf+'% complete ('+resolved+' of '+total+' issues resolved).</div>'+
+      (partials.length?'<div class="acr-sub">Partially supports — open items:</div><ul class="acr-ul">'+partials.map(p=>'<li>'+p+'</li>').join('')+'</ul>':'<div class="acr-sub">All tracked criteria Support — full WCAG 2.1 AA conformance.</div>')+
+      '<div class="acr-foot">Method: axe-core + manual screen-reader/keyboard testing. Generated '+new Date().toLocaleString()+' · draft for review.</div>';
+    a11yLog('Generated conformance report (ACR) · '+supports+' support / '+partial+' partial');
+  }
+  renderA11y();
+
+  // ---------- drop-zone wiring ----------
+  function wireDrop(zoneId,inputId,handler){
+    const z=document.getElementById(zoneId), inp=document.getElementById(inputId);
+    z.addEventListener('click',()=>inp.click());
+    z.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inp.click();}});
+    inp.addEventListener('change',e=>{handler(e.target.files);inp.value='';});
+    ['dragenter','dragover'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.add('over');}));
+    ['dragleave','dragend'].forEach(ev=>z.addEventListener(ev,()=>z.classList.remove('over')));
+    z.addEventListener('drop',e=>{e.preventDefault();z.classList.remove('over');handler(e.dataTransfer.files);});
+  }
+  wireDrop('dropInv','fileInv',addFiles);
+  wireDrop('dropDoc','fileDoc',addDocs);
+
+  // ---------- shared: pre-fill, brief, weeks ----------
+  function parse(){
+    SEG.forEach((s,i)=>{ if(s.pre){const pf=document.getElementById('pf'+i);pf&&pf.classList.add('on');const blk=document.getElementById('pre'+i);if(blk)blk.style.display='block';}});
+    document.getElementById('parseBtn').textContent='Parsed ✓';
+    document.getElementById('pnote').classList.add('on');
+    document.getElementById('structSrc').innerHTML='<span class="pill draft">from syllabus</span>';
+    addBrief('struct','<b>Course structure</b> — 15 wk · 3 cr · 14 modules (from syllabus)');
+    runA11yAudit();
+  }
+  function confirmPre(i,j,key){const el=document.getElementById('pre'+i+'_'+j);el.classList.add('confd');addBrief('pre'+i+'_'+j,'<b>'+key+'</b> — confirmed');}
+
+  const brief=document.getElementById('brief'); let briefItems=0;
+  function addBrief(id,html){if(document.getElementById('b_'+id))return;if(briefItems===0)brief.innerHTML='';const li=document.createElement('li');li.id='b_'+id;li.innerHTML='<span class="bdot"></span><span>'+html+'</span>';brief.appendChild(li);briefItems++;document.getElementById('briefCount').textContent=briefItems+' captured';}
+  function removeBrief(id){const el=document.getElementById('b_'+id);if(!el)return;el.remove();briefItems--;document.getElementById('briefCount').textContent=briefItems+' captured';if(briefItems===0){brief.innerHTML='<li class="empty">Confirm a field, cover a checklist, or set a content decision to start the brief.</li>';}}
+
+  function renderWeeks(weeks){const m=document.getElementById('weekmap');m.innerHTML='';let mod=1;for(let w=1;w<=weeks;w++){const d=document.createElement('div');let cls='wk',label;if(w===8){cls+=' special';label='Rev';}else if(w===15){cls+=' special2';label='Fin';}else{label='M'+mod;mod++;}d.className=cls;d.innerHTML=`<div class="wn">${w}</div><div class="mn">${label}</div>`;m.appendChild(d);} }
+  renderWeeks(15); prog();
+
+  // ---------- MEETING RECORDER → TRANSCRIBE → NEXT AGENDA ----------
+  let recTimer=null, recSecs=0;
+  function fmtClock(s){const m=Math.floor(s/60),x=s%60;return String(m).padStart(2,'0')+':'+String(x).padStart(2,'0');}
+  function toggleRec(){
+    const btn=document.getElementById('recBtn'), st=document.getElementById('recStatus'), meter=document.getElementById('meter');
+    if(!recTimer){
+      recSecs=0; document.getElementById('recClock').textContent='00:00';
+      recTimer=setInterval(()=>{recSecs++;document.getElementById('recClock').textContent=fmtClock(recSecs);},1000);
+      btn.classList.add('recording'); btn.querySelector('.rlbl').textContent='Stop';
+      st.textContent='Recording…'; meter.classList.add('on');
+    } else {
+      clearInterval(recTimer); recTimer=null;
+      btn.classList.remove('recording'); btn.querySelector('.rlbl').textContent='Record';
+      meter.classList.remove('on'); st.textContent='Transcribing…';
+      setTimeout(()=>{
+        document.getElementById('recStatus').textContent='Transcript ready · '+fmtClock(recSecs||(2*60+14));
+        const pane=document.getElementById('transcriptPane'); pane.style.display='block'; pane.scrollIntoView({block:'nearest'});
+        addBrief('rec','<b>Meeting recorded &amp; transcribed</b> — decisions, open items, actions extracted');
+        if(document.getElementById('rule_notify').checked) feed('⚡ Auto: drafted faculty note · 3 action items');
+      },1400);
+    }
+  }
+
+  const FALLBACK_AGENDA=[
+    {time:"0:00",title:"Recap & decisions confirmed",purpose:"Confirm what we locked in the kickoff."},
+    {time:"0:05",title:"Open items from kickoff",purpose:"Resolve AI-voiceover scope, learnersourcing, and cohort accommodations."},
+    {time:"0:15",title:"Backward design review",purpose:"Walk the alignment map; close any outcome–assessment gaps."},
+    {time:"0:30",title:"Prototype module walkthrough",purpose:"Review Module 4; faculty sign-off to propagate the pattern."},
+    {time:"0:45",title:"Media & accessibility plan check",purpose:"Captioning/alt-text progress and the remediation queue."},
+    {time:"0:55",title:"Action items & timeline",purpose:"Confirm owners and dates; schedule the next review."}
+  ];
+  async function genNextAgenda(){
+    const out=document.getElementById('nextAgenda'); out.style.display='block';
+    const emp=document.getElementById('nextAgendaEmpty'); if(emp)emp.style.display='none';
+    const body=document.getElementById('nextAgendaBody');
+    body.innerHTML='<p class="muted" style="font-size:13px;margin:0">Drafting the next agenda from the transcript…</p>';
+    out.scrollIntoView({block:'nearest'});
+    const transcript=document.getElementById('transcriptText').innerText.trim();
+    const items=document.getElementById('extracted').innerText.trim();
+    let segs=null;
+    try{
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,messages:[{role:"user",content:
+          `You are an instructional designer. From this course-design kickoff transcript and its extracted items, draft the agenda for the NEXT meeting (a design review / prototype walkthrough). Carry forward the open questions and action items. Return ONLY a JSON array of 5-6 objects {"time":"M:SS","title":"short","purpose":"one sentence"} — no prose, no markdown.\n\nTRANSCRIPT:\n${transcript}\n\nEXTRACTED:\n${items}`}]})});
+      const data=await r.json();
+      const txt=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').replace(/```json|```/g,'').trim();
+      const parsed=JSON.parse(txt);
+      if(Array.isArray(parsed)&&parsed.length) segs=parsed;
+    }catch(e){ segs=null; }
+    renderNextAgenda(segs||FALLBACK_AGENDA);
+  }
+  function renderNextAgenda(segs){
+    document.getElementById('nextAgendaBody').innerHTML=segs.map(s=>
+      `<div class="naseg"><span class="natime">${(s.time||'').replace(/[<>]/g,'')}</span><div><b>${(s.title||'').replace(/[<>]/g,'')}</b><small>${(s.purpose||'').replace(/[<>]/g,'')}</small></div></div>`).join('');
+    addBrief('next','<b>Next-meeting agenda</b> — drafted, ready to review &amp; send');
+  }
+
+  // ---------- SOCRATIC INQUIRY ----------
+  function toggleSoc(i){const b=document.getElementById('soc'+i);b.style.display=b.style.display==='none'?'block':'none';}
+  async function socFollow(i){
+    const note=(wrap.children[i].querySelector('textarea').value||'').trim();
+    const topic=SEG[i].title;
+    const tgt=document.getElementById('socAi'+i);
+    tgt.innerHTML='<span class="muted" style="font-size:12px">Thinking of a deeper question…</span>';
+    const fallback=["What are you assuming here that we haven't tested with students?","What evidence would change your mind about this?","If the opposite were true, how would the design have to change?","Who does this decision serve best — and who might it leave behind?"];
+    let q=null;
+    try{
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:120,messages:[{role:"user",content:
+          `You are a Socratic instructional-design coach in a course kickoff. Topic: "${topic}". Notes so far: "${note||'(none captured yet)'}". Ask ONE short, probing Socratic question that surfaces an assumption, demands evidence, or exposes an implication — to push toward a better curriculum decision. Return only the question, no preamble.`}]})});
+      const data=await r.json();
+      q=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim().replace(/^["']|["']$/g,'');
+    }catch(e){ q=null; }
+    if(!q) q=fallback[Math.floor(Math.random()*fallback.length)];
+    tgt.innerHTML='<div class="soc-q"><span class="sm">probe</span><span>'+q.replace(/[<>]/g,'')+'</span></div>';
+  }
+
+  // ---------- TIME TRACKING + AUTOMATION (Wrike-style) ----------
+  const T=SEG.map(()=>({secs:0,run:false,status:'todo'}));
+  let active=null, ticker=null;
+  function fmtT(s){const m=Math.floor(s/60);return m+':'+String(s%60).padStart(2,'0');}
+  function feed(msg){
+    const f=document.getElementById('feed'); const e=f.querySelector('.feed-empty'); if(e)f.innerHTML='';
+    const d=new Date(), hh=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    const it=document.createElement('div'); it.className='fitem'; it.innerHTML='<span class="ftime mono">'+hh+'</span><span>'+msg+'</span>'; f.prepend(it);
+  }
+  function ruleOn(id){const el=document.getElementById(id);return el&&el.checked;}
+  function setStatus(i,s){T[i].status=s;const p=document.getElementById('st'+i);p.className='stat-pill '+s;p.textContent=s==='todo'?'To do':s==='doing'?'In progress':'Done';}
+  function updTimerUI(i){document.getElementById('tt'+i).textContent=fmtT(T[i].secs);document.getElementById('tmr'+i).classList.toggle('running',T[i].run);}
+  function updTotal(){document.getElementById('totalTime').textContent=fmtT(T.reduce((a,x)=>a+x.secs,0))+' logged';}
+  function setActive(){const el=document.getElementById('activeTimer');if(active===null){el.style.display='none';}else{el.style.display='inline-flex';document.getElementById('activeName').textContent=SEG[active].title;}}
+  function tick(){if(active!==null){T[active].secs++;updTimerUI(active);}updTotal();}
+  function startTimer(i){
+    if(active!==null&&active!==i)pauseTimer(active);
+    T[i].run=true;active=i;if(!ticker)ticker=setInterval(tick,1000);
+    updTimerUI(i);setActive();
+    if(ruleOn('rule_status')&&T[i].status==='todo'){setStatus(i,'doing');feed('⚡ Auto: '+SEG[i].title+' → In progress');}
+    feed('▶ Started timer · '+SEG[i].title);
+  }
+  function pauseTimer(i){
+    if(!T[i].run)return;T[i].run=false;if(active===i)active=null;
+    updTimerUI(i);setActive();updTotal();
+    if(active===null&&ticker){clearInterval(ticker);ticker=null;}
+    feed('⏸ Paused · '+SEG[i].title+' · '+fmtT(T[i].secs)+' logged');
+  }
+  function toggleTimer(i,e){if(e)e.stopPropagation();T[i].run?pauseTimer(i):startTimer(i);}
+  function autoComplete(i,complete){
+    if(!complete)return;
+    if(ruleOn('rule_done')&&T[i].status!=='done'){
+      const had=T[i].run; if(had){T[i].run=false;if(active===i)active=null;updTimerUI(i);setActive();if(active===null&&ticker){clearInterval(ticker);ticker=null;}}
+      setStatus(i,'done');updTotal();
+      feed('⚡ Auto: '+SEG[i].title+' → Done · '+fmtT(T[i].secs)+' logged');
+      if(ruleOn('rule_advance')){const n=i+1;if(n<SEG.length){if(!wrap.children[n].classList.contains('open'))toggle(n);startTimer(n);feed('⚡ Auto: advanced to '+SEG[n].title);}}
+    }
+  }
+</script>

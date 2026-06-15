@@ -17,12 +17,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar */}
-      <div className="hidden border-r bg-card md:flex md:w-64 md:flex-col">
-        <div className="flex h-14 items-center border-b px-4 font-semibold text-primary">
-          <div className="mr-2 flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold">
-            ID
+      <div className="hidden border-r border-sidebar-border bg-sidebar md:flex md:w-64 md:flex-col">
+        <div className="flex h-14 items-center border-b border-sidebar-border px-4 font-semibold text-sidebar-foreground">
+          <div className="mr-2 flex h-6 w-6 items-center justify-center rounded bg-gradient-to-br from-sidebar-primary to-teal-400 text-white text-xs font-bold relative overflow-hidden">
+            <div className="absolute inset-0 m-auto w-3 h-3 border border-white rotate-45" />
+            <span className="relative z-10 text-[10px]">ID</span>
           </div>
-          Production Engine
+          ID Production Engine
         </div>
         <ScrollArea className="flex-1 py-4">
           <nav className="space-y-1 px-2">
@@ -34,14 +35,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   className={cn(
                     isActive
-                      ? "bg-secondary text-secondary-foreground"
-                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     "group flex items-center rounded-md px-2 py-2 text-sm font-medium"
                   )}
                 >
                   <item.icon
                     className={cn(
-                      isActive ? "text-secondary-foreground" : "text-muted-foreground group-hover:text-foreground",
+                      isActive ? "text-sidebar-primary-foreground" : "text-sidebar-foreground/70 group-hover:text-sidebar-accent-foreground",
                       "mr-3 h-4 w-4 flex-shrink-0"
                     )}
                     aria-hidden="true"
@@ -52,14 +53,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
         </ScrollArea>
-        <div className="border-t p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-xs font-medium">
+        <div className="border-t border-sidebar-border p-4">
+          <div className="flex items-center gap-3 text-sidebar-foreground">
+            <div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center text-xs font-medium">
               ID
             </div>
             <div className="text-sm">
               <p className="font-medium">Instructional Designer</p>
-              <p className="text-xs text-muted-foreground">Admin</p>
+              <p className="text-xs text-sidebar-foreground/70">Admin</p>
             </div>
           </div>
         </div>
