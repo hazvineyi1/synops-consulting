@@ -1,0 +1,163 @@
+# Build Prompt — UVA Production Engine (v7, standards + grounding aligned)
+
+> **How to use this:** Paste into your AI coding agent as the project brief. Supersedes v6. Built around **UVA RFP #1214651**, the real ID engagement lifecycle, grounded in **Khosravi, Sadiq & Gasevic (2020), "Development and Adoption of an Adaptive Learning System" (RiPPLE, SIGCSE '20)**, and aligned to **programmatic accreditation + state licensure standards** (§2). **Ask before guessing** on security, FERPA/data residency, or accessibility behavior; refuse anything in "Do NOT build."
+
+---
+
+## 0. Frame and thesis
+
+One platform, one company, **helper alongside specialists** — the firm's internal production engine for winning and delivering the UVA services contract. Not a SaaS, not a product UVA adopts. UVA keeps Canvas; we build *in* Canvas. Faculty are the academic authority; OEDI owns quality oversight; every automated output is a draft a qualified human approves.
+
+**Core thesis — "build once, prove automatically."** The act of building produces the proof as a byproduct.
+
+**The engine runs the real engagement lifecycle** as a stage-gated pipeline: Kickoff & Intake → Backward Design → Prototype → Production → QA & Accessibility → Handoff (full stage detail in §4).
+
+---
+
+## 1. Grounding alignment (the "makes sense" layer)
+
+The grounding paper studies a *runtime* adaptive system students use; this is a *production* tool the firm uses. So its principles apply at **two layers**: requirements of the **engine** itself, and evidence-based **curricula patterns the engine produces into Canvas courses**. The engine never becomes a hosted adaptive recommender or crowdsourcing platform — it *designs and assembles* these patterns using native Canvas features, and faculty/OEDI stay the academic authority and data custodians.
+
+| Grounding principle (Khosravi et al., 2020) | Engine layer (the tool) | Curricula layer (what the engine produces) | Scope guard |
+|---|---|---|---|
+| **G1 — Instructors in charge; helper-not-replacement; co-design; instructor as data custodian** (§3.3) | Kickoff co-design; faculty-facing alignment map; faculty-owned approvals at every gate | Courses keep faculty voice/authority; activities route decisions to faculty | Engine never makes academic decisions; faculty own data |
+| **G2 — Transparency over black-box; open learner models build trust** (§3.2) | **Evidence Ledger** = transparent production record for faculty/OEDI | **Open progress model** in courses — transparent mastery view, **decoupled from high-stakes** so it doesn't discourage risk-taking | No hidden recommendation logic; no opaque scoring |
+| **G3 — Adapt on knowledge/mastery state, NOT learning styles** (intro, §3.2) | Alignment + QA key off outcomes/mastery, not style | **Mastery-based practice** and misconception-targeted formative checks; retain/understand/apply media design | **No learning-style classifier anywhere** |
+| **G4 — Engage learners as partners (learnersourcing); higher-order learning + evaluative judgement; needs moderation + incentives** (§3.1) | A reusable **learnersourcing activity template** with built-in moderation + incentive design | Students create/evaluate resources (worked examples, MCQs, peer review) → higher-order learning | Designed *activity* in Canvas (peer review/discussion), **not** a hosted crowdsourcing platform |
+| **G5 — Motivation/gamification only when it targets learning behaviors** (§3.5) | Optional, evidence-gated engagement components in the design library | Progress/badges/low-stakes practice applied **only** where they target learning | Off by default; never gamify for its own sake |
+| **G6 — Usability, flexibility (LTI/LMS), scalability are adoption requirements; authoring overhead is the real bottleneck** (§3.6) | Canvas-native + standards/LTI export; usability-tested; intake acceleration + born-accessible authoring + reuse attack the ~200→~25 expert-hr/instructional-hr overhead | Courses ship in the tools faculty already use | Pedagogy alone isn't enough — the tool must be lived-in |
+| **G-ethics — Ethical, low-cost efficacy measurement (consent, transparency, non-maleficence; quasi-experiments)** (§3.4) | **Efficacy-measurement capability**: pre/post + low-stakes design comparisons, consent-based, instructor-owned | Courses can be evaluated and improved on evidence | Answers RFP "Demonstrated Efficacy" (20%); consent revocable; do no harm |
+
+---
+
+## 2. Standards, accreditation & licensure alignment
+
+Beyond accessibility (WCAG) and institutional quality (OEDI's rubric), many UVA programs answer to **programmatic/specialized accreditors** (e.g., ABET, AACSB, CCNE/ACEN, CAEP, CACREP, CSWE, CEPH, ABA, LCME) and **state licensure boards**. These set requirements across three dimensions: **curricula** (required competencies and content coverage), **faculty** (qualifications/credentials), and **clinical or laboratory** requirements (supervised hours, simulation, lab components). The engine makes the design *provably aligned* to whichever apply and produces the crosswalk evidence as a byproduct — "build once, prove automatically," applied to accreditation.
+
+**What the engine does (supports meeting standards):**
+- **Capture (Intake):** record the governing accreditor(s) and state licensure board(s) per program/course; import their competency framework as a `StandardsFramework`.
+- **Crosswalk (Backward Design):** map course/module outcomes and assessments to required accreditor competencies and licensure standards — a second alignment layer beside the University→Program→Course cascade — with gap flags when a required competency is untaught or unassessed.
+- **Curriculum coverage:** verify required content/competencies are present and assessed.
+- **Clinical/lab (Production):** for applicable courses, design and track required practicum/clinical hours, supervised practice, simulation, and lab components with competency checkpoints.
+- **Coverage gate (QA):** no required competency may be unmapped before delivery.
+- **Evidence (Handoff):** generate a **Standards Crosswalk / Accreditation Alignment Report** from the Evidence Ledger — directly usable in the program's accreditation self-study and licensure documentation.
+
+**What the engine does NOT do (the boundary that keeps it defensible):** it does not grant accreditation, make faculty-credentialing decisions, or approve clinical sites — those stay with the program, the accreditor, and the licensure board (consistent with **G1**: faculty/OEDI are the authority and data custodian). Faculty-qualification and clinical-placement requirements are *captured and flagged* for the program; the vendor deliverable is the curricular alignment and the evidence.
+
+---
+
+## 3. Innovation layer (the differentiators, now grounded)
+
+- **Build once, prove automatically** — proof falls out of the work (G2).
+- **Intake acceleration** — source materials → draft skeleton + draft objectives; attacks the authoring-overhead bottleneck the paper quantifies (G6).
+- **Objectives cascade + faculty-facing alignment** — backward design as a shared, co-designed instrument (G1).
+- **Prototype-as-gate** — de-risk once, propagate the pattern; the efficiency that makes flat tier pricing profitable.
+- **Born-accessible authoring** — conformance by construction (RFP 15% + cost).
+- **Evidence-based lecture/media development** — retain/understand/apply, mastery-keyed, never style-keyed (G3).
+- **Learnersourcing pattern** — students-as-partners activities with moderation + incentives (G4) — a distinctive, evidence-grounded design signature that also maps to UVA's active-learning/authentic-assessment priorities (A3).
+- **Governed AI with provenance + closed-model option** — accelerant under human control; auto-generates the AI disclosure.
+- **Accreditation/licensure crosswalk** — outcomes and assessments mapped to programmatic-accreditor competencies and state licensure standards, with the crosswalk report generated from the ledger (§2); a high-value, painful deliverable for professional programs that competitors rarely automate.
+
+---
+
+## 4. The pipeline (stages, with grounding woven in)
+
+### Stage 0 — Kickoff & Intake
+Co-design kickoff with the instructor/SME (**G1**). Ingest sources (text, PPTX, PDF, prior builds, recordings); AI parses them into a **draft course skeleton + draft objectives**, human-reviewed (**G6** overhead reduction). Capture philosophy, vision, **course structure & pacing** (term weeks, credits, module count, explicit module↔week mapping, seat-time), modality, tier. Model the **objectives cascade**: University → Program → Course → Module LOs (**G3** mastery framing). Capture any governing **programmatic accreditor(s) and state licensure board(s)** and import their competencies as a `StandardsFramework` (**§2**). An **interactive built-in agenda** runs the meeting and writes captures into the Intake Brief; existing syllabi/outlines pre-fill it (confirm-not-gather). *Artifacts: Intake Brief, objectives cascade, course outline, course-structure record, standards framework.*
+
+### Stage 1 — Backward Design
+Derive assessments and activities *from* objectives via the **faculty-facing alignment map** (**G1**), enforcing constructive alignment end to end. Run the **accreditation/licensure crosswalk**: map outcomes and assessments to required accreditor competencies and state licensure standards, flagging any untaught or unassessed requirement (**§2**). Design in **mastery/knowledge-state** terms — evidence of mastery and misconception targeting, not style (**G3**). Where appropriate, design the **learnersourcing activity** here: students create/evaluate resources, with a chosen **moderation policy** (staff / peer / staff-review-on-student) and **incentive structure** (assessment weight, bonus, or gamified) — both required for quality and engagement per the paper (**G4**). *Artifacts: alignment chart, module objectives, assessment plan.*
+
+### Stage 2 — Prototype Module (a gate)
+Build one module end-to-end (content, one lecture object, one interactive, one assessment, and — if used — one learnersourcing activity). Faculty sign-off converts it into the **propagation template**. *Artifacts: prototype module, blueprint, approval.*
+
+### Stage 3 — Production (scaled build)
+Propagate the pattern; three lanes, all born-accessible and ledger-logged.
+- **3a. Content authoring (born-accessible)** with UDL/inclusive checks.
+- **3b. Lecture & media development (evidence-based)** — segment + caption + enhance for **retain** (retrieval/spacing), **understand** (dual coding, worked examples — Mayer/CLT), **apply** (scenario/transfer). Mastery-keyed, never style-keyed (**G3**). Asset requests → media pipeline (rate-card keyed, duration guardrails).
+- **3c. Interactives, assignments, discussions, and learnersourcing** — built from aligned assessments; learnersourcing assembled from native Canvas peer-review/discussion with its moderation + incentive design (**G4**).
+- Optional **open progress model** for the course: a transparent mastery/progress view built on Canvas outcomes, **decoupled from high-stakes** practice (**G2**); and a bounded **engagement layer** only where it targets learning (**G5**).
+- **Clinical/lab/practicum** (where the program requires it): design and track required supervised hours, simulation, and lab components with competency checkpoints, mapped to the standards framework (**§2**). Placement/site approval stays program-owned.
+
+### Stage 4 — QA & Accessibility
+QA against OEDI's own rubric (configurable; QM optional). Born-accessible means most criteria already pass; final axe + manual audit + remediation incl. UVA-provided assets. A **standards-coverage gate** blocks delivery if any required accreditor/licensure competency is unmapped (**§2**). Hard gates. *Artifacts: QA scorecard, accessibility findings + remediation log, standards-coverage report.*
+
+### Stage 5 — Handoff & Review
+Canvas-native build/handoff (+ Common Cartridge/SCORM/LTI export); brand-standard compliant; read-only client portal; **proof artifacts generated from the Evidence Ledger** (Accessibility Conformance Report + methodology, AI Usage Disclosure, Design Rationale, and — where applicable — the **Standards Crosswalk / Accreditation Alignment Report** for the program's self-study and licensure documentation, **§2**). If the SOW includes it, stand up the consent-based **efficacy-measurement** plan (pre/post or low-stakes design comparison), instructor-owned (**G-ethics**). Revision/Redevelopment loop re-enters the pipeline.
+
+---
+
+## 5. Do NOT build (reconciled scope)
+
+- ❌ A runtime adaptive recommender / hosted student crowdsourcing platform. The engine *designs and assembles* learnersourcing, open-progress, and mastery-practice patterns into Canvas using native features — it does not host or run a live ALS. (This is the boundary that keeps the grounding alignment sensible.)
+- ❌ Any learning-style detection or style-based adaptation (**G3**). Learning science lives in design, not a runtime classifier.
+- ❌ Multi-tenant SaaS scaffolding, SSO/SAML/OIDC, SCIM, self-serve onboarding.
+- ❌ Multi-LMS adapter framework (Canvas only; standards/LTI export fallback).
+- ❌ Kubernetes, Terraform, Temporal, OpenSearch, microservice split. One monolith, managed infra.
+- ❌ Billing/ERP module (estimates + actuals only; invoicing via finance + UVA PO/Workday).
+- ❌ Granting accreditation, making faculty-credentialing decisions, or approving clinical sites. The engine captures, crosswalks, flags, and evidences standards (**§2**); the program, accreditor, and licensure board own the decisions.
+- ❌ Any feature that removes a human from an academic, quality, or accessibility decision, or that treats the firm (not faculty/OEDI) as the data custodian.
+
+---
+
+## 6. Data model (lifecycle + grounding)
+
+Core: `Client`, `Project`, `SOW`, `User`, `Role`.
+Intake: `IntakeBrief`, `SourceArtifact`, `KickoffAgenda` (template + captures), `CourseStructure` (format, weeks, credits, module count, module↔week map, seat-time).
+Objectives: `ObjectiveCascade` with `Objective` (`university|program|course|module`), `AlignmentLink`.
+Structure: `Program`, `Course`, `CourseVersion`, `Module`, `Lesson`.
+Design/build: `Assessment`, `Activity`, `PrototypeApproval`, `Asset` (+`AssetType` rate-card-keyed, `AssetVersion`), `LectureObject` (+`Segment`, `MediaEnhancement` tagged `retain|understand|apply`).
+**Grounding additions:** `LearnersourcingActivity` (+`ModerationPolicy`, `IncentiveStructure`), `OpenProgressModel` (mastery view config; high-stakes-decoupled flag), `MasteryPracticeSet`, `EngagementComponent` (evidence-gated, default off), `EfficacyStudy` (design, `Consent` records, instructor-as-custodian).
+**Standards additions:** `StandardsFramework` (accreditor / state licensure board), `StandardCompetency`, `StandardsCrosswalkLink` (competency ↔ outcome ↔ assessment), `ClinicalLabRequirement` (hours/simulation/checkpoints), `FacultyQualificationRequirement` (captured + flagged, not adjudicated).
+Govern/prove: `AIGenerationLog`, `EvidenceLedgerEntry`, `QARubric` (OEDI-importable), `QACheckResult`, `DesignCheck` (UDL/inclusive/brand), `AccessibilityScan`, `AccessibilityIssue`, `RemediationTask`.
+Deliver/manage: `Milestone`, `Task`, `Assignment`, `Estimate`, `SMEEngagement`, `CanvasPublishJob`, `Stage` (gate state), `AuditEvent`.
+
+---
+
+## 7. Non-functional & tech (carried, grounded by G6)
+
+RBAC + per-client/project segregation; MFA; **US data residency for Protected University Data** (DPA §3b); FERPA "school official"; encryption in transit (FIPS 140-2) and at rest; Protected University Data per **NIST 800-171 or ISO/IEC 27002** (ISO 27001 / SOC 2 Type II recognized); immutable audit logging; async jobs (ingestion/extraction/scans/AI/media); backups + restore; **platform UI meets WCAG 2.1 AA**. **Usability is a first-class requirement (G6):** new-user observation, focus groups, in-app feedback, and analytics on under-used features inform iteration; mobile-aware.
+
+Stack: Next.js + TypeScript + Tailwind + React Aria/Radix; one backend app with background workers (BullMQ); PostgreSQL (+ full-text search) with row-level isolation; Redis; S3-compatible storage + CDN; document parsing (pdf/pptx/docx) for intake; thin adapters for AI providers and Canvas/standards (LTI) export; Docker on managed host (no K8s/Terraform v1). CI: tests + SAST + dependency scan + **axe on all UI**.
+
+---
+
+## 8. Build phases
+
+- **P0 Foundation:** repo, CI/CD, auth+MFA, RBAC + segregation, accessible UI shell, observability, audit logging, US-residency controls, Evidence Ledger primitive, Stage/gate model.
+- **P1 Intake:** source upload + parsing → draft skeleton/objectives; objectives cascade; **CourseStructure** (weeks/modules/mapping); **StandardsFramework** capture (accreditor/licensure); interactive agenda with syllabus pre-fill.
+- **P2 Backward Design:** alignment engine + faculty-facing map; assessment/activity derivation; **accreditation/licensure crosswalk** with gap flags; **learnersourcing activity designer** (moderation + incentive).
+- **P3 Prototype + Born-accessible authoring:** single-module build; approval → propagation; compliant-by-construction editor + UDL checks.
+- **P4 Production — media & curricula patterns:** lecture object workspace (retain/understand/apply); interactives/assignments/discussions; learnersourcing assembly; optional open-progress model + bounded engagement; governed AI with provenance.
+- **P5 QA & Accessibility:** OEDI rubric, automated checks, audit + remediation, hard gates; **standards-coverage gate**; conformance report from ledger.
+- **P6 Handoff & Review:** Canvas build/handoff + standards/LTI export; client portal; proof artifacts (incl. **Standards Crosswalk / Accreditation Alignment Report** where applicable); **efficacy-measurement (consent-based, instructor-owned)**; revision/redevelopment loop; estimate + actuals.
+
+---
+
+## 9. Acceptance criteria
+
+- Each stage advances only when its gates are clear; gate state visible and enforced.
+- Objectives trace up the cascade and down to ≥1 assessment and ≥1 activity, or are flagged; structure models weeks, modules, and their mapping.
+- Born-accessible: content can't save missing alt text/caption/heading order.
+- Learnersourcing activities cannot be created without a moderation policy and an incentive structure (per **G4**); open-progress models carry the high-stakes-decoupled flag (per **G2**).
+- No learning-style classifier exists anywhere (**G3**); engine performs no runtime adaptive recommendation or crowdsourcing hosting (**§5**).
+- For accredited/licensure-bearing programs, every required competency maps to ≥1 outcome and ≥1 assessment or is flagged; delivery is blocked while any required competency is unmapped (**§2**). The engine never asserts accreditation status or credentials faculty.
+- Evidence Ledger generates conformance report + methodology, AI disclosure, and design rationale from real data.
+- Efficacy studies require recorded, revocable consent; faculty are the data custodian.
+- Client portal shows real live data; per-client/project isolation verified; Protected University Data never leaves the US; platform UI passes WCAG 2.1 AA.
+
+---
+
+## 10. Guardrails
+
+- **Helper, never replacement;** faculty/OEDI own academic, quality, and accessibility decisions and are the data custodians (**G1**).
+- **Transparency by default** (Evidence Ledger; open progress decoupled from high-stakes) (**G2**).
+- **Mastery, not style** (**G3**); **learnersourcing always carries moderation + incentives** (**G4**); **engagement only when it targets learning** (**G5**).
+- **Standards alignment supports, never asserts:** the engine captures, crosswalks, flags, and evidences accreditation/licensure requirements; the program, accreditor, and board grant accreditation and credential faculty (**§2**).
+- Build to the RFP and the grounding, not past them; honor §5. Route all AI through the gateway + Evidence Ledger; synthetic data only in tests; enforce US residency.
+- Keep accessibility, QA, and design checks as enforced gates.
+
+---
+
+### One-line summary
+Reconcile the production engine to its grounding (Khosravi et al., 2020) and to **programmatic accreditation + state licensure standards** on two layers — the **engine** embodies instructor-in-charge, transparency, mastery-not-styles, usability/LTI/scalability, low authoring overhead, and a standards crosswalk that captures/flags/evidences (never asserts); the **courses it produces** can carry learnersourcing (with moderation + incentives), an open progress model decoupled from high-stakes, mastery-based practice, bounded engagement, clinical/lab requirements, and consent-based efficacy measurement — all assembled into Canvas with faculty/program/accreditor as the authority, never as a hosted runtime adaptive platform.

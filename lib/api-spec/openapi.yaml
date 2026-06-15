@@ -3,20 +3,38 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: UVA Production Engine API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: clients
+    description: Client management
+  - name: projects
+    description: Project pipeline management
+  - name: courses
+    description: Course and module structure
+  - name: objectives
+    description: Objectives cascade
+  - name: assessments
+    description: Assessments and activities
+  - name: ledger
+    description: Evidence Ledger
+  - name: qa
+    description: QA and accessibility
+  - name: standards
+    description: Standards frameworks and accreditation crosswalk
+  - name: dashboard
+    description: Dashboard summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +42,1758 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Dashboard ───────────────────────────────────────────────
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/activity:
+    get:
+      operationId: getDashboardActivity
+      tags: [dashboard]
+      summary: Get recent activity feed
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityFeedItem"
+
+  # ── Clients ──────────────────────────────────────────────────
+  /clients:
+    get:
+      operationId: listClients
+      tags: [clients]
+      summary: List all clients
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+    post:
+      operationId: createClient
+      tags: [clients]
+      summary: Create a new client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+
+  /clients/{id}:
+    get:
+      operationId: getClient
+      tags: [clients]
+      summary: Get a client by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateClient
+      tags: [clients]
+      summary: Update a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+
+  # ── Projects ─────────────────────────────────────────────────
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List all projects
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get a project by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}/advance-stage:
+    post:
+      operationId: advanceProjectStage
+      tags: [projects]
+      summary: Advance the project to the next pipeline stage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StageAdvanceInput"
+      responses:
+        "200":
+          description: Stage advanced
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Gate requirements not met
+
+  /projects/{id}/gate-status:
+    get:
+      operationId: getProjectGateStatus
+      tags: [projects]
+      summary: Get gate requirements and status for the current stage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Gate status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GateStatus"
+
+  # ── Courses ───────────────────────────────────────────────────
+  /projects/{projectId}/courses:
+    get:
+      operationId: listCourses
+      tags: [courses]
+      summary: List courses for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Course"
+    post:
+      operationId: createCourse
+      tags: [courses]
+      summary: Create a course for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourseInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+
+  /courses/{id}:
+    get:
+      operationId: getCourse
+      tags: [courses]
+      summary: Get a course by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Course
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+    patch:
+      operationId: updateCourse
+      tags: [courses]
+      summary: Update a course
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourseUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+
+  # ── Modules ───────────────────────────────────────────────────
+  /courses/{courseId}/modules:
+    get:
+      operationId: listModules
+      tags: [courses]
+      summary: List modules for a course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Modules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Module"
+    post:
+      operationId: createModule
+      tags: [courses]
+      summary: Create a module for a course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModuleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Module"
+
+  /modules/{id}:
+    patch:
+      operationId: updateModule
+      tags: [courses]
+      summary: Update a module
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModuleUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Module"
+    delete:
+      operationId: deleteModule
+      tags: [courses]
+      summary: Delete a module
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Objectives Cascade ────────────────────────────────────────
+  /projects/{projectId}/objectives:
+    get:
+      operationId: listObjectives
+      tags: [objectives]
+      summary: List objectives for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Objectives
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Objective"
+    post:
+      operationId: createObjective
+      tags: [objectives]
+      summary: Create an objective
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ObjectiveInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Objective"
+
+  /objectives/{id}:
+    patch:
+      operationId: updateObjective
+      tags: [objectives]
+      summary: Update an objective
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ObjectiveUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Objective"
+    delete:
+      operationId: deleteObjective
+      tags: [objectives]
+      summary: Delete an objective
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Assessments ───────────────────────────────────────────────
+  /courses/{courseId}/assessments:
+    get:
+      operationId: listAssessments
+      tags: [assessments]
+      summary: List assessments for a course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Assessments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Assessment"
+    post:
+      operationId: createAssessment
+      tags: [assessments]
+      summary: Create an assessment
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssessmentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assessment"
+
+  /assessments/{id}:
+    patch:
+      operationId: updateAssessment
+      tags: [assessments]
+      summary: Update an assessment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssessmentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assessment"
+    delete:
+      operationId: deleteAssessment
+      tags: [assessments]
+      summary: Delete an assessment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Activities ────────────────────────────────────────────────
+  /courses/{courseId}/activities:
+    get:
+      operationId: listActivities
+      tags: [assessments]
+      summary: List activities for a course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activity"
+    post:
+      operationId: createActivity
+      tags: [assessments]
+      summary: Create an activity
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivityInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Activity"
+
+  /activities/{id}:
+    patch:
+      operationId: updateActivity
+      tags: [assessments]
+      summary: Update an activity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivityUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Activity"
+    delete:
+      operationId: deleteActivity
+      tags: [assessments]
+      summary: Delete an activity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Evidence Ledger ───────────────────────────────────────────
+  /projects/{projectId}/ledger:
+    get:
+      operationId: listLedgerEntries
+      tags: [ledger]
+      summary: List evidence ledger entries for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ledger entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LedgerEntry"
+    post:
+      operationId: createLedgerEntry
+      tags: [ledger]
+      summary: Create an evidence ledger entry
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LedgerEntryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerEntry"
+
+  /projects/{projectId}/ledger/report:
+    get:
+      operationId: getLedgerReport
+      tags: [ledger]
+      summary: Generate proof artifacts from the evidence ledger
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerReport"
+
+  # ── QA & Accessibility ────────────────────────────────────────
+  /projects/{projectId}/qa:
+    get:
+      operationId: listQAChecks
+      tags: [qa]
+      summary: List QA checks for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: QA checks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QACheck"
+    post:
+      operationId: createQACheck
+      tags: [qa]
+      summary: Create or record a QA check
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QACheckInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QACheck"
+
+  /qa-checks/{id}:
+    patch:
+      operationId: updateQACheck
+      tags: [qa]
+      summary: Update a QA check result
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QACheckUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QACheck"
+
+  # ── Standards Frameworks ──────────────────────────────────────
+  /standards-frameworks:
+    get:
+      operationId: listStandardsFrameworks
+      tags: [standards]
+      summary: List all standards frameworks
+      responses:
+        "200":
+          description: Frameworks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StandardsFramework"
+    post:
+      operationId: createStandardsFramework
+      tags: [standards]
+      summary: Create a standards framework
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StandardsFrameworkInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardsFramework"
+
+  /standards-frameworks/{id}/competencies:
+    get:
+      operationId: listCompetencies
+      tags: [standards]
+      summary: List competencies for a framework
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Competencies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StandardCompetency"
+    post:
+      operationId: createCompetency
+      tags: [standards]
+      summary: Add a competency to a framework
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StandardCompetencyInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardCompetency"
+
+  /projects/{projectId}/crosswalk:
+    get:
+      operationId: listCrosswalkLinks
+      tags: [standards]
+      summary: List standards crosswalk links for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Crosswalk links
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrosswalkLink"
+    post:
+      operationId: createCrosswalkLink
+      tags: [standards]
+      summary: Create a crosswalk link
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrosswalkLinkInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrosswalkLink"
+
+  /crosswalk-links/{id}:
+    delete:
+      operationId: deleteCrosswalkLink
+      tags: [standards]
+      summary: Remove a crosswalk link
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /projects/{projectId}/crosswalk/gaps:
+    get:
+      operationId: getCrosswalkGaps
+      tags: [standards]
+      summary: Get unmapped competency gaps for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Gap report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrosswalkGapReport"
+
+# ── Component Schemas ───────────────────────────────────────────────
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ── Dashboard ─────────────────────────────────────────────────
+    DashboardSummary:
+      type: object
+      required: [totalProjects, activeProjects, projectsByStage, totalClients, gateBlockedCount, overdueCount]
+      properties:
+        totalProjects:
+          type: integer
+        activeProjects:
+          type: integer
+        projectsByStage:
+          type: array
+          items:
+            $ref: "#/components/schemas/StageCount"
+        totalClients:
+          type: integer
+        gateBlockedCount:
+          type: integer
+        overdueCount:
+          type: integer
+
+    StageCount:
+      type: object
+      required: [stage, label, count]
+      properties:
+        stage:
+          type: integer
+        label:
+          type: string
+        count:
+          type: integer
+
+    ActivityFeedItem:
+      type: object
+      required: [id, projectId, projectTitle, action, entityType, entityTitle, timestamp]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        projectTitle:
+          type: string
+        action:
+          type: string
+        entityType:
+          type: string
+        entityTitle:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    # ── Client ────────────────────────────────────────────────────
+    Client:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        contactName:
+          type: ["string", "null"]
+        contactEmail:
+          type: ["string", "null"]
+        institution:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        projectCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ClientInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        contactName:
+          type: string
+        contactEmail:
+          type: string
+        institution:
+          type: string
+        notes:
+          type: string
+
+    ClientUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        contactName:
+          type: string
+        contactEmail:
+          type: string
+        institution:
+          type: string
+        notes:
+          type: string
+
+    # ── Project ───────────────────────────────────────────────────
+    Project:
+      type: object
+      required: [id, clientId, title, stage, status, createdAt]
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        clientName:
+          type: ["string", "null"]
+        title:
+          type: string
+        stage:
+          type: integer
+          description: "0=Kickoff/Intake, 1=Backward Design, 2=Prototype, 3=Production, 4=QA, 5=Handoff"
+        status:
+          type: string
+          description: "active | paused | complete | gate_blocked"
+        tier:
+          type: ["string", "null"]
+        modality:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        targetDeliveryDate:
+          type: ["string", "null"]
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProjectInput:
+      type: object
+      required: [clientId, title]
+      properties:
+        clientId:
+          type: integer
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        tier:
+          type: string
+        modality:
+          type: string
+        targetDeliveryDate:
+          type: string
+          format: date
+
+    ProjectUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        tier:
+          type: string
+        modality:
+          type: string
+        targetDeliveryDate:
+          type: string
+          format: date
+
+    StageAdvanceInput:
+      type: object
+      required: [notes]
+      properties:
+        notes:
+          type: string
+
+    GateStatus:
+      type: object
+      required: [stage, canAdvance, requirements]
+      properties:
+        stage:
+          type: integer
+        canAdvance:
+          type: boolean
+        requirements:
+          type: array
+          items:
+            $ref: "#/components/schemas/GateRequirement"
+
+    GateRequirement:
+      type: object
+      required: [label, met, blocking]
+      properties:
+        label:
+          type: string
+        met:
+          type: boolean
+        blocking:
+          type: boolean
+        detail:
+          type: ["string", "null"]
+
+    # ── Course ────────────────────────────────────────────────────
+    Course:
+      type: object
+      required: [id, projectId, title, createdAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        title:
+          type: string
+        creditHours:
+          type: ["integer", "null"]
+        termWeeks:
+          type: ["integer", "null"]
+        moduleCount:
+          type: ["integer", "null"]
+        modality:
+          type: ["string", "null"]
+        accreditors:
+          type: ["string", "null"]
+          description: "Comma-separated accreditor names/acronyms"
+        seatTimeHours:
+          type: ["number", "null"]
+        courseDescription:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    CourseInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        creditHours:
+          type: integer
+        termWeeks:
+          type: integer
+        moduleCount:
+          type: integer
+        modality:
+          type: string
+        accreditors:
+          type: string
+        seatTimeHours:
+          type: number
+        courseDescription:
+          type: string
+
+    CourseUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        creditHours:
+          type: integer
+        termWeeks:
+          type: integer
+        moduleCount:
+          type: integer
+        modality:
+          type: string
+        accreditors:
+          type: string
+        seatTimeHours:
+          type: number
+        courseDescription:
+          type: string
+
+    # ── Module ────────────────────────────────────────────────────
+    Module:
+      type: object
+      required: [id, courseId, title, position, createdAt]
+      properties:
+        id:
+          type: integer
+        courseId:
+          type: integer
+        title:
+          type: string
+        position:
+          type: integer
+        weekNumber:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+          description: "draft | in_progress | complete | approved"
+        isPrototype:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    ModuleInput:
+      type: object
+      required: [title, position]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        position:
+          type: integer
+        weekNumber:
+          type: integer
+        description:
+          type: string
+        isPrototype:
+          type: boolean
+
+    ModuleUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        position:
+          type: integer
+        weekNumber:
+          type: integer
+        description:
+          type: string
+        status:
+          type: string
+        isPrototype:
+          type: boolean
+
+    # ── Objective ─────────────────────────────────────────────────
+    Objective:
+      type: object
+      required: [id, projectId, level, text, createdAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        level:
+          type: string
+          description: "university | program | course | module"
+        text:
+          type: string
+        parentId:
+          type: ["integer", "null"]
+        moduleId:
+          type: ["integer", "null"]
+        masteryEvidence:
+          type: ["string", "null"]
+        alignedAssessmentCount:
+          type: integer
+        alignedActivityCount:
+          type: integer
+        isFlagged:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    ObjectiveInput:
+      type: object
+      required: [level, text]
+      properties:
+        level:
+          type: string
+        text:
+          type: string
+          minLength: 1
+        parentId:
+          type: integer
+        moduleId:
+          type: integer
+        masteryEvidence:
+          type: string
+
+    ObjectiveUpdate:
+      type: object
+      properties:
+        level:
+          type: string
+        text:
+          type: string
+        parentId:
+          type: integer
+        moduleId:
+          type: integer
+        masteryEvidence:
+          type: string
+        isFlagged:
+          type: boolean
+
+    # ── Assessment ────────────────────────────────────────────────
+    Assessment:
+      type: object
+      required: [id, courseId, title, assessmentType, status, createdAt]
+      properties:
+        id:
+          type: integer
+        courseId:
+          type: integer
+        title:
+          type: string
+        assessmentType:
+          type: string
+          description: "formative | summative | quiz | assignment | project | exam | discussion"
+        description:
+          type: ["string", "null"]
+        masteryEvidence:
+          type: ["string", "null"]
+        misconceptionTargeted:
+          type: ["string", "null"]
+        status:
+          type: string
+          description: "draft | in_progress | complete | approved"
+        alignedObjectiveIds:
+          type: array
+          items:
+            type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    AssessmentInput:
+      type: object
+      required: [title, assessmentType]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        assessmentType:
+          type: string
+        description:
+          type: string
+        masteryEvidence:
+          type: string
+        misconceptionTargeted:
+          type: string
+        alignedObjectiveIds:
+          type: array
+          items:
+            type: integer
+
+    AssessmentUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        assessmentType:
+          type: string
+        description:
+          type: string
+        masteryEvidence:
+          type: string
+        misconceptionTargeted:
+          type: string
+        status:
+          type: string
+        alignedObjectiveIds:
+          type: array
+          items:
+            type: integer
+
+    # ── Activity ──────────────────────────────────────────────────
+    Activity:
+      type: object
+      required: [id, courseId, title, activityType, status, createdAt]
+      properties:
+        id:
+          type: integer
+        courseId:
+          type: integer
+        title:
+          type: string
+        activityType:
+          type: string
+          description: "discussion | assignment | interactive | learnersourcing | peer_review | simulation | lab"
+        description:
+          type: ["string", "null"]
+        moderationPolicy:
+          type: ["string", "null"]
+        incentiveStructure:
+          type: ["string", "null"]
+        status:
+          type: string
+          description: "draft | in_progress | complete | approved"
+        alignedObjectiveIds:
+          type: array
+          items:
+            type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ActivityInput:
+      type: object
+      required: [title, activityType]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        activityType:
+          type: string
+        description:
+          type: string
+        moderationPolicy:
+          type: string
+        incentiveStructure:
+          type: string
+        alignedObjectiveIds:
+          type: array
+          items:
+            type: integer
+
+    ActivityUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        activityType:
+          type: string
+        description:
+          type: string
+        moderationPolicy:
+          type: string
+        incentiveStructure:
+          type: string
+        status:
+          type: string
+        alignedObjectiveIds:
+          type: array
+          items:
+            type: integer
+
+    # ── Evidence Ledger ───────────────────────────────────────────
+    LedgerEntry:
+      type: object
+      required: [id, projectId, entryType, content, aiGenerated, createdAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        entryType:
+          type: string
+          description: "design_decision | qa_finding | accessibility_finding | ai_disclosure | approval | standards_crosswalk | efficacy_note"
+        content:
+          type: string
+        aiGenerated:
+          type: boolean
+        aiDisclosure:
+          type: ["string", "null"]
+        authorName:
+          type: ["string", "null"]
+        entityType:
+          type: ["string", "null"]
+        entityId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    LedgerEntryInput:
+      type: object
+      required: [entryType, content]
+      properties:
+        entryType:
+          type: string
+        content:
+          type: string
+        aiGenerated:
+          type: boolean
+        aiDisclosure:
+          type: string
+        authorName:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: integer
+
+    LedgerReport:
+      type: object
+      required: [projectId, generatedAt, accessibilityConformance, aiDisclosure, designRationale, standardsCrosswalk]
+      properties:
+        projectId:
+          type: integer
+        generatedAt:
+          type: string
+          format: date-time
+        accessibilityConformance:
+          $ref: "#/components/schemas/ReportSection"
+        aiDisclosure:
+          $ref: "#/components/schemas/ReportSection"
+        designRationale:
+          $ref: "#/components/schemas/ReportSection"
+        standardsCrosswalk:
+          $ref: "#/components/schemas/ReportSection"
+
+    ReportSection:
+      type: object
+      required: [title, entries, summary]
+      properties:
+        title:
+          type: string
+        summary:
+          type: string
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/LedgerEntry"
+
+    # ── QA ────────────────────────────────────────────────────────
+    QACheck:
+      type: object
+      required: [id, projectId, checkType, status, createdAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        checkType:
+          type: string
+          description: "oedi_rubric | accessibility_auto | accessibility_manual | standards_coverage | udl | brand"
+        status:
+          type: string
+          description: "pending | pass | fail | in_remediation"
+        findings:
+          type: ["string", "null"]
+        remediationNotes:
+          type: ["string", "null"]
+        gateBlock:
+          type: boolean
+        passedCount:
+          type: ["integer", "null"]
+        failedCount:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    QACheckInput:
+      type: object
+      required: [checkType, status]
+      properties:
+        checkType:
+          type: string
+        status:
+          type: string
+        findings:
+          type: string
+        gateBlock:
+          type: boolean
+        passedCount:
+          type: integer
+        failedCount:
+          type: integer
+
+    QACheckUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        findings:
+          type: string
+        remediationNotes:
+          type: string
+        gateBlock:
+          type: boolean
+        passedCount:
+          type: integer
+        failedCount:
+          type: integer
+
+    # ── Standards ─────────────────────────────────────────────────
+    StandardsFramework:
+      type: object
+      required: [id, name, frameworkType, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        acronym:
+          type: ["string", "null"]
+        frameworkType:
+          type: string
+          description: "accreditor | licensure_board"
+        description:
+          type: ["string", "null"]
+        competencyCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    StandardsFrameworkInput:
+      type: object
+      required: [name, frameworkType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        acronym:
+          type: string
+        frameworkType:
+          type: string
+        description:
+          type: string
+
+    StandardCompetency:
+      type: object
+      required: [id, frameworkId, code, description]
+      properties:
+        id:
+          type: integer
+        frameworkId:
+          type: integer
+        code:
+          type: string
+        description:
+          type: string
+        domain:
+          type: ["string", "null"]
+
+    StandardCompetencyInput:
+      type: object
+      required: [code, description]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        domain:
+          type: string
+
+    CrosswalkLink:
+      type: object
+      required: [id, projectId, competencyId, createdAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        competencyId:
+          type: integer
+        competencyCode:
+          type: ["string", "null"]
+        competencyDescription:
+          type: ["string", "null"]
+        objectiveId:
+          type: ["integer", "null"]
+        assessmentId:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    CrosswalkLinkInput:
+      type: object
+      required: [competencyId]
+      properties:
+        competencyId:
+          type: integer
+        objectiveId:
+          type: integer
+        assessmentId:
+          type: integer
+        notes:
+          type: string
+
+    CrosswalkGapReport:
+      type: object
+      required: [projectId, frameworkName, totalCompetencies, mappedCount, unmappedCount, gaps]
+      properties:
+        projectId:
+          type: integer
+        frameworkName:
+          type: string
+        totalCompetencies:
+          type: integer
+        mappedCount:
+          type: integer
+        unmappedCount:
+          type: integer
+        deliveryBlocked:
+          type: boolean
+        gaps:
+          type: array
+          items:
+            $ref: "#/components/schemas/StandardCompetency"
