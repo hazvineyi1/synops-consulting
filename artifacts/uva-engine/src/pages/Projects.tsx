@@ -107,6 +107,7 @@ export default function Projects() {
                       </Badge>
                       <Badge variant="outline">Stage {project.stage}</Badge>
                       {project.tier && <Badge variant="outline">Tier {project.tier}</Badge>}
+                      {project.lms && <Badge variant="outline" className="capitalize">{project.lms.replace('_', ' ')}</Badge>}
                     </div>
                     {project.description && (
                       <p className="text-sm text-muted-foreground line-clamp-2">

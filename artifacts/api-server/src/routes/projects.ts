@@ -71,6 +71,7 @@ router.post("/projects", async (req, res): Promise<void> => {
       description: parsed.data.description ?? null,
       tier: parsed.data.tier ?? null,
       modality: parsed.data.modality ?? null,
+      lms: parsed.data.lms ?? null,
       targetDeliveryDate: parsed.data.targetDeliveryDate ?? null,
       stage: 0,
       status: "active",
@@ -129,6 +130,7 @@ router.patch("/projects/:id", async (req, res): Promise<void> => {
   if (parsed.data.status !== undefined) updates.status = parsed.data.status;
   if (parsed.data.tier !== undefined) updates.tier = parsed.data.tier;
   if (parsed.data.modality !== undefined) updates.modality = parsed.data.modality;
+  if (parsed.data.lms !== undefined) updates.lms = parsed.data.lms;
   if (parsed.data.targetDeliveryDate !== undefined) updates.targetDeliveryDate = parsed.data.targetDeliveryDate;
 
   const [project] = await db

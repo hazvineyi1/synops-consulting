@@ -10,6 +10,7 @@ export const projectsTable = pgTable("projects", {
   status: text("status").notNull().default("active"),
   tier: text("tier"),
   modality: text("modality"),
+  lms: text("lms"),
   description: text("description"),
   targetDeliveryDate: date("target_delivery_date", { mode: "string" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

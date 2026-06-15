@@ -1,7 +1,7 @@
 import { useListClients, useCreateProject, getListProjectsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,12 +14,25 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft } from "lucide-react";
 import { Link } from "wouter";
 
+const LMS_OPTIONS = [
+  { value: "canvas", label: "Canvas (Instructure)" },
+  { value: "blackboard", label: "Blackboard Learn" },
+  { value: "moodle", label: "Moodle" },
+  { value: "d2l", label: "D2L Brightspace" },
+  { value: "schoology", label: "Schoology" },
+  { value: "sakai", label: "Sakai" },
+  { value: "google_classroom", label: "Google Classroom" },
+  { value: "microsoft_teams", label: "Microsoft Teams (Education)" },
+  { value: "other", label: "Other / Not yet determined" },
+];
+
 const projectSchema = z.object({
   clientId: z.number().min(1, "Client is required"),
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   tier: z.string().optional(),
   modality: z.string().optional(),
+  lms: z.string().optional(),
   targetDeliveryDate: z.string().optional(),
 });
 
@@ -41,6 +54,7 @@ export default function NewProject() {
       description: "",
       tier: "1",
       modality: "online",
+      lms: "",
       targetDeliveryDate: "",
     },
   });
@@ -81,20 +95,20 @@ export default function NewProject() {
                 name="clientId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Client</FormLabel>
-                    <Select 
-                      onValueChange={(val) => field.onChange(parseInt(val, 10))} 
+                    <FormLabel>Institution / Client</FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(parseInt(val, 10))}
                       value={field.value ? field.value.toString() : ""}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a client" />
+                          <SelectValue placeholder="Select an institution or client" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {clients?.map(client => (
                           <SelectItem key={client.id} value={client.id.toString()}>
-                            {client.name}
+                            {client.name}{client.institution ? ` — ${client.institution}` : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -109,7 +123,7 @@ export default function NewProject() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Project Title</FormLabel>
-                    <FormControl><Input {...field} placeholder="e.g. Intro to Computer Science" /></FormControl>
+                    <FormControl><Input {...field} placeholder="e.g. BIOL 101: Intro to Biology — Full Redesign" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -120,26 +134,26 @@ export default function NewProject() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Description</FormLabel>
-                    <FormControl><Textarea {...field} className="h-24" /></FormControl>
+                    <FormControl><Textarea {...field} className="h-24" placeholder="Brief overview of scope, goals, and context" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="tier"
+                  name="lms"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Service Tier</FormLabel>
+                      <FormLabel>Target LMS</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="Select LMS" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="1">Tier 1 (Full Custom)</SelectItem>
-                          <SelectItem value="2">Tier 2 (Template)</SelectItem>
-                          <SelectItem value="3">Tier 3 (Light Touch)</SelectItem>
+                          {LMS_OPTIONS.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -167,12 +181,34 @@ export default function NewProject() {
                     </FormItem>
                   )}
                 />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="tier"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Service Tier</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="1">Tier 1 — Full Custom</SelectItem>
+                          <SelectItem value="2">Tier 2 — Template-Based</SelectItem>
+                          <SelectItem value="3">Tier 3 — Light Touch</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="targetDeliveryDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Target Delivery</FormLabel>
+                      <FormLabel>Target Delivery Date</FormLabel>
                       <FormControl><Input type="date" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>

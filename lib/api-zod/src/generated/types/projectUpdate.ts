@@ -12,5 +12,6 @@ export interface ProjectUpdate {
   status?: string;
   tier?: string;
   modality?: string;
+  lms?: string;
   targetDeliveryDate?: Date;
 }

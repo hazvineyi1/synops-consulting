@@ -1118,6 +1118,9 @@ components:
           type: ["string", "null"]
         modality:
           type: ["string", "null"]
+        lms:
+          type: ["string", "null"]
+          description: "Learning management system (Canvas, Blackboard, Moodle, D2L Brightspace, Schoology, other)"
         description:
           type: ["string", "null"]
         targetDeliveryDate:
@@ -1145,6 +1148,9 @@ components:
           type: string
         modality:
           type: string
+        lms:
+          type: string
+          description: "Target LMS platform"
         targetDeliveryDate:
           type: string
           format: date
@@ -1161,6 +1167,8 @@ components:
         tier:
           type: string
         modality:
+          type: string
+        lms:
           type: string
         targetDeliveryDate:
           type: string

@@ -184,7 +184,7 @@ export default function ProjectDetail() {
               <CardTitle>Project Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <span className="text-muted-foreground block mb-1 text-xs uppercase">Tier</span>
                   <span className="font-medium">{project.tier || "Unspecified"}</span>
@@ -192,6 +192,10 @@ export default function ProjectDetail() {
                 <div>
                   <span className="text-muted-foreground block mb-1 text-xs uppercase">Modality</span>
                   <span className="font-medium capitalize">{project.modality?.replace('_', ' ') || "Unspecified"}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block mb-1 text-xs uppercase">LMS</span>
+                  <span className="font-medium capitalize">{project.lms?.replace(/_/g, ' ') || "Not specified"}</span>
                 </div>
               </div>
               {project.description && (

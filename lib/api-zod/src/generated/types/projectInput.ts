@@ -13,5 +13,7 @@ export interface ProjectInput {
   description?: string;
   tier?: string;
   modality?: string;
+  /** Target LMS platform */
+  lms?: string;
   targetDeliveryDate?: Date;
 }

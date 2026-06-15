@@ -20,6 +20,11 @@ export interface Project {
   tier?: string | null;
   /** @nullable */
   modality?: string | null;
+  /**
+     * Learning management system (Canvas, Blackboard, Moodle, D2L Brightspace, Schoology, other)
+     * @nullable
+     */
+  lms?: string | null;
   /** @nullable */
   description?: string | null;
   /** @nullable */

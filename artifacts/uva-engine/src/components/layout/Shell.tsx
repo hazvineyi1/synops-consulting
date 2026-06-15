@@ -19,8 +19,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <div className="hidden border-r bg-card md:flex md:w-64 md:flex-col">
         <div className="flex h-14 items-center border-b px-4 font-semibold text-primary">
-          <div className="mr-2 flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs">
-            UV
+          <div className="mr-2 flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold">
+            ID
           </div>
           Production Engine
         </div>
@@ -68,7 +68,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="flex flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b bg-card px-4 md:hidden">
-          <div className="font-semibold text-primary">UVA Production Engine</div>
+          <div className="font-semibold text-primary">ID Production Engine</div>
         </header>
         <main className="flex-1 overflow-auto bg-background">
           {children}

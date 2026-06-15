@@ -140,6 +140,7 @@ export const ListProjectsResponseItem = zod.object({
   "status": zod.string().describe('active | paused | complete | gate_blocked'),
   "tier": zod.string().nullish(),
   "modality": zod.string().nullish(),
+  "lms": zod.string().nullish().describe('Learning management system (Canvas, Blackboard, Moodle, D2L Brightspace, Schoology, other)'),
   "description": zod.string().nullish(),
   "targetDeliveryDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
@@ -160,6 +161,7 @@ export const CreateProjectBody = zod.object({
   "description": zod.string().optional(),
   "tier": zod.string().optional(),
   "modality": zod.string().optional(),
+  "lms": zod.string().optional().describe('Target LMS platform'),
   "targetDeliveryDate": zod.coerce.date().optional()
 })
 
@@ -180,6 +182,7 @@ export const GetProjectResponse = zod.object({
   "status": zod.string().describe('active | paused | complete | gate_blocked'),
   "tier": zod.string().nullish(),
   "modality": zod.string().nullish(),
+  "lms": zod.string().nullish().describe('Learning management system (Canvas, Blackboard, Moodle, D2L Brightspace, Schoology, other)'),
   "description": zod.string().nullish(),
   "targetDeliveryDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
@@ -200,6 +203,7 @@ export const UpdateProjectBody = zod.object({
   "status": zod.string().optional(),
   "tier": zod.string().optional(),
   "modality": zod.string().optional(),
+  "lms": zod.string().optional(),
   "targetDeliveryDate": zod.coerce.date().optional()
 })
 
@@ -212,6 +216,7 @@ export const UpdateProjectResponse = zod.object({
   "status": zod.string().describe('active | paused | complete | gate_blocked'),
   "tier": zod.string().nullish(),
   "modality": zod.string().nullish(),
+  "lms": zod.string().nullish().describe('Learning management system (Canvas, Blackboard, Moodle, D2L Brightspace, Schoology, other)'),
   "description": zod.string().nullish(),
   "targetDeliveryDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
@@ -239,6 +244,7 @@ export const AdvanceProjectStageResponse = zod.object({
   "status": zod.string().describe('active | paused | complete | gate_blocked'),
   "tier": zod.string().nullish(),
   "modality": zod.string().nullish(),
+  "lms": zod.string().nullish().describe('Learning management system (Canvas, Blackboard, Moodle, D2L Brightspace, Schoology, other)'),
   "description": zod.string().nullish(),
   "targetDeliveryDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
