@@ -137,48 +137,19 @@ export function PublicLayout({ children }: { children: ReactNode }) {
       </main>
 
       <footer className="border-t border-border bg-card">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-4 lg:px-8">
-          <div className="space-y-3 md:col-span-1">
-            <Brandmark />
-            <p className="text-sm text-muted-foreground">
-              Operations, learning, and technology consulting, from strategy to
-              build. Woman- and minority-owned, serving clients nationwide.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="text-sm font-semibold">Practices</h2>
-            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/healthcare" className="hover:text-foreground">Healthcare &amp; Operations</Link></li>
-              <li><Link href="/learning" className="hover:text-foreground">Learning, EdTech &amp; AI</Link></li>
-              <li><Link href="/platforms" className="hover:text-foreground">Platforms &amp; SaaS</Link></li>
-              <li><Link href="/government" className="hover:text-foreground">Government Contracting</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h2 className="text-sm font-semibold">Firm</h2>
-            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/about" className="hover:text-foreground">About</Link></li>
-              <li><Link href="/insights" className="hover:text-foreground">Insights</Link></li>
-              <li><Link href="/contact" className="hover:text-foreground">Contact</Link></li>
-              <li><Link href="/portals" className="hover:text-foreground">Client portal</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h2 className="text-sm font-semibold">Accessibility</h2>
-            <p className="mt-3 text-sm text-muted-foreground">
-              We build to WCAG 2.1 AA. If you encounter a barrier using this site,
-              contact us and we will provide the information you need in an
-              accessible format.
-            </p>
-          </div>
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-10 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <Brandmark />
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+            <Link href="/about" className="hover:text-foreground">About</Link>
+            <Link href="/insights" className="hover:text-foreground">Insights</Link>
+            <Link href="/contact" className="hover:text-foreground">Contact</Link>
+            <Link href="/portals" className="hover:text-foreground">Client portal</Link>
+          </nav>
         </div>
         <div className="border-t border-border">
           <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 px-4 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:px-6 lg:px-8">
             <p>&copy; {new Date().getFullYear()} Synops Advisory Group. All rights reserved.</p>
-            <p>Virginia SWaM certified &middot; Active federal SAM.gov registration</p>
+            <p>Built to WCAG 2.1 AA. Contact us if you encounter any barrier using this site.</p>
           </div>
         </div>
       </footer>

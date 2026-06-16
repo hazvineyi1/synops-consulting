@@ -5,6 +5,7 @@ import { usePageMeta } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { InterestForm } from "@/components/public/InterestForm";
 
 export default function Home() {
   usePageMeta("Synops Advisory Group", "Operations, learning, and technology consulting, from strategy to build.");
@@ -238,16 +239,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-24 px-4 bg-muted text-center border-t border-border">
-        <div className="max-w-2xl mx-auto space-y-8">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Ready to improve your outcomes?</h2>
-          <p className="text-lg text-muted-foreground">
-            Whether you need to streamline healthcare operations or build rigorous educational technology, we're ready to help.
-          </p>
-          <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-            <Link href="/contact">Book a consultation</Link>
-          </Button>
+      {/* Interest Form */}
+      <section className="py-24 px-4 bg-muted border-t border-border">
+        <div className="max-w-3xl mx-auto space-y-8">
+          <div className="text-center space-y-4">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Tell us what you need</h2>
+            <p className="text-lg text-muted-foreground">
+              Whether you are a school exploring our curriculum platform, a provider streamlining operations, or an organization building new technology, share a few details and our team will follow up.
+            </p>
+          </div>
+          <InterestForm />
         </div>
       </section>
 

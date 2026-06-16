@@ -1,6 +1,6 @@
 import { usePageMeta } from "@/lib/seo";
 import { Link } from "wouter";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AdaptiveDemo } from "@/components/public/AdaptiveDemo";
 import { Database, MonitorSmartphone, BrainCircuit, Lock } from "lucide-react";
@@ -67,19 +67,6 @@ export default function Platforms() {
             <Link href="/contact?area=platforms">Request a tailored build</Link>
           </Button>
         </div>
-      </div>
-
-      <div className="space-y-8 border-t border-border pt-24">
-        <h2 className="text-2xl font-bold">Featured Platform</h2>
-        <Card className="bg-muted/50 border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-              <MonitorSmartphone className="w-8 h-8 text-muted-foreground opacity-50" />
-            </div>
-            <h3 className="text-xl font-medium text-muted-foreground">Socratic Reasoning Engine</h3>
-            <p className="text-sm text-muted-foreground">Coming soon: A dedicated showcase of our conversational evaluation platform.</p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
