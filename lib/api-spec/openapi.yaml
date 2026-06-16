@@ -1320,6 +1320,150 @@ paths:
               schema:
                 type: string
 
+  # ── Super-admin console: cross-organization analytics ────────
+  /compass/admin/overview:
+    get:
+      operationId: getPlatformOverview
+      tags: [admin]
+      summary: Cross-organization platform overview (global roles only)
+      responses:
+        "200":
+          description: Platform overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformOverview"
+
+  /compass/admin/report.md:
+    get:
+      operationId: getPlatformReportMarkdown
+      tags: [admin]
+      summary: Platform overview as downloadable markdown (global roles only)
+      responses:
+        "200":
+          description: Platform report markdown
+          content:
+            text/markdown:
+              schema:
+                type: string
+
+  /compass/stats/scope:
+    get:
+      operationId: getScopeStats
+      tags: [admin]
+      summary: Rollup statistics for a single curriculum scope
+      parameters:
+        - name: scopeType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [project, course, class]
+        - name: scopeId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Scope statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopeStats"
+
+  /compass/admin/users:
+    get:
+      operationId: getPlatformUsers
+      tags: [admin]
+      summary: User directory across all organizations (global roles only)
+      responses:
+        "200":
+          description: Platform user directory
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlatformUser"
+
+  # ── White-label branding management ──────────────────────────
+  /compass/admin/organizations/{id}/branding:
+    patch:
+      operationId: updateOrganizationBranding
+      tags: [admin]
+      summary: Update an organization's white-label branding
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBrandingInput"
+      responses:
+        "200":
+          description: Updated branding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationBranding"
+
+  # ── Impersonation (top-level, not gated to one product) ──────
+  /impersonation/start:
+    post:
+      operationId: startImpersonation
+      tags: [impersonation]
+      summary: Begin impersonating a user (super admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartImpersonationInput"
+      responses:
+        "200":
+          description: Impersonation started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /impersonation/stop:
+    post:
+      operationId: stopImpersonation
+      tags: [impersonation]
+      summary: Stop impersonating and restore your own session
+      responses:
+        "200":
+          description: Impersonation stopped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  # ── White-label branding (public, host-resolved) ─────────────
+  /branding:
+    get:
+      operationId: getBranding
+      tags: [branding]
+      summary: Resolve white-label branding for the requesting host
+      description: >-
+        Public. Resolves branding by the request host only; the host never
+        authorizes anything. Returns a neutral (unbranded) response when the
+        host does not match a configured organization domain.
+      responses:
+        "200":
+          description: Branding for the host (neutral when unmatched)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandingResponse"
+
   # ── Auth ─────────────────────────────────────────────────────
   /auth/register:
     post:
@@ -1878,6 +2022,13 @@ components:
         createdAt:
           type: string
           format: date-time
+        impersonator:
+          anyOf:
+            - $ref: "#/components/schemas/Impersonator"
+            - type: "null"
+          description: >-
+            When set, the real super admin currently impersonating this user.
+            Null during a normal session.
 
     RegisterInput:
       type: object
@@ -3630,3 +3781,247 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SchoolReportBuilder"
+
+    # ── Impersonation ─────────────────────────────────────────────
+    Impersonator:
+      type: object
+      required: [id, name, email]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+
+    StartImpersonationInput:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: integer
+          description: The id of the user to impersonate.
+
+    # ── White-label branding ──────────────────────────────────────
+    BrandingOrganization:
+      type: object
+      required: [id, name, slug, type]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+        accentColor:
+          type: ["string", "null"]
+        tagline:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+
+    BrandingResponse:
+      type: object
+      required: [branded, organization]
+      properties:
+        branded:
+          type: boolean
+          description: True when the host matched a configured organization domain.
+        organization:
+          anyOf:
+            - $ref: "#/components/schemas/BrandingOrganization"
+            - type: "null"
+
+    OrganizationBranding:
+      type: object
+      required: [id, name, slug, type]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+        accentColor:
+          type: ["string", "null"]
+        tagline:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        domain:
+          type: ["string", "null"]
+
+    UpdateBrandingInput:
+      type: object
+      description: >-
+        All fields optional. A null clears that field. The `domain` field can be
+        changed by a global admin only; a school admin editing their own org may
+        not set it. accentColor must be a hex color; logoUrl must be https or a
+        site-relative path. These are validated server-side.
+      properties:
+        name:
+          type: string
+          minLength: 1
+        tagline:
+          type: ["string", "null"]
+        accentColor:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        domain:
+          type: ["string", "null"]
+
+    # ── Super-admin platform analytics ────────────────────────────
+    PlatformOverviewTotals:
+      type: object
+      required:
+        [organizations, users, clients, projects, activeProjects, courses, classes, builders, activeAllocations]
+      properties:
+        organizations:
+          type: integer
+        users:
+          type: integer
+        clients:
+          type: integer
+        projects:
+          type: integer
+        activeProjects:
+          type: integer
+        courses:
+          type: integer
+        classes:
+          type: integer
+        builders:
+          type: integer
+        activeAllocations:
+          type: integer
+
+    PlatformOverviewOrganization:
+      type: object
+      required:
+        [id, name, slug, type, users, clients, projects, activeProjects, courses, classes, builders, activeAllocations]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+        domain:
+          type: ["string", "null"]
+        accentColor:
+          type: ["string", "null"]
+        tagline:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        users:
+          type: integer
+        clients:
+          type: integer
+        projects:
+          type: integer
+        activeProjects:
+          type: integer
+        courses:
+          type: integer
+        classes:
+          type: integer
+        builders:
+          type: integer
+        activeAllocations:
+          type: integer
+
+    PlatformCountByKey:
+      type: object
+      required: [key, count]
+      properties:
+        key:
+          type: string
+        count:
+          type: integer
+
+    PlatformUser:
+      type: object
+      required: [id, name, email, role, productKey, status]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        productKey:
+          type: string
+        status:
+          type: string
+        organizationId:
+          type: ["integer", "null"]
+        organizationName:
+          type: ["string", "null"]
+
+    PlatformOverview:
+      type: object
+      required: [generatedAt, totals, usersByRole, usersByProduct, organizations]
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        totals:
+          $ref: "#/components/schemas/PlatformOverviewTotals"
+        usersByRole:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlatformCountByKey"
+        usersByProduct:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlatformCountByKey"
+        organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlatformOverviewOrganization"
+
+    ScopeStatsTotals:
+      type: object
+      required:
+        [courses, modules, objectives, assessments, activities, classes, crosswalkLinks, qaChecks]
+      properties:
+        courses:
+          type: integer
+        modules:
+          type: integer
+        objectives:
+          type: integer
+        assessments:
+          type: integer
+        activities:
+          type: integer
+        classes:
+          type: integer
+        crosswalkLinks:
+          type: integer
+        qaChecks:
+          type: integer
+
+    ScopeStats:
+      type: object
+      required: [scopeType, scopeId, name, totals]
+      properties:
+        scopeType:
+          type: string
+          enum: [project, course, class]
+        scopeId:
+          type: integer
+        name:
+          type: string
+        totals:
+          $ref: "#/components/schemas/ScopeStatsTotals"

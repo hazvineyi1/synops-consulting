@@ -5,6 +5,7 @@
  * UVA Production Engine API
  * OpenAPI spec version: 0.1.0
  */
+import type { Impersonator } from './impersonator';
 import type { ProductKey } from './productKey';
 
 export interface AuthUser {
@@ -26,4 +27,6 @@ export interface AuthUser {
   /** @nullable */
   organizationSlug?: string | null;
   createdAt: Date;
+  /** When set, the real super admin currently impersonating this user. Null during a normal session. */
+  impersonator?: Impersonator | null;
 }

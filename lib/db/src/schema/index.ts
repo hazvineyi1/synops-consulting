@@ -12,6 +12,7 @@ export * from "./ledger";
 export * from "./qa";
 export * from "./standards";
 export * from "./audit";
+export * from "./impersonation";
 export * from "./intake";
 export * from "./users";
 export * from "./marketing";

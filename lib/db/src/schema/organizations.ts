@@ -17,6 +17,7 @@ export const organizationsTable = pgTable("organizations", {
   // for authorization. Host/DNS resolution is a later task.
   accentColor: text("accent_color"),
   tagline: text("tagline"),
+  logoUrl: text("logo_url"),
   domain: text("domain"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

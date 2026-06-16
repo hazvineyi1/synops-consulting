@@ -10,6 +10,26 @@ export function isGlobalAdmin(role?: string | null): boolean {
   return role === "admin" || role === "super_admin";
 }
 
+export function isSuperAdmin(role?: string | null): boolean {
+  return role === "super_admin";
+}
+
+/**
+ * Who can open the platform console (cross-organization overview, user
+ * directory, white-label branding management). Global admins only.
+ */
+export function canViewConsole(role?: string | null): boolean {
+  return isGlobalAdmin(role);
+}
+
+/**
+ * Who may impersonate another user. UX gate only; the server independently
+ * verifies the real actor is a super administrator before swapping the session.
+ */
+export function canImpersonate(role?: string | null): boolean {
+  return isSuperAdmin(role);
+}
+
 export function isSchoolAdmin(role?: string | null): boolean {
   return role === "school_admin";
 }

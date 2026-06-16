@@ -4,8 +4,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { AuthProvider } from "@/lib/auth-context";
+import { BrandingProvider } from "@/lib/branding-context";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { ProtectedProduct } from "@/components/portal/ProtectedProduct";
+import { ImpersonationBanner } from "@/components/portal/ImpersonationBanner";
 import { PRODUCTS } from "@/lib/products";
 
 import Home from "@/pages/public/Home";
@@ -95,12 +97,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-        <AuthProvider>
-          <TooltipProvider>
-            <Router />
-            <Toaster />
-          </TooltipProvider>
-        </AuthProvider>
+        <BrandingProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <ImpersonationBanner />
+              <Router />
+              <Toaster />
+            </TooltipProvider>
+          </AuthProvider>
+        </BrandingProvider>
       </WouterRouter>
     </QueryClientProvider>
   );

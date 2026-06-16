@@ -16,7 +16,7 @@ import {
   ResetBuilderPasswordBody,
   GetBuilderActivityParams,
 } from "@workspace/api-zod";
-import { hashPassword } from "../lib/auth";
+import { blockWhileImpersonating, hashPassword } from "../lib/auth";
 import {
   actorCanAccessOrg,
   denyBuilderWrite,
@@ -101,7 +101,7 @@ router.get("/builders", async (req, res): Promise<void> => {
 });
 
 // Provision a builder in the actor's organization.
-router.post("/builders", async (req, res): Promise<void> => {
+router.post("/builders", blockWhileImpersonating, async (req, res): Promise<void> => {
   const parsed = CreateBuilderBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -177,7 +177,7 @@ async function loadManagedBuilder(req: import("express").Request, res: import("e
 }
 
 // Activate or deactivate a builder. Deactivated builders cannot authenticate.
-router.patch("/builders/:id/status", async (req, res): Promise<void> => {
+router.patch("/builders/:id/status", blockWhileImpersonating, async (req, res): Promise<void> => {
   if (denyBuilderWrite(res, req.actor!)) return;
 
   const params = UpdateBuilderStatusParams.safeParse(req.params);
@@ -210,7 +210,7 @@ router.patch("/builders/:id/status", async (req, res): Promise<void> => {
 });
 
 // Reset a builder's password (school admins cannot see the existing one).
-router.post("/builders/:id/password", async (req, res): Promise<void> => {
+router.post("/builders/:id/password", blockWhileImpersonating, async (req, res): Promise<void> => {
   if (denyBuilderWrite(res, req.actor!)) return;
 
   const params = ResetBuilderPasswordParams.safeParse(req.params);

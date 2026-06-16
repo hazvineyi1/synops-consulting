@@ -23,6 +23,7 @@ import {
   resolveManagedOrg,
 } from "../lib/tenancy";
 import { recordActorAudit } from "../lib/audit";
+import { blockWhileImpersonating } from "../lib/auth";
 
 const router = Router();
 
@@ -127,7 +128,7 @@ router.get("/allocations", async (req, res): Promise<void> => {
 });
 
 // Create an active allocation binding a builder to a scope in their org.
-router.post("/allocations", async (req, res): Promise<void> => {
+router.post("/allocations", blockWhileImpersonating, async (req, res): Promise<void> => {
   if (denyBuilderWrite(res, req.actor!)) return;
 
   const parsed = CreateAllocationBody.safeParse(req.body);
@@ -187,7 +188,7 @@ router.post("/allocations", async (req, res): Promise<void> => {
 });
 
 // Revoke an allocation (idempotent). Downward write access disappears at once.
-router.patch("/allocations/:id/revoke", async (req, res): Promise<void> => {
+router.patch("/allocations/:id/revoke", blockWhileImpersonating, async (req, res): Promise<void> => {
   if (denyBuilderWrite(res, req.actor!)) return;
 
   const params = RevokeAllocationParams.safeParse(req.params);

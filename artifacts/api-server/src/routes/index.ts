@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import authRouter from "./auth";
 import contactRouter from "./contact";
 import demoRouter from "./demo";
+import brandingRouter from "./branding";
 import clientsRouter from "./clients";
 import projectsRouter from "./projects";
 import coursesRouter from "./courses";
@@ -17,8 +18,10 @@ import buildersRouter from "./builders";
 import allocationsRouter from "./allocations";
 import classesRouter from "./classes";
 import schoolRouter from "./school";
+import consoleRouter from "./console";
 import portalRouter from "./portal";
 import adminRouter from "./admin";
+import impersonationRouter from "./impersonation";
 import cadenceRouter from "./cadence";
 import riseRouter from "./rise";
 import meridianRouter from "./meridian";
@@ -32,6 +35,7 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(contactRouter);
 router.use(demoRouter);
+router.use(brandingRouter);
 
 // ── Compass curriculum engine (single guarded namespace) ────
 // Every curriculum route lives under /compass behind ONE gate applied at the top
@@ -57,6 +61,7 @@ engineRouter.use(buildersRouter);
 engineRouter.use(allocationsRouter);
 engineRouter.use(classesRouter);
 engineRouter.use(schoolRouter);
+engineRouter.use(consoleRouter);
 router.use("/compass", engineRouter);
 
 // ── Authenticated routes ────────────────────────────────────
@@ -68,6 +73,10 @@ router.use(requireAuth);
 // ── Hub client portal + admin (self-gated per route) ────────
 router.use(portalRouter);
 router.use(adminRouter);
+
+// ── Impersonation (top-level so an impersonated non-Compass user can stop) ──
+// Authorization is enforced inside the router (start requires super_admin).
+router.use(impersonationRouter);
 
 // ── Other product engines (self-gated with requireProduct) ──
 router.use(cadenceRouter);

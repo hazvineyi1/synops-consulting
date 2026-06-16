@@ -1382,6 +1382,160 @@ export const GetSchoolReportMarkdownQueryParams = zod.object({
 
 
 /**
+ * @summary Cross-organization platform overview (global roles only)
+ */
+export const GetPlatformOverviewResponse = zod.object({
+  "generatedAt": zod.coerce.date(),
+  "totals": zod.object({
+  "organizations": zod.number(),
+  "users": zod.number(),
+  "clients": zod.number(),
+  "projects": zod.number(),
+  "activeProjects": zod.number(),
+  "courses": zod.number(),
+  "classes": zod.number(),
+  "builders": zod.number(),
+  "activeAllocations": zod.number()
+}),
+  "usersByRole": zod.array(zod.object({
+  "key": zod.string(),
+  "count": zod.number()
+})),
+  "usersByProduct": zod.array(zod.object({
+  "key": zod.string(),
+  "count": zod.number()
+})),
+  "organizations": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "type": zod.string(),
+  "domain": zod.string().nullish(),
+  "accentColor": zod.string().nullish(),
+  "tagline": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
+  "users": zod.number(),
+  "clients": zod.number(),
+  "projects": zod.number(),
+  "activeProjects": zod.number(),
+  "courses": zod.number(),
+  "classes": zod.number(),
+  "builders": zod.number(),
+  "activeAllocations": zod.number()
+}))
+})
+
+
+/**
+ * @summary Rollup statistics for a single curriculum scope
+ */
+export const GetScopeStatsQueryParams = zod.object({
+  "scopeType": zod.enum(['project', 'course', 'class']),
+  "scopeId": zod.coerce.number()
+})
+
+export const GetScopeStatsResponse = zod.object({
+  "scopeType": zod.enum(['project', 'course', 'class']),
+  "scopeId": zod.number(),
+  "name": zod.string(),
+  "totals": zod.object({
+  "courses": zod.number(),
+  "modules": zod.number(),
+  "objectives": zod.number(),
+  "assessments": zod.number(),
+  "activities": zod.number(),
+  "classes": zod.number(),
+  "crosswalkLinks": zod.number(),
+  "qaChecks": zod.number()
+})
+})
+
+
+/**
+ * @summary User directory across all organizations (global roles only)
+ */
+export const GetPlatformUsersResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "productKey": zod.string(),
+  "status": zod.string(),
+  "organizationId": zod.number().nullish(),
+  "organizationName": zod.string().nullish()
+})
+export const GetPlatformUsersResponse = zod.array(GetPlatformUsersResponseItem)
+
+
+/**
+ * @summary Update an organization's white-label branding
+ */
+export const UpdateOrganizationBrandingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateOrganizationBrandingBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "tagline": zod.string().nullish(),
+  "accentColor": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
+  "domain": zod.string().nullish()
+}).describe('All fields optional. A null clears that field. The `domain` field can be changed by a global admin only; a school admin editing their own org may not set it. accentColor must be a hex color; logoUrl must be https or a site-relative path. These are validated server-side.')
+
+export const UpdateOrganizationBrandingResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "type": zod.string(),
+  "accentColor": zod.string().nullish(),
+  "tagline": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
+  "domain": zod.string().nullish()
+})
+
+
+/**
+ * @summary Begin impersonating a user (super admin only)
+ */
+export const StartImpersonationBody = zod.object({
+  "userId": zod.number().describe('The id of the user to impersonate.')
+})
+
+export const StartImpersonationResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Stop impersonating and restore your own session
+ */
+export const StopImpersonationResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * Public. Resolves branding by the request host only; the host never authorizes anything. Returns a neutral (unbranded) response when the host does not match a configured organization domain.
+ * @summary Resolve white-label branding for the requesting host
+ */
+export const GetBrandingResponse = zod.object({
+  "branded": zod.boolean().describe('True when the host matched a configured organization domain.'),
+  "organization": zod.union([zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "type": zod.string(),
+  "accentColor": zod.string().nullish(),
+  "tagline": zod.string().nullish(),
+  "logoUrl": zod.string().nullish()
+}),zod.null()])
+})
+
+
+/**
  * @summary Register a new client account
  */
 export const registerBodyPasswordMin = 8;
@@ -1417,7 +1571,12 @@ export const LoginResponse = zod.object({
   "organizationName": zod.string().nullish(),
   "organizationType": zod.string().nullish(),
   "organizationSlug": zod.string().nullish(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "impersonator": zod.union([zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string()
+}),zod.null()]).optional().describe('When set, the real super admin currently impersonating this user. Null during a normal session.')
 })
 
 
@@ -1444,7 +1603,12 @@ export const GetCurrentUserResponse = zod.object({
   "organizationName": zod.string().nullish(),
   "organizationType": zod.string().nullish(),
   "organizationSlug": zod.string().nullish(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "impersonator": zod.union([zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string()
+}),zod.null()]).optional().describe('When set, the real super admin currently impersonating this user. Null during a normal session.')
 })
 
 

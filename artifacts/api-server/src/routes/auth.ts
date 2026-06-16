@@ -30,7 +30,13 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-async function publicUser(u: UserRow) {
+interface ImpersonatorInfo {
+  id: number;
+  name: string;
+  email: string;
+}
+
+async function publicUser(u: UserRow, impersonator: ImpersonatorInfo | null = null) {
   let organizationName: string | null = null;
   let organizationType: string | null = null;
   let organizationSlug: string | null = null;
@@ -59,8 +65,28 @@ async function publicUser(u: UserRow) {
     organizationName,
     organizationType,
     organizationSlug,
+    // Present only while a super admin is acting as this user. The frontend uses
+    // it to render a persistent banner with a "Stop impersonating" control.
+    impersonator,
     createdAt: u.createdAt.toISOString(),
   };
+}
+
+// express-session callbacks are node-style; wrap them so we can await in order.
+// Regenerating on login/register issues a brand-new session id (defeats session
+// fixation) AND, critically, drops any stale `impersonatorUserId` so an
+// impersonated session cannot silently swap identity outside the audited
+// impersonation routes.
+function regenerateSession(req: import("express").Request): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((err) => (err ? reject(err) : resolve()));
+  });
+}
+
+function saveSession(req: import("express").Request): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.save((err) => (err ? reject(err) : resolve()));
+  });
 }
 
 function sampleEngagements(userId: number) {
@@ -132,8 +158,10 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
     await db.insert(engagementsTable).values(sampleEngagements(user.id));
   }
 
+  await regenerateSession(req);
   req.session.userId = user.id;
   req.session.role = user.role;
+  await saveSession(req);
   res.status(201).json(await publicUser(user));
 });
 
@@ -156,8 +184,10 @@ router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
     return;
   }
 
+  await regenerateSession(req);
   req.session.userId = user.id;
   req.session.role = user.role;
+  await saveSession(req);
   res.json(await publicUser(user));
 });
 
@@ -179,7 +209,20 @@ router.get("/auth/me", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
-  res.json(await publicUser(user));
+
+  // When impersonating, surface the real operator so the client can show a
+  // persistent banner. Branding/host never sets this; only the impersonation
+  // routes do. If the recorded operator is missing, fail safe to no banner.
+  let impersonator: ImpersonatorInfo | null = null;
+  if (req.session.impersonatorUserId != null) {
+    const [op] = await db
+      .select({ id: usersTable.id, name: usersTable.name, email: usersTable.email })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.session.impersonatorUserId));
+    impersonator = op ?? null;
+  }
+
+  res.json(await publicUser(user, impersonator));
 });
 
 export default router;

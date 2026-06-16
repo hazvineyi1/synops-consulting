@@ -6,17 +6,24 @@ import {
   useLogin,
   useRegister,
   useLogout,
+  useStartImpersonation,
+  useStopImpersonation,
   type AuthUser,
+  type Impersonator,
   type LoginInput,
   type RegisterInput,
 } from "@workspace/api-client-react";
 
 interface AuthContextValue {
   user: AuthUser | null;
+  /** Set when the session is an impersonation: the real super administrator. */
+  impersonator: Impersonator | null;
   isLoading: boolean;
   login: (body: LoginInput) => Promise<AuthUser>;
   register: (body: RegisterInput) => Promise<AuthUser>;
   logout: () => Promise<void>;
+  startImpersonating: (userId: number) => Promise<void>;
+  stopImpersonating: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -36,6 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginMut = useLogin();
   const registerMut = useRegister();
   const logoutMut = useLogout();
+  const startImpersonationMut = useStartImpersonation();
+  const stopImpersonationMut = useStopImpersonation();
 
   const login = async (body: LoginInput) => {
     const user = await loginMut.mutateAsync({ data: body });
@@ -55,9 +64,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await queryClient.invalidateQueries();
   };
 
+  // Impersonation swaps the server session to the target user. The acting
+  // identity changes entirely, so drop every cached query and refetch (including
+  // /me, which now carries the impersonator). Stopping restores the real session.
+  const startImpersonating = async (userId: number) => {
+    await startImpersonationMut.mutateAsync({ data: { userId } });
+    await queryClient.invalidateQueries();
+  };
+
+  const stopImpersonating = async () => {
+    await stopImpersonationMut.mutateAsync();
+    await queryClient.invalidateQueries();
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user: data ?? null, isLoading, login, register, logout }}
+      value={{
+        user: data ?? null,
+        impersonator: data?.impersonator ?? null,
+        isLoading,
+        login,
+        register,
+        logout,
+        startImpersonating,
+        stopImpersonating,
+      }}
     >
       {children}
     </AuthContext.Provider>

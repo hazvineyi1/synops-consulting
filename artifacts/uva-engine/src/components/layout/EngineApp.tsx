@@ -1,7 +1,7 @@
 import { Switch, Route, Redirect } from "wouter";
 import { Shell } from "@/components/layout/Shell";
 import { useAuth } from "@/lib/auth-context";
-import { canManageSchool, isBuilder } from "@/lib/roles";
+import { canManageSchool, isBuilder, canViewConsole } from "@/lib/roles";
 import Dashboard from "@/pages/Dashboard";
 import Clients from "@/pages/Clients";
 import ClientDetail from "@/pages/ClientDetail";
@@ -20,6 +20,7 @@ import BuilderActivity from "@/pages/compass/BuilderActivity";
 import Allocations from "@/pages/compass/Allocations";
 import SchoolReport from "@/pages/compass/SchoolReport";
 import MyWork from "@/pages/compass/MyWork";
+import Console from "@/pages/compass/Console";
 import NotFound from "@/pages/not-found";
 
 /**
@@ -65,6 +66,9 @@ export function EngineApp() {
           {manage ? <SchoolReport /> : <Redirect to="/" />}
         </Route>
         <Route path="/my-work">{builder ? <MyWork /> : <Redirect to="/" />}</Route>
+        <Route path="/console">
+          {canViewConsole(role) ? <Console /> : <Redirect to="/" />}
+        </Route>
         <Route component={NotFound} />
       </Switch>
     </Shell>

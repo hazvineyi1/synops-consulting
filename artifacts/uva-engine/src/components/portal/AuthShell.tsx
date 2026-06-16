@@ -14,6 +14,8 @@ export function AuthShell({
   panelLine = "One platform for the Synops Advisory Group products you rely on.",
   panelNote,
   accent,
+  logoUrl,
+  brandName = "Synops Advisory",
 }: {
   title: string;
   subtitle?: string;
@@ -23,6 +25,10 @@ export function AuthShell({
   panelLine?: string;
   panelNote?: string;
   accent?: string;
+  // When a white-label org is resolved by host, its logo and name replace the
+  // default Synops mark on the sign-in screen.
+  logoUrl?: string;
+  brandName?: string;
 }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -32,11 +38,15 @@ export function AuthShell({
             href="/"
             className="mb-8 inline-flex items-center gap-2.5 font-semibold tracking-tight"
           >
-            <span className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded bg-gradient-to-br from-primary to-teal-400 text-white">
-              <span className="absolute inset-0 m-auto h-3.5 w-3.5 rotate-45 border border-white/80" />
-              <span className="relative z-10 text-[11px] font-bold">SA</span>
-            </span>
-            <span>Synops Advisory</span>
+            {logoUrl ? (
+              <img src={logoUrl} alt="" className="h-8 w-auto" />
+            ) : (
+              <span className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded bg-gradient-to-br from-primary to-teal-400 text-white">
+                <span className="absolute inset-0 m-auto h-3.5 w-3.5 rotate-45 border border-white/80" />
+                <span className="relative z-10 text-[11px] font-bold">SA</span>
+              </span>
+            )}
+            <span>{brandName}</span>
           </Link>
 
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>

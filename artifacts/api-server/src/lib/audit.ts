@@ -27,6 +27,7 @@ export async function recordActorAudit(
       entityTitle: event.entityTitle,
       projectTitle: event.projectTitle ?? null,
       actorUserId: actor.userId,
+      impersonatorUserId: actor.impersonatorUserId ?? null,
     });
   } catch {
     // Audit is best-effort; swallow so the mutation still succeeds.

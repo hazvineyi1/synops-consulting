@@ -19,6 +19,12 @@ export const ProductKey = {
   meridian: 'meridian',
 } as const;
 
+export interface Impersonator {
+  id: number;
+  name: string;
+  email: string;
+}
+
 export interface AuthUser {
   id: number;
   email: string;
@@ -38,6 +44,8 @@ export interface AuthUser {
   /** @nullable */
   organizationSlug?: string | null;
   createdAt: string;
+  /** When set, the real super admin currently impersonating this user. Null during a normal session. */
+  impersonator?: Impersonator | null;
 }
 
 export interface RegisterInput {
@@ -1131,6 +1139,149 @@ export interface SchoolReport {
   builders: SchoolReportBuilder[];
 }
 
+export interface StartImpersonationInput {
+  /** The id of the user to impersonate. */
+  userId: number;
+}
+
+export interface BrandingOrganization {
+  id: number;
+  name: string;
+  slug: string;
+  type: string;
+  /** @nullable */
+  accentColor?: string | null;
+  /** @nullable */
+  tagline?: string | null;
+  /** @nullable */
+  logoUrl?: string | null;
+}
+
+export interface BrandingResponse {
+  /** True when the host matched a configured organization domain. */
+  branded: boolean;
+  organization: BrandingOrganization | null;
+}
+
+export interface OrganizationBranding {
+  id: number;
+  name: string;
+  slug: string;
+  type: string;
+  /** @nullable */
+  accentColor?: string | null;
+  /** @nullable */
+  tagline?: string | null;
+  /** @nullable */
+  logoUrl?: string | null;
+  /** @nullable */
+  domain?: string | null;
+}
+
+/**
+ * All fields optional. A null clears that field. The `domain` field can be changed by a global admin only; a school admin editing their own org may not set it. accentColor must be a hex color; logoUrl must be https or a site-relative path. These are validated server-side.
+ */
+export interface UpdateBrandingInput {
+  /** @minLength 1 */
+  name?: string;
+  /** @nullable */
+  tagline?: string | null;
+  /** @nullable */
+  accentColor?: string | null;
+  /** @nullable */
+  logoUrl?: string | null;
+  /** @nullable */
+  domain?: string | null;
+}
+
+export interface PlatformOverviewTotals {
+  organizations: number;
+  users: number;
+  clients: number;
+  projects: number;
+  activeProjects: number;
+  courses: number;
+  classes: number;
+  builders: number;
+  activeAllocations: number;
+}
+
+export interface PlatformOverviewOrganization {
+  id: number;
+  name: string;
+  slug: string;
+  type: string;
+  /** @nullable */
+  domain?: string | null;
+  /** @nullable */
+  accentColor?: string | null;
+  /** @nullable */
+  tagline?: string | null;
+  /** @nullable */
+  logoUrl?: string | null;
+  users: number;
+  clients: number;
+  projects: number;
+  activeProjects: number;
+  courses: number;
+  classes: number;
+  builders: number;
+  activeAllocations: number;
+}
+
+export interface PlatformCountByKey {
+  key: string;
+  count: number;
+}
+
+export interface PlatformUser {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  productKey: string;
+  status: string;
+  /** @nullable */
+  organizationId?: number | null;
+  /** @nullable */
+  organizationName?: string | null;
+}
+
+export interface PlatformOverview {
+  generatedAt: string;
+  totals: PlatformOverviewTotals;
+  usersByRole: PlatformCountByKey[];
+  usersByProduct: PlatformCountByKey[];
+  organizations: PlatformOverviewOrganization[];
+}
+
+export interface ScopeStatsTotals {
+  courses: number;
+  modules: number;
+  objectives: number;
+  assessments: number;
+  activities: number;
+  classes: number;
+  crosswalkLinks: number;
+  qaChecks: number;
+}
+
+export type ScopeStatsScopeType = typeof ScopeStatsScopeType[keyof typeof ScopeStatsScopeType];
+
+
+export const ScopeStatsScopeType = {
+  project: 'project',
+  course: 'course',
+  class: 'class',
+} as const;
+
+export interface ScopeStats {
+  scopeType: ScopeStatsScopeType;
+  scopeId: number;
+  name: string;
+  totals: ScopeStatsTotals;
+}
+
 export type ListBuildersParams = {
 organizationId?: number;
 };
@@ -1147,6 +1298,20 @@ organizationId?: number;
 export type GetSchoolReportMarkdownParams = {
 organizationId?: number;
 };
+
+export type GetScopeStatsParams = {
+scopeType: GetScopeStatsScopeType;
+scopeId: number;
+};
+
+export type GetScopeStatsScopeType = typeof GetScopeStatsScopeType[keyof typeof GetScopeStatsScopeType];
+
+
+export const GetScopeStatsScopeType = {
+  project: 'project',
+  course: 'course',
+  class: 'class',
+} as const;
 
 export type GetDemoBankParams = {
 level: GetDemoBankLevel;

@@ -7,6 +7,11 @@ declare module "express-session" {
   interface SessionData {
     userId?: number;
     role?: string;
+    // Set only while a super admin is impersonating another user. Holds the
+    // REAL operator's id; `userId` holds the impersonated target. Cleared on
+    // stop. Drives the impersonation banner and the blockWhileImpersonating
+    // guard. See routes/impersonation.ts.
+    impersonatorUserId?: number;
   }
 }
 
@@ -23,6 +28,24 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
 export const requireAuth: RequestHandler = (req, res, next) => {
   if (!req.session?.userId) {
     res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  next();
+};
+
+/**
+ * Reject credential- and security-changing actions while a super admin is
+ * impersonating another user. Impersonation is for support and reproduction,
+ * not for performing privileged changes as the target (creating users, resetting
+ * passwords, granting access, or nesting impersonation). Detected from the
+ * session, which is set only by routes/impersonation.ts, so this works both
+ * inside and outside the /compass namespace.
+ */
+export const blockWhileImpersonating: RequestHandler = (req, res, next) => {
+  if (req.session?.impersonatorUserId != null) {
+    res.status(403).json({
+      error: "This action is not available while impersonating. Stop impersonating first.",
+    });
     return;
   }
   next();

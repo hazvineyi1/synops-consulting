@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, Redirect } from "wouter";
 import { useAuth, authErrorMessage } from "@/lib/auth-context";
+import { useBranding } from "@/lib/branding-context";
 import { usePageMeta } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,12 @@ export default function ProductLogin({ product }: { product: Product }) {
     `Sign in to ${product.name}, the ${product.title} from Synops Advisory Group.`,
   );
   const { user, login } = useAuth();
+  const { isBranded, organization } = useBranding();
+
+  // When the host resolves to a white-label org, its accent and logo theme the
+  // sign-in screen. The host is cosmetic only; it never grants access.
+  const branded = isBranded ? organization : null;
+  const accent = branded?.accentColor ?? product.accent;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,7 +52,9 @@ export default function ProductLogin({ product }: { product: Product }) {
       subtitle={product.title}
       eyebrow={`${product.name} \u00b7 ${product.vertical}`}
       panelLine={product.panelLine}
-      accent={product.accent}
+      accent={accent}
+      logoUrl={branded?.logoUrl ?? undefined}
+      brandName={branded?.name}
       footer={
         product.hasRegister ? (
           <p>
@@ -53,7 +62,7 @@ export default function ProductLogin({ product }: { product: Product }) {
             <Link
               href={`/${product.key}/register`}
               className="font-medium hover:underline"
-              style={{ color: product.accent }}
+              style={{ color: accent }}
             >
               Create one
             </Link>
@@ -64,6 +73,14 @@ export default function ProductLogin({ product }: { product: Product }) {
       }
     >
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        {branded && (
+          <div
+            className="rounded-md border-l-4 bg-muted/50 px-3 py-2 text-sm text-muted-foreground"
+            style={{ borderLeftColor: accent }}
+          >
+            Provided for {branded.name} via Synops Advisory Group.
+          </div>
+        )}
         {error && (
           <div
             role="alert"
@@ -97,7 +114,7 @@ export default function ProductLogin({ product }: { product: Product }) {
         <Button
           type="submit"
           className="w-full text-white hover:opacity-90"
-          style={{ backgroundColor: product.accent }}
+          style={{ backgroundColor: accent }}
           disabled={submitting}
         >
           {submitting ? "Signing in..." : "Sign in"}

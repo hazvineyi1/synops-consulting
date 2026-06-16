@@ -21,8 +21,9 @@ function isOrgBoundRole(role: string): boolean {
 /**
  * The acting user's tenancy context. Resolved once per request by
  * `loadActorContext` and consumed by the org-scoped query helpers in tenancy.ts.
- * `impersonatorUserId` is a placeholder for a later impersonation feature; it is
- * always null for now.
+ * `userId` is always the ACTING user (the impersonated target while a super
+ * admin is impersonating); `impersonatorUserId` carries the REAL operator in
+ * that case, and is null otherwise. See routes/impersonation.ts.
  */
 export interface ActorContext {
   userId: number;
@@ -101,7 +102,7 @@ export const loadActorContext: RequestHandler = (req, res, next) => {
         organizationId: user.organizationId,
         organizationType,
         isGlobal,
-        impersonatorUserId: null,
+        impersonatorUserId: req.session.impersonatorUserId ?? null,
       };
       next();
     } catch (err) {

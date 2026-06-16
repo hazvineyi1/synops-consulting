@@ -9,11 +9,12 @@ import {
   KeySquare,
   FileBarChart,
   Briefcase,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/lib/auth-context";
-import { canManageSchool, isBuilder, roleLabel } from "@/lib/roles";
+import { canManageSchool, isBuilder, canViewConsole, roleLabel } from "@/lib/roles";
 import { PRODUCT_MAP } from "@/lib/products";
 import React from "react";
 
@@ -33,6 +34,9 @@ function navForRole(role?: string | null): NavItem[] {
     items.push({ name: "Builders", href: "/builders", icon: UserCog });
     items.push({ name: "Allocations", href: "/allocations", icon: KeySquare });
     items.push({ name: "School report", href: "/school-report", icon: FileBarChart });
+  }
+  if (canViewConsole(role)) {
+    items.push({ name: "Platform console", href: "/console", icon: ShieldCheck });
   }
   return items;
 }

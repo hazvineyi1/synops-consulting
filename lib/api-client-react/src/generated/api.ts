@@ -30,6 +30,7 @@ import type {
   AssessmentInput,
   AssessmentUpdate,
   AuthUser,
+  BrandingResponse,
   Builder,
   CadenceDeliverable,
   CadenceEngagement,
@@ -65,6 +66,7 @@ import type {
   GetRiseBankParams,
   GetSchoolReportMarkdownParams,
   GetSchoolReportParams,
+  GetScopeStatsParams,
   HealthStatus,
   IntakeProgress,
   IntakeProgressInput,
@@ -84,6 +86,9 @@ import type {
   ObjectiveInput,
   ObjectiveUpdate,
   OkResponse,
+  OrganizationBranding,
+  PlatformOverview,
+  PlatformUser,
   PortalMessageInput,
   PortalResource,
   Project,
@@ -103,12 +108,15 @@ import type {
   RiseSession,
   RiseSessionInput,
   SchoolReport,
+  ScopeStats,
   StageAdvanceInput,
   StandardCompetency,
   StandardCompetencyInput,
   StandardsFramework,
   StandardsFrameworkInput,
+  StartImpersonationInput,
   SubmitResult,
+  UpdateBrandingInput,
   UpdateBuilderStatusInput
 } from './api.schemas';
 
@@ -4804,6 +4812,612 @@ export function useGetSchoolReportMarkdown<TData = Awaited<ReturnType<typeof get
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetSchoolReportMarkdownQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPlatformOverviewUrl = () => {
+
+
+
+
+  return `/api/compass/admin/overview`
+}
+
+/**
+ * @summary Cross-organization platform overview (global roles only)
+ */
+export const getPlatformOverview = async ( options?: RequestInit): Promise<PlatformOverview> => {
+
+  return customFetch<PlatformOverview>(getGetPlatformOverviewUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformOverviewQueryKey = () => {
+    return [
+    `/api/compass/admin/overview`
+    ] as const;
+    }
+
+
+export const getGetPlatformOverviewQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformOverview>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformOverviewQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformOverview>>> = ({ signal }) => getPlatformOverview({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformOverview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlatformOverviewQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformOverview>>>
+export type GetPlatformOverviewQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Cross-organization platform overview (global roles only)
+ */
+
+export function useGetPlatformOverview<TData = Awaited<ReturnType<typeof getPlatformOverview>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlatformOverviewQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPlatformReportMarkdownUrl = () => {
+
+
+
+
+  return `/api/compass/admin/report.md`
+}
+
+/**
+ * @summary Platform overview as downloadable markdown (global roles only)
+ */
+export const getPlatformReportMarkdown = async ( options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getGetPlatformReportMarkdownUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformReportMarkdownQueryKey = () => {
+    return [
+    `/api/compass/admin/report.md`
+    ] as const;
+    }
+
+
+export const getGetPlatformReportMarkdownQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformReportMarkdown>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformReportMarkdown>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformReportMarkdownQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformReportMarkdown>>> = ({ signal }) => getPlatformReportMarkdown({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformReportMarkdown>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlatformReportMarkdownQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformReportMarkdown>>>
+export type GetPlatformReportMarkdownQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Platform overview as downloadable markdown (global roles only)
+ */
+
+export function useGetPlatformReportMarkdown<TData = Awaited<ReturnType<typeof getPlatformReportMarkdown>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformReportMarkdown>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlatformReportMarkdownQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetScopeStatsUrl = (params: GetScopeStatsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/compass/stats/scope?${stringifiedParams}` : `/api/compass/stats/scope`
+}
+
+/**
+ * @summary Rollup statistics for a single curriculum scope
+ */
+export const getScopeStats = async (params: GetScopeStatsParams, options?: RequestInit): Promise<ScopeStats> => {
+
+  return customFetch<ScopeStats>(getGetScopeStatsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetScopeStatsQueryKey = (params?: GetScopeStatsParams,) => {
+    return [
+    `/api/compass/stats/scope`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetScopeStatsQueryOptions = <TData = Awaited<ReturnType<typeof getScopeStats>>, TError = ErrorType<unknown>>(params: GetScopeStatsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScopeStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetScopeStatsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getScopeStats>>> = ({ signal }) => getScopeStats(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getScopeStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetScopeStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getScopeStats>>>
+export type GetScopeStatsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Rollup statistics for a single curriculum scope
+ */
+
+export function useGetScopeStats<TData = Awaited<ReturnType<typeof getScopeStats>>, TError = ErrorType<unknown>>(
+ params: GetScopeStatsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScopeStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetScopeStatsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPlatformUsersUrl = () => {
+
+
+
+
+  return `/api/compass/admin/users`
+}
+
+/**
+ * @summary User directory across all organizations (global roles only)
+ */
+export const getPlatformUsers = async ( options?: RequestInit): Promise<PlatformUser[]> => {
+
+  return customFetch<PlatformUser[]>(getGetPlatformUsersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformUsersQueryKey = () => {
+    return [
+    `/api/compass/admin/users`
+    ] as const;
+    }
+
+
+export const getGetPlatformUsersQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformUsers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformUsersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformUsers>>> = ({ signal }) => getPlatformUsers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformUsers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlatformUsersQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformUsers>>>
+export type GetPlatformUsersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary User directory across all organizations (global roles only)
+ */
+
+export function useGetPlatformUsers<TData = Awaited<ReturnType<typeof getPlatformUsers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlatformUsersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateOrganizationBrandingUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/admin/organizations/${id}/branding`
+}
+
+/**
+ * @summary Update an organization's white-label branding
+ */
+export const updateOrganizationBranding = async (id: number,
+    updateBrandingInput: UpdateBrandingInput, options?: RequestInit): Promise<OrganizationBranding> => {
+
+  return customFetch<OrganizationBranding>(getUpdateOrganizationBrandingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateBrandingInput,)
+  }
+);}
+
+
+
+
+export const getUpdateOrganizationBrandingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrganizationBranding>>, TError,{id: number;data: BodyType<UpdateBrandingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOrganizationBranding>>, TError,{id: number;data: BodyType<UpdateBrandingInput>}, TContext> => {
+
+const mutationKey = ['updateOrganizationBranding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOrganizationBranding>>, {id: number;data: BodyType<UpdateBrandingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateOrganizationBranding(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOrganizationBrandingMutationResult = NonNullable<Awaited<ReturnType<typeof updateOrganizationBranding>>>
+    export type UpdateOrganizationBrandingMutationBody = BodyType<UpdateBrandingInput>
+    export type UpdateOrganizationBrandingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update an organization's white-label branding
+ */
+export const useUpdateOrganizationBranding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrganizationBranding>>, TError,{id: number;data: BodyType<UpdateBrandingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOrganizationBranding>>,
+        TError,
+        {id: number;data: BodyType<UpdateBrandingInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateOrganizationBrandingMutationOptions(options));
+    }
+
+export const getStartImpersonationUrl = () => {
+
+
+
+
+  return `/api/impersonation/start`
+}
+
+/**
+ * @summary Begin impersonating a user (super admin only)
+ */
+export const startImpersonation = async (startImpersonationInput: StartImpersonationInput, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getStartImpersonationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      startImpersonationInput,)
+  }
+);}
+
+
+
+
+export const getStartImpersonationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startImpersonation>>, TError,{data: BodyType<StartImpersonationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startImpersonation>>, TError,{data: BodyType<StartImpersonationInput>}, TContext> => {
+
+const mutationKey = ['startImpersonation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startImpersonation>>, {data: BodyType<StartImpersonationInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  startImpersonation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartImpersonationMutationResult = NonNullable<Awaited<ReturnType<typeof startImpersonation>>>
+    export type StartImpersonationMutationBody = BodyType<StartImpersonationInput>
+    export type StartImpersonationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Begin impersonating a user (super admin only)
+ */
+export const useStartImpersonation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startImpersonation>>, TError,{data: BodyType<StartImpersonationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startImpersonation>>,
+        TError,
+        {data: BodyType<StartImpersonationInput>},
+        TContext
+      > => {
+      return useMutation(getStartImpersonationMutationOptions(options));
+    }
+
+export const getStopImpersonationUrl = () => {
+
+
+
+
+  return `/api/impersonation/stop`
+}
+
+/**
+ * @summary Stop impersonating and restore your own session
+ */
+export const stopImpersonation = async ( options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getStopImpersonationUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getStopImpersonationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopImpersonation>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof stopImpersonation>>, TError,void, TContext> => {
+
+const mutationKey = ['stopImpersonation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof stopImpersonation>>, void> = () => {
+
+
+          return  stopImpersonation(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StopImpersonationMutationResult = NonNullable<Awaited<ReturnType<typeof stopImpersonation>>>
+
+    export type StopImpersonationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Stop impersonating and restore your own session
+ */
+export const useStopImpersonation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopImpersonation>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof stopImpersonation>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getStopImpersonationMutationOptions(options));
+    }
+
+export const getGetBrandingUrl = () => {
+
+
+
+
+  return `/api/branding`
+}
+
+/**
+ * Public. Resolves branding by the request host only; the host never authorizes anything. Returns a neutral (unbranded) response when the host does not match a configured organization domain.
+ * @summary Resolve white-label branding for the requesting host
+ */
+export const getBranding = async ( options?: RequestInit): Promise<BrandingResponse> => {
+
+  return customFetch<BrandingResponse>(getGetBrandingUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBrandingQueryKey = () => {
+    return [
+    `/api/branding`
+    ] as const;
+    }
+
+
+export const getGetBrandingQueryOptions = <TData = Awaited<ReturnType<typeof getBranding>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBranding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBrandingQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBranding>>> = ({ signal }) => getBranding({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBranding>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBrandingQueryResult = NonNullable<Awaited<ReturnType<typeof getBranding>>>
+export type GetBrandingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Resolve white-label branding for the requesting host
+ */
+
+export function useGetBranding<TData = Awaited<ReturnType<typeof getBranding>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBranding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBrandingQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
