@@ -56,17 +56,6 @@ function PublicSite() {
 function Router() {
   return (
     <Switch>
-      {/* Legacy portal paths redirect to Hub. */}
-      <Route path="/portal/login">
-        <Redirect to="/hub/login" />
-      </Route>
-      <Route path="/portal/register">
-        <Redirect to="/hub/register" />
-      </Route>
-      <Route path="/portal" nest>
-        <Redirect to="~/hub" />
-      </Route>
-
       {/* Per-product branded register (only where self-service is enabled). */}
       {PRODUCTS.filter((p) => p.hasRegister).map((p) => (
         <Route key={`reg-${p.key}`} path={`/${p.key}/register`}>

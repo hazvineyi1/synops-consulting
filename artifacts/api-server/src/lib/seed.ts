@@ -1,7 +1,6 @@
-import { inArray, eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, inArray } from "drizzle-orm";
 import {
   db,
-  portalResourcesTable,
   usersTable,
   organizationsTable,
   clientsTable,
@@ -9,57 +8,12 @@ import {
   coursesTable,
   classesTable,
   allocationsTable,
-  engagementsTable,
-  engagementMilestonesTable,
-  engagementDeliverablesTable,
-  providersTable,
-  networkAdequacyReviewsTable,
-  providerDisputesTable,
 } from "@workspace/db";
 import { hashPassword } from "./auth";
 import { PRODUCT_KEYS } from "./products";
 
 interface MinimalLogger {
   info: (obj: object, msg?: string) => void;
-}
-
-const SAMPLE_RESOURCES = [
-  {
-    title: "Engagement Playbook",
-    category: "Guides",
-    description:
-      "How we run every engagement: Assess → Design → Build → Sustain, with the artifacts you receive at each stage.",
-    url: "#",
-  },
-  {
-    title: "Accessibility & Compliance Checklist",
-    category: "Templates",
-    description:
-      "Our WCAG 2.1 AA and Section 508 review checklist, used on every learning deliverable.",
-    url: "#",
-  },
-  {
-    title: "Quality Review Rubric",
-    category: "Templates",
-    description:
-      "The course and curriculum review rubric we crosswalk against recognized quality standards.",
-    url: "#",
-  },
-  {
-    title: "Sample Quarterly Status Report",
-    category: "Reports",
-    description:
-      "An example of the cadence, metrics, and format we deliver to engagement sponsors.",
-    url: "#",
-  },
-];
-
-/** Idempotently seed sample portal resources if none exist yet. */
-export async function ensurePortalSeed(log: MinimalLogger): Promise<void> {
-  const existing = await db.select().from(portalResourcesTable).limit(1);
-  if (existing.length > 0) return;
-  await db.insert(portalResourcesTable).values(SAMPLE_RESOURCES);
-  log.info({ count: SAMPLE_RESOURCES.length }, "Seeded sample portal resources");
 }
 
 // The consulting firm's own tenant. The curriculum tree built by internal staff
@@ -152,175 +106,10 @@ function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function demoEngagements(userId: number) {
-  return [
-    {
-      userId,
-      title: "K-12 Curriculum Modernization",
-      practiceArea: "Education",
-      status: "active",
-      nextMilestone: "Module 3 review",
-      description: "Standards-aligned redesign across four core courses.",
-    },
-    {
-      userId,
-      title: "Provider Network Adequacy Review",
-      practiceArea: "Healthcare",
-      status: "active",
-      nextMilestone: "County gap analysis",
-      description: "Quarterly adequacy assessment for the regional network.",
-    },
-    {
-      userId,
-      title: "Platform Accessibility Audit",
-      practiceArea: "Platforms",
-      status: "planning",
-      nextMilestone: "Kickoff",
-      description: "WCAG 2.1 AA audit and remediation plan.",
-    },
-  ];
-}
-
-interface CadenceMilestoneSeed {
-  title: string;
-  status: string;
-}
-
-interface CadenceDeliverableSeed {
-  title: string;
-  status: string;
-  qaGateStatus: string;
-  qaNotes: string | null;
-  milestoneIdx: number;
-}
-
-interface CadenceEngagementSeed {
-  title: string;
-  practiceArea: string;
-  status: string;
-  nextMilestone: string;
-  description: string;
-  milestones: CadenceMilestoneSeed[];
-  deliverables: CadenceDeliverableSeed[];
-}
-
-const CADENCE_SEED: CadenceEngagementSeed[] = [
-  {
-    title: "District Curriculum Modernization",
-    practiceArea: "Education",
-    status: "Active",
-    nextMilestone: "Pilot launch",
-    description: "Redesign core courses to current standards across the district.",
-    milestones: [
-      { title: "Discovery and audit", status: "Complete" },
-      { title: "Design and build", status: "In progress" },
-      { title: "Pilot launch", status: "Pending" },
-    ],
-    deliverables: [
-      {
-        title: "Current-state curriculum audit",
-        status: "Complete",
-        qaGateStatus: "passed",
-        qaNotes: "Reviewed against state standards.",
-        milestoneIdx: 0,
-      },
-      {
-        title: "Standards crosswalk",
-        status: "In review",
-        qaGateStatus: "pending",
-        qaNotes: null,
-        milestoneIdx: 1,
-      },
-      {
-        title: "Unit 1 redesign",
-        status: "Not started",
-        qaGateStatus: "pending",
-        qaNotes: null,
-        milestoneIdx: 1,
-      },
-    ],
-  },
-  {
-    title: "Regional Health Network Readiness",
-    practiceArea: "Healthcare",
-    status: "Active",
-    nextMilestone: "Adequacy report",
-    description: "Assess and improve provider network adequacy for the region.",
-    milestones: [
-      { title: "Data intake", status: "Complete" },
-      { title: "Gap analysis", status: "In progress" },
-      { title: "Adequacy report", status: "Pending" },
-    ],
-    deliverables: [
-      {
-        title: "Provider data intake summary",
-        status: "Complete",
-        qaGateStatus: "passed",
-        qaNotes: "Validated against the source registry.",
-        milestoneIdx: 0,
-      },
-      {
-        title: "County-level gap analysis",
-        status: "In review",
-        qaGateStatus: "failed",
-        qaNotes: "Recheck three counties with stale data.",
-        milestoneIdx: 1,
-      },
-      {
-        title: "Network adequacy report",
-        status: "Not started",
-        qaGateStatus: "pending",
-        qaNotes: null,
-        milestoneIdx: 2,
-      },
-    ],
-  },
-];
-
-async function seedCadenceData(userId: number): Promise<void> {
-  for (const e of CADENCE_SEED) {
-    const [engagement] = await db
-      .insert(engagementsTable)
-      .values({
-        userId,
-        title: e.title,
-        practiceArea: e.practiceArea,
-        status: e.status,
-        nextMilestone: e.nextMilestone,
-        description: e.description,
-      })
-      .returning();
-
-    const milestoneIds: number[] = [];
-    for (const [i, m] of e.milestones.entries()) {
-      const [milestone] = await db
-        .insert(engagementMilestonesTable)
-        .values({
-          engagementId: engagement.id,
-          title: m.title,
-          status: m.status,
-          orderIndex: i,
-        })
-        .returning();
-      milestoneIds.push(milestone.id);
-    }
-
-    for (const d of e.deliverables) {
-      await db.insert(engagementDeliverablesTable).values({
-        engagementId: engagement.id,
-        milestoneId: milestoneIds[d.milestoneIdx] ?? null,
-        title: d.title,
-        status: d.status,
-        qaGateStatus: d.qaGateStatus,
-        qaNotes: d.qaNotes,
-      });
-    }
-  }
-}
-
 /**
- * Idempotently seed one demo client per product plus a platform admin, so every
- * branded portal is reachable for review. Skipped entirely in production.
+ * Idempotently seed a demo client for Compass plus a platform admin and the
+ * role-based Compass accounts, so the branded login and console are reachable
+ * for review. Skipped entirely in production.
  */
 export async function ensureDemoUsers(
   log: MinimalLogger,
@@ -339,7 +128,7 @@ export async function ensureDemoUsers(
   }
 
   const accounts: DemoAccount[] = [
-    { email: `admin@${DEMO_DOMAIN}`, name: "Platform Admin", role: "admin", productKey: "hub", organizationId: null },
+    { email: `admin@${DEMO_DOMAIN}`, name: "Platform Admin", role: "admin", productKey: "compass", organizationId: null },
     ...PRODUCT_KEYS.map((key): DemoAccount => ({
       email: `${key}@${DEMO_DOMAIN}`,
       name: `${titleCase(key)} Demo`,
@@ -370,7 +159,7 @@ export async function ensureDemoUsers(
     const passwordHash = await hashPassword(DEMO_PASSWORD);
 
     for (const acct of toCreate) {
-      const [user] = await db
+      await db
         .insert(usersTable)
         .values({
           email: acct.email,
@@ -380,39 +169,11 @@ export async function ensureDemoUsers(
           organizationId: acct.organizationId,
           role: acct.role,
           productKey: acct.productKey,
-        })
-        .returning();
-
-      if (acct.productKey === "hub" && acct.role === "client") {
-        await db.insert(engagementsTable).values(demoEngagements(user.id));
-      }
+        });
     }
 
     log.info({ count: toCreate.length }, "Seeded demo users");
   }
-
-  // Ensure the Cadence demo client has engagement data even when the account
-  // was created before this seed existed. Idempotent: only seeds when the user
-  // currently has no engagements.
-  await ensureCadenceDemoData(log);
-}
-
-async function ensureCadenceDemoData(log: MinimalLogger): Promise<void> {
-  const [cadenceUser] = await db
-    .select({ id: usersTable.id })
-    .from(usersTable)
-    .where(eq(usersTable.email, `cadence@${DEMO_DOMAIN}`));
-  if (!cadenceUser) return;
-
-  const existing = await db
-    .select({ id: engagementsTable.id })
-    .from(engagementsTable)
-    .where(eq(engagementsTable.userId, cadenceUser.id))
-    .limit(1);
-  if (existing.length > 0) return;
-
-  await seedCadenceData(cadenceUser.id);
-  log.info({ userId: cadenceUser.id }, "Seeded Cadence demo data");
 }
 
 /**
@@ -491,116 +252,5 @@ export async function ensureDemoAcademyCurriculum(log: MinimalLogger): Promise<v
   log.info(
     { orgId: demoSchoolOrgId, courses: courses.length },
     "Seeded Demo Academy curriculum + allocation",
-  );
-}
-
-// ── Meridian (provider operations) synthetic seed ─────────────
-// All records below are fabricated for demo only. No real provider or patient
-// data is used.
-const MERIDIAN_PROVIDERS = [
-  { name: "Blue Ridge Family Medicine", specialty: "Primary Care", region: "Central", networkStatus: "In-network", acceptingPatients: true, panelSize: 1850 },
-  { name: "Cardinal Cardiology Associates", specialty: "Cardiology", region: "Central", networkStatus: "In-network", acceptingPatients: false, panelSize: 920 },
-  { name: "Tidewater Pediatrics", specialty: "Pediatrics", region: "Coastal", networkStatus: "In-network", acceptingPatients: true, panelSize: 1340 },
-  { name: "Shenandoah Behavioral Health", specialty: "Behavioral Health", region: "Western", networkStatus: "Pending", acceptingPatients: true, panelSize: 410 },
-  { name: "Piedmont Orthopedics", specialty: "Orthopedics", region: "Central", networkStatus: "In-network", acceptingPatients: true, panelSize: 760 },
-  { name: "Coastal OB-GYN Group", specialty: "OB-GYN", region: "Coastal", networkStatus: "Out-of-network", acceptingPatients: false, panelSize: 0 },
-  { name: "Highlands Internal Medicine", specialty: "Primary Care", region: "Western", networkStatus: "In-network", acceptingPatients: true, panelSize: 1605 },
-  { name: "James River Dermatology", specialty: "Dermatology", region: "Central", networkStatus: "In-network", acceptingPatients: true, panelSize: 540 },
-];
-
-const MERIDIAN_REVIEWS = [
-  { region: "Central", specialty: "Primary Care", requiredProviders: 6, actualProviders: 7, status: "Adequate", notes: "Meets time and distance standards." },
-  { region: "Central", specialty: "Cardiology", requiredProviders: 3, actualProviders: 2, status: "At risk", notes: "One provider closed panel; monitor wait times." },
-  { region: "Coastal", specialty: "Pediatrics", requiredProviders: 4, actualProviders: 4, status: "Adequate", notes: null },
-  { region: "Coastal", specialty: "OB-GYN", requiredProviders: 3, actualProviders: 1, status: "Deficient", notes: "Active recruitment needed in two counties." },
-  { region: "Western", specialty: "Behavioral Health", requiredProviders: 5, actualProviders: 3, status: "Deficient", notes: "Telehealth expansion under review." },
-  { region: "Western", specialty: "Primary Care", requiredProviders: 4, actualProviders: 5, status: "Adequate", notes: null },
-];
-
-interface DisputeSeedNote {
-  author: string;
-  body: string;
-  at: string;
-}
-
-interface DisputeSeed {
-  subject: string;
-  category: string;
-  status: string;
-  priority: string;
-  notes: DisputeSeedNote[];
-}
-
-const MERIDIAN_DISPUTES: DisputeSeed[] = [
-  {
-    subject: "Claim reprocessing for Q1 telehealth visits",
-    category: "Claims",
-    status: "In review",
-    priority: "High",
-    notes: [
-      { author: "Operations", body: "Provider reports 14 telehealth claims denied in error.", at: "2026-03-04T14:10:00.000Z" },
-      { author: "Operations", body: "Confirmed coding update; routed to claims for batch reprocessing.", at: "2026-03-06T09:30:00.000Z" },
-    ],
-  },
-  {
-    subject: "Contract rate discrepancy on orthopedic procedures",
-    category: "Contracting",
-    status: "Open",
-    priority: "Normal",
-    notes: [
-      { author: "Operations", body: "Provider flagged mismatch between fee schedule and contract addendum.", at: "2026-04-12T16:45:00.000Z" },
-    ],
-  },
-  {
-    subject: "Credentialing delay for new behavioral health clinician",
-    category: "Credentialing",
-    status: "Escalated",
-    priority: "Urgent",
-    notes: [
-      { author: "Operations", body: "Primary source verification stalled past 30 days.", at: "2026-05-01T11:00:00.000Z" },
-      { author: "Operations", body: "Escalated to credentialing committee for expedited review.", at: "2026-05-08T13:20:00.000Z" },
-    ],
-  },
-  {
-    subject: "Directory listing correction for Tidewater Pediatrics",
-    category: "Directory",
-    status: "Resolved",
-    priority: "Low",
-    notes: [
-      { author: "Operations", body: "Address and accepting-patients flag updated in directory.", at: "2026-02-18T10:05:00.000Z" },
-    ],
-  },
-];
-
-/**
- * Idempotently seed synthetic Meridian provider-operations data. Skipped in
- * production and when records already exist.
- */
-export async function ensureMeridianSeed(log: MinimalLogger): Promise<void> {
-  if (process.env.NODE_ENV === "production") return;
-
-  const existing = await db.select({ id: providersTable.id }).from(providersTable).limit(1);
-  if (existing.length > 0) return;
-
-  const providers = await db.insert(providersTable).values(MERIDIAN_PROVIDERS).returning();
-  await db.insert(networkAdequacyReviewsTable).values(MERIDIAN_REVIEWS);
-  await db.insert(providerDisputesTable).values(
-    MERIDIAN_DISPUTES.map((d, i) => ({
-      providerId: providers[i % providers.length]?.id ?? null,
-      subject: d.subject,
-      category: d.category,
-      status: d.status,
-      priority: d.priority,
-      notes: d.notes,
-    })),
-  );
-
-  log.info(
-    {
-      providers: MERIDIAN_PROVIDERS.length,
-      reviews: MERIDIAN_REVIEWS.length,
-      disputes: MERIDIAN_DISPUTES.length,
-    },
-    "Seeded Meridian demo data",
   );
 }

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { eq } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import { z } from "zod/v4";
-import { db, usersTable, engagementsTable, organizationsTable } from "@workspace/db";
+import { db, usersTable, organizationsTable } from "@workspace/db";
 import type { UserRow } from "@workspace/db";
 import { hashPassword, verifyPassword } from "../lib/auth";
 import { PRODUCT_KEYS, isSelfServiceProductKey } from "../lib/products";
@@ -89,32 +89,6 @@ function saveSession(req: import("express").Request): Promise<void> {
   });
 }
 
-function sampleEngagements(userId: number) {
-  return [
-    {
-      userId,
-      title: "Provider Network Adequacy Review",
-      practiceArea: "Healthcare & Operations",
-      status: "Active",
-      nextMilestone: "Gap-analysis readout, week 3",
-    },
-    {
-      userId,
-      title: "Online Course Accessibility Audit",
-      practiceArea: "Learning & EdTech",
-      status: "In QA",
-      nextMilestone: "WCAG 2.1 AA remediation sign-off",
-    },
-    {
-      userId,
-      title: "Adaptive Learning Pilot",
-      practiceArea: "Platforms & SaaS",
-      status: "Discovery",
-      nextMilestone: "Scope & success-metrics workshop",
-    },
-  ];
-}
-
 router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -123,11 +97,11 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
   }
   const email = parsed.data.email.toLowerCase().trim();
 
-  // Public self-registration is allowed only for self-service products (Hub).
-  // Every other product is provisioned by the engagement team, so reject an
-  // attempt to self-register into one even though the client never offers it.
-  const productKey = parsed.data.productKey ?? "hub";
-  if (!isSelfServiceProductKey(productKey)) {
+  // Public self-registration is allowed only for self-service products. There
+  // are currently none, so every product is provisioned by the engagement team:
+  // reject the attempt (the client never offers a sign-up form).
+  const productKey = parsed.data.productKey;
+  if (!productKey || !isSelfServiceProductKey(productKey)) {
     res
       .status(403)
       .json({ error: "This product is provisioned by your engagement team." });
@@ -151,12 +125,6 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
       productKey,
     })
     .returning();
-
-  // Hub clients get a few sample engagements so the portal is not empty on
-  // first sign-in. Other products manage their own data.
-  if (productKey === "hub") {
-    await db.insert(engagementsTable).values(sampleEngagements(user.id));
-  }
 
   await regenerateSession(req);
   req.session.userId = user.id;

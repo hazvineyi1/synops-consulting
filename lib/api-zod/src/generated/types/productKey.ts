@@ -13,9 +13,5 @@ export type ProductKey = typeof ProductKey[keyof typeof ProductKey];
 
 
 export const ProductKey = {
-  hub: 'hub',
-  cadence: 'cadence',
-  rise: 'rise',
   compass: 'compass',
-  meridian: 'meridian',
 } as const;

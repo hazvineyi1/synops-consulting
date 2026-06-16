@@ -77,7 +77,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
               href="/portals"
               className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              Client portal
+              Curriculum Builder
             </Link>
             <Button asChild>
               <Link href="/contact">Book a consultation</Link>
@@ -119,7 +119,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                   onClick={() => setMobileOpen(false)}
                   className="block rounded-md px-3 py-2 text-base font-medium text-foreground hover:bg-muted"
                 >
-                  Client portal
+                  Curriculum Builder
                 </Link>
                 <Button asChild className="w-full">
                   <Link href="/contact" onClick={() => setMobileOpen(false)}>
@@ -143,7 +143,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             <Link href="/about" className="hover:text-foreground">About</Link>
             <Link href="/insights" className="hover:text-foreground">Insights</Link>
             <Link href="/contact" className="hover:text-foreground">Contact</Link>
-            <Link href="/portals" className="hover:text-foreground">Client portal</Link>
+            <Link href="/portals" className="hover:text-foreground">Curriculum Builder</Link>
           </nav>
         </div>
         <div className="border-t border-border">

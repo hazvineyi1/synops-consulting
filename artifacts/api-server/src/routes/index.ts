@@ -19,12 +19,7 @@ import allocationsRouter from "./allocations";
 import classesRouter from "./classes";
 import schoolRouter from "./school";
 import consoleRouter from "./console";
-import portalRouter from "./portal";
-import adminRouter from "./admin";
 import impersonationRouter from "./impersonation";
-import cadenceRouter from "./cadence";
-import riseRouter from "./rise";
-import meridianRouter from "./meridian";
 import { requireAuth, requireProduct } from "../lib/auth";
 import { loadActorContext } from "../lib/actor";
 
@@ -37,7 +32,7 @@ router.use(contactRouter);
 router.use(demoRouter);
 router.use(brandingRouter);
 
-// ── Compass curriculum engine (single guarded namespace) ────
+// ── Compass curriculum builder (single guarded namespace) ────
 // Every curriculum route lives under /compass behind ONE gate applied at the top
 // of the engine router: authenticate, confirm the Compass product (admins and
 // super-admins bypass), then load the actor's tenancy context. Because the gate
@@ -65,22 +60,11 @@ engineRouter.use(consoleRouter);
 router.use("/compass", engineRouter);
 
 // ── Authenticated routes ────────────────────────────────────
-// Everything below requires a valid session. Admin endpoints additionally
-// enforce the admin role within their own handlers; the other product engines
-// self-gate per-router with requireProduct.
+// Everything below requires a valid session.
 router.use(requireAuth);
 
-// ── Hub client portal + admin (self-gated per route) ────────
-router.use(portalRouter);
-router.use(adminRouter);
-
-// ── Impersonation (top-level so an impersonated non-Compass user can stop) ──
+// ── Impersonation (top-level so the operator can always stop) ──
 // Authorization is enforced inside the router (start requires super_admin).
 router.use(impersonationRouter);
-
-// ── Other product engines (self-gated with requireProduct) ──
-router.use(cadenceRouter);
-router.use(riseRouter);
-router.use(meridianRouter);
 
 export default router;

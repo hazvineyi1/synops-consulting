@@ -53,23 +53,22 @@ function PortalCard({ product }: { product: Product }) {
 
 export default function Portals() {
   usePageMeta(
-    "Client portals",
-    "Sign in to the Synops Advisory Group product suite across education, healthcare, and project management.",
+    "Curriculum Builder",
+    "Sign in to Curriculum Builder, the Synops Advisory Group standards-aligned curriculum platform.",
   );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
       <div className="max-w-2xl space-y-4">
         <p className="text-sm font-medium uppercase tracking-widest text-primary">
-          Client portals
+          Platform access
         </p>
         <h1 className="text-4xl font-bold tracking-tight">
-          One sign-in for every Synops product
+          Sign in to Curriculum Builder
         </h1>
         <p className="text-lg text-muted-foreground">
-          Each product has its own secure, branded workspace. Choose yours below.
-          Access is provisioned by your engagement team unless self-service
-          sign-up is offered.
+          A secure, branded workspace for standards-aligned curriculum design.
+          Access is provisioned by your engagement team.
         </p>
       </div>
 
