@@ -7,11 +7,20 @@ import {
   GetClientParams,
   UpdateClientParams,
 } from "@workspace/api-zod";
+import {
+  clientOrgFilter,
+  denyCrossOrg,
+  getClientOrgId,
+} from "../lib/tenancy";
 
 const router = Router();
 
 router.get("/clients", async (req, res): Promise<void> => {
-  const clients = await db.select().from(clientsTable).orderBy(clientsTable.createdAt);
+  const clients = await db
+    .select()
+    .from(clientsTable)
+    .where(clientOrgFilter(req.actor!))
+    .orderBy(clientsTable.createdAt);
 
   const projectCounts = await db
     .select({ clientId: projectsTable.clientId, count: count() })
@@ -35,9 +44,17 @@ router.post("/clients", async (req, res): Promise<void> => {
     return;
   }
 
+  // A client is created inside the actor's organization (the tenant boundary).
+  const organizationId = req.actor!.organizationId;
+  if (organizationId == null) {
+    res.status(400).json({ error: "No organization context for client creation." });
+    return;
+  }
+
   const [client] = await db
     .insert(clientsTable)
     .values({
+      organizationId,
       name: parsed.data.name,
       contactName: parsed.data.contactName ?? null,
       contactEmail: parsed.data.contactEmail ?? null,
@@ -66,6 +83,8 @@ router.get("/clients/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, client.organizationId, "Client not found")) return;
+
   const [projectCount] = await db
     .select({ count: count() })
     .from(projectsTable)
@@ -86,6 +105,8 @@ router.patch("/clients/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
+  if (denyCrossOrg(res, req.actor!, await getClientOrgId(params.data.id), "Client not found")) return;
 
   const updates: Record<string, unknown> = {};
   if (parsed.data.name !== undefined) updates.name = parsed.data.name;

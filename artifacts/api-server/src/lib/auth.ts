@@ -52,7 +52,11 @@ export function requireProduct(productKey: string): RequestHandler {
           return;
         }
 
-        if (user.role === "admin" || user.productKey === productKey) {
+        if (
+          user.role === "admin" ||
+          user.role === "super_admin" ||
+          user.productKey === productKey
+        ) {
           next();
           return;
         }

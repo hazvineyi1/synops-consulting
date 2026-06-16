@@ -53,6 +53,7 @@ export const GetDashboardActivityResponse = zod.array(GetDashboardActivityRespon
  */
 export const ListClientsResponseItem = zod.object({
   "id": zod.number(),
+  "organizationId": zod.number().describe('Owning organization (tenant). Set by the server on creation.'),
   "name": zod.string(),
   "contactName": zod.string().nullish(),
   "contactEmail": zod.string().nullish(),
@@ -88,6 +89,7 @@ export const GetClientParams = zod.object({
 
 export const GetClientResponse = zod.object({
   "id": zod.number(),
+  "organizationId": zod.number().describe('Owning organization (tenant). Set by the server on creation.'),
   "name": zod.string(),
   "contactName": zod.string().nullish(),
   "contactEmail": zod.string().nullish(),
@@ -118,6 +120,7 @@ export const UpdateClientBody = zod.object({
 
 export const UpdateClientResponse = zod.object({
   "id": zod.number(),
+  "organizationId": zod.number().describe('Owning organization (tenant). Set by the server on creation.'),
   "name": zod.string(),
   "contactName": zod.string().nullish(),
   "contactEmail": zod.string().nullish(),

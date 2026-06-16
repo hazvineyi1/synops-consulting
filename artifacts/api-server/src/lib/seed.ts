@@ -1,8 +1,10 @@
-import { inArray, eq } from "drizzle-orm";
+import { inArray, eq, and, isNull } from "drizzle-orm";
 import {
   db,
   portalResourcesTable,
   usersTable,
+  organizationsTable,
+  clientsTable,
   engagementsTable,
   engagementMilestonesTable,
   engagementDeliverablesTable,
@@ -54,6 +56,87 @@ export async function ensurePortalSeed(log: MinimalLogger): Promise<void> {
   if (existing.length > 0) return;
   await db.insert(portalResourcesTable).values(SAMPLE_RESOURCES);
   log.info({ count: SAMPLE_RESOURCES.length }, "Seeded sample portal resources");
+}
+
+// The consulting firm's own tenant. The curriculum tree built by internal staff
+// roots here; every pre-multi-tenancy client and compass user belongs to it.
+const INTERNAL_ORG_SLUG = "synops-internal";
+// A white-labeled external school tenant, used only to demonstrate org isolation.
+const DEMO_SCHOOL_SLUG = "demo-academy";
+
+/**
+ * Idempotently ensure the internal organization exists and adopt any orphaned
+ * tenancy rows. Runs in EVERY environment (production included) because the
+ * curriculum engine cannot function without a tenant for internal staff:
+ * `clients.organization_id` is NOT NULL and client creation copies the actor's
+ * organization. Returns the internal org id for the demo seed to bind to.
+ */
+export async function ensureOrganizationsSeed(
+  log: MinimalLogger,
+): Promise<{ internalOrgId: number }> {
+  let [internal] = await db
+    .select({ id: organizationsTable.id })
+    .from(organizationsTable)
+    .where(eq(organizationsTable.slug, INTERNAL_ORG_SLUG));
+
+  if (!internal) {
+    [internal] = await db
+      .insert(organizationsTable)
+      .values({
+        name: "Synops Advisory Group",
+        slug: INTERNAL_ORG_SLUG,
+        type: "internal",
+        tagline: "Internal consulting tenant",
+      })
+      .returning({ id: organizationsTable.id });
+    log.info({ id: internal.id }, "Seeded internal organization");
+  }
+
+  // Adopt any compass user who predates multi-tenancy (null org) into the
+  // internal tenant so the internal-consulting flow keeps working after upgrade.
+  // School users are always created WITH an org, so they are never matched here.
+  // Global roles (admin/super_admin) bypass org checks, so this is harmless even
+  // if one happens to be a compass user.
+  const adopted = await db
+    .update(usersTable)
+    .set({ organizationId: internal.id })
+    .where(and(eq(usersTable.productKey, "compass"), isNull(usersTable.organizationId)))
+    .returning({ id: usersTable.id });
+  if (adopted.length > 0) {
+    log.info({ count: adopted.length }, "Adopted orphaned compass users into internal org");
+  }
+
+  // Defensive safety net for any client row left without a tenant. The column is
+  // NOT NULL on a clean schema, so this normally matches nothing.
+  await db
+    .update(clientsTable)
+    .set({ organizationId: internal.id })
+    .where(isNull(clientsTable.organizationId));
+
+  return { internalOrgId: internal.id };
+}
+
+/** Idempotently find or create the dev-only demo school tenant. */
+async function ensureDemoSchoolOrg(): Promise<number> {
+  let [org] = await db
+    .select({ id: organizationsTable.id })
+    .from(organizationsTable)
+    .where(eq(organizationsTable.slug, DEMO_SCHOOL_SLUG));
+
+  if (!org) {
+    [org] = await db
+      .insert(organizationsTable)
+      .values({
+        name: "Demo Academy",
+        slug: DEMO_SCHOOL_SLUG,
+        type: "school",
+        accentColor: "#2563eb",
+        tagline: "White-labeled demo school tenant",
+      })
+      .returning({ id: organizationsTable.id });
+  }
+
+  return org.id;
 }
 
 const DEMO_DOMAIN = "demo.synops.test";
@@ -235,17 +318,39 @@ async function seedCadenceData(userId: number): Promise<void> {
  * Idempotently seed one demo client per product plus a platform admin, so every
  * branded portal is reachable for review. Skipped entirely in production.
  */
-export async function ensureDemoUsers(log: MinimalLogger): Promise<void> {
+export async function ensureDemoUsers(
+  log: MinimalLogger,
+  internalOrgId: number,
+): Promise<void> {
   if (process.env.NODE_ENV === "production") return;
 
-  const accounts = [
-    { email: `admin@${DEMO_DOMAIN}`, name: "Platform Admin", role: "admin", productKey: "hub" },
-    ...PRODUCT_KEYS.map((key) => ({
+  const demoSchoolOrgId = await ensureDemoSchoolOrg();
+
+  interface DemoAccount {
+    email: string;
+    name: string;
+    role: string;
+    productKey: string;
+    organizationId: number | null;
+  }
+
+  const accounts: DemoAccount[] = [
+    { email: `admin@${DEMO_DOMAIN}`, name: "Platform Admin", role: "admin", productKey: "hub", organizationId: null },
+    ...PRODUCT_KEYS.map((key): DemoAccount => ({
       email: `${key}@${DEMO_DOMAIN}`,
       name: `${titleCase(key)} Demo`,
       role: "client",
       productKey: key,
+      // The Compass demo client is an internal staffer; bind it to the internal
+      // tenant so it sees the backfilled internal curriculum.
+      organizationId: key === "compass" ? internalOrgId : null,
     })),
+    // Role-based Compass accounts that demonstrate multi-tenancy. The super admin
+    // is global (no org); the school admin and builder are scoped to the external
+    // demo school tenant and must never see the internal org's curriculum.
+    { email: `super-admin@${DEMO_DOMAIN}`, name: "Compass Super Admin", role: "super_admin", productKey: "compass", organizationId: null },
+    { email: `school-admin@${DEMO_DOMAIN}`, name: "Demo Academy Admin", role: "school_admin", productKey: "compass", organizationId: demoSchoolOrgId },
+    { email: `builder@${DEMO_DOMAIN}`, name: "Demo Academy Builder", role: "builder", productKey: "compass", organizationId: demoSchoolOrgId },
   ];
 
   const emails = accounts.map((a) => a.email);
@@ -268,6 +373,7 @@ export async function ensureDemoUsers(log: MinimalLogger): Promise<void> {
           passwordHash,
           name: acct.name,
           organization: "Synops Demo",
+          organizationId: acct.organizationId,
           role: acct.role,
           productKey: acct.productKey,
         })

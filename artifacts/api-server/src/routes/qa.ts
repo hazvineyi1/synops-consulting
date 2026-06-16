@@ -8,6 +8,7 @@ import {
   UpdateQACheckParams,
   UpdateQACheckBody,
 } from "@workspace/api-zod";
+import { denyCrossOrg, getProjectOrgId, getQaCheckOrgId } from "../lib/tenancy";
 
 const router = Router();
 
@@ -15,6 +16,10 @@ router.get("/projects/:projectId/qa", async (req, res): Promise<void> => {
   const params = ListQAChecksParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
     return;
   }
 
@@ -37,6 +42,10 @@ router.post("/projects/:projectId/qa", async (req, res): Promise<void> => {
   const parsed = CreateQACheckBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
     return;
   }
 
@@ -67,6 +76,10 @@ router.patch("/qa-checks/:id", async (req, res): Promise<void> => {
   const parsed = UpdateQACheckBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getQaCheckOrgId(params.data.id), "QA check not found")) {
     return;
   }
 

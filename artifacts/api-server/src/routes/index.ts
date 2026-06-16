@@ -19,6 +19,7 @@ import cadenceRouter from "./cadence";
 import riseRouter from "./rise";
 import meridianRouter from "./meridian";
 import { requireAuth, requireProduct } from "../lib/auth";
+import { loadActorContext } from "../lib/actor";
 
 const router: IRouter = Router();
 
@@ -28,43 +29,33 @@ router.use(authRouter);
 router.use(contactRouter);
 router.use(demoRouter);
 
+// ── Compass curriculum engine (single guarded namespace) ────
+// Every curriculum route lives under /compass behind ONE gate applied at the top
+// of the engine router: authenticate, confirm the Compass product (admins and
+// super-admins bypass), then load the actor's tenancy context. Because the gate
+// sits above every mounted module, a route added inside the engine is always
+// authenticated, product-gated, and org-aware. There is no way to register an
+// ungated curriculum route here (the previous path-prefix allowlist could leave
+// a new prefix wide open). See engine.safeguard.test.ts.
+const engineRouter = Router();
+engineRouter.use(requireAuth, requireProduct("compass"), loadActorContext);
+engineRouter.use(dashboardRouter);
+engineRouter.use(clientsRouter);
+engineRouter.use(projectsRouter);
+engineRouter.use(coursesRouter);
+engineRouter.use(objectivesRouter);
+engineRouter.use(assessmentsRouter);
+engineRouter.use(ledgerRouter);
+engineRouter.use(qaRouter);
+engineRouter.use(standardsRouter);
+engineRouter.use(intakeRouter);
+router.use("/compass", engineRouter);
+
 // ── Authenticated routes ────────────────────────────────────
-// Everything below requires a valid session (the gated curriculum portal +
-// engine, plus client-portal endpoints). Admin endpoints additionally enforce
-// the admin role within their own handlers.
+// Everything below requires a valid session. Admin endpoints additionally
+// enforce the admin role within their own handlers; the other product engines
+// self-gate per-router with requireProduct.
 router.use(requireAuth);
-
-// ── Compass curriculum engine (product-gated) ───────────────
-// The engine endpoints below all belong to the Compass product. Gate them by
-// their path prefixes (Express `use` does prefix matching) so users bound to
-// "compass" (and admins) can reach them, while the other products' own routes
-// (portal, cadence, rise) are left untouched. A pathless router-level gate would
-// run before route matching and wrongly block every other product.
-const COMPASS_ENGINE_PATHS = [
-  "/dashboard",
-  "/clients",
-  "/projects",
-  "/courses",
-  "/modules",
-  "/objectives",
-  "/assessments",
-  "/activities",
-  "/standards-frameworks",
-  "/crosswalk-links",
-  "/qa-checks",
-];
-router.use(COMPASS_ENGINE_PATHS, requireProduct("compass"));
-
-router.use(dashboardRouter);
-router.use(clientsRouter);
-router.use(projectsRouter);
-router.use(coursesRouter);
-router.use(objectivesRouter);
-router.use(assessmentsRouter);
-router.use(ledgerRouter);
-router.use(qaRouter);
-router.use(standardsRouter);
-router.use(intakeRouter);
 
 // ── Hub client portal + admin (self-gated per route) ────────
 router.use(portalRouter);

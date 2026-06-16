@@ -192,7 +192,7 @@ export const getGetDashboardSummaryUrl = () => {
 
 
 
-  return `/api/dashboard/summary`
+  return `/api/compass/dashboard/summary`
 }
 
 /**
@@ -215,7 +215,7 @@ export const getDashboardSummary = async ( options?: RequestInit): Promise<Dashb
 
 export const getGetDashboardSummaryQueryKey = () => {
     return [
-    `/api/dashboard/summary`
+    `/api/compass/dashboard/summary`
     ] as const;
     }
 
@@ -269,7 +269,7 @@ export const getGetDashboardActivityUrl = () => {
 
 
 
-  return `/api/dashboard/activity`
+  return `/api/compass/dashboard/activity`
 }
 
 /**
@@ -292,7 +292,7 @@ export const getDashboardActivity = async ( options?: RequestInit): Promise<Acti
 
 export const getGetDashboardActivityQueryKey = () => {
     return [
-    `/api/dashboard/activity`
+    `/api/compass/dashboard/activity`
     ] as const;
     }
 
@@ -346,7 +346,7 @@ export const getListClientsUrl = () => {
 
 
 
-  return `/api/clients`
+  return `/api/compass/clients`
 }
 
 /**
@@ -369,7 +369,7 @@ export const listClients = async ( options?: RequestInit): Promise<Client[]> => 
 
 export const getListClientsQueryKey = () => {
     return [
-    `/api/clients`
+    `/api/compass/clients`
     ] as const;
     }
 
@@ -423,7 +423,7 @@ export const getCreateClientUrl = () => {
 
 
 
-  return `/api/clients`
+  return `/api/compass/clients`
 }
 
 /**
@@ -494,7 +494,7 @@ export const getGetClientUrl = (id: number,) => {
 
 
 
-  return `/api/clients/${id}`
+  return `/api/compass/clients/${id}`
 }
 
 /**
@@ -517,7 +517,7 @@ export const getClient = async (id: number, options?: RequestInit): Promise<Clie
 
 export const getGetClientQueryKey = (id: number,) => {
     return [
-    `/api/clients/${id}`
+    `/api/compass/clients/${id}`
     ] as const;
     }
 
@@ -571,7 +571,7 @@ export const getUpdateClientUrl = (id: number,) => {
 
 
 
-  return `/api/clients/${id}`
+  return `/api/compass/clients/${id}`
 }
 
 /**
@@ -643,7 +643,7 @@ export const getListProjectsUrl = () => {
 
 
 
-  return `/api/projects`
+  return `/api/compass/projects`
 }
 
 /**
@@ -666,7 +666,7 @@ export const listProjects = async ( options?: RequestInit): Promise<Project[]> =
 
 export const getListProjectsQueryKey = () => {
     return [
-    `/api/projects`
+    `/api/compass/projects`
     ] as const;
     }
 
@@ -720,7 +720,7 @@ export const getCreateProjectUrl = () => {
 
 
 
-  return `/api/projects`
+  return `/api/compass/projects`
 }
 
 /**
@@ -791,7 +791,7 @@ export const getGetProjectUrl = (id: number,) => {
 
 
 
-  return `/api/projects/${id}`
+  return `/api/compass/projects/${id}`
 }
 
 /**
@@ -814,7 +814,7 @@ export const getProject = async (id: number, options?: RequestInit): Promise<Pro
 
 export const getGetProjectQueryKey = (id: number,) => {
     return [
-    `/api/projects/${id}`
+    `/api/compass/projects/${id}`
     ] as const;
     }
 
@@ -868,7 +868,7 @@ export const getUpdateProjectUrl = (id: number,) => {
 
 
 
-  return `/api/projects/${id}`
+  return `/api/compass/projects/${id}`
 }
 
 /**
@@ -940,7 +940,7 @@ export const getAdvanceProjectStageUrl = (id: number,) => {
 
 
 
-  return `/api/projects/${id}/advance-stage`
+  return `/api/compass/projects/${id}/advance-stage`
 }
 
 /**
@@ -1012,7 +1012,7 @@ export const getGetProjectGateStatusUrl = (id: number,) => {
 
 
 
-  return `/api/projects/${id}/gate-status`
+  return `/api/compass/projects/${id}/gate-status`
 }
 
 /**
@@ -1035,7 +1035,7 @@ export const getProjectGateStatus = async (id: number, options?: RequestInit): P
 
 export const getGetProjectGateStatusQueryKey = (id: number,) => {
     return [
-    `/api/projects/${id}/gate-status`
+    `/api/compass/projects/${id}/gate-status`
     ] as const;
     }
 
@@ -1089,7 +1089,7 @@ export const getListCoursesUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/courses`
+  return `/api/compass/projects/${projectId}/courses`
 }
 
 /**
@@ -1112,7 +1112,7 @@ export const listCourses = async (projectId: number, options?: RequestInit): Pro
 
 export const getListCoursesQueryKey = (projectId: number,) => {
     return [
-    `/api/projects/${projectId}/courses`
+    `/api/compass/projects/${projectId}/courses`
     ] as const;
     }
 
@@ -1166,7 +1166,7 @@ export const getCreateCourseUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/courses`
+  return `/api/compass/projects/${projectId}/courses`
 }
 
 /**
@@ -1238,7 +1238,7 @@ export const getGetCourseUrl = (id: number,) => {
 
 
 
-  return `/api/courses/${id}`
+  return `/api/compass/courses/${id}`
 }
 
 /**
@@ -1261,7 +1261,7 @@ export const getCourse = async (id: number, options?: RequestInit): Promise<Cour
 
 export const getGetCourseQueryKey = (id: number,) => {
     return [
-    `/api/courses/${id}`
+    `/api/compass/courses/${id}`
     ] as const;
     }
 
@@ -1315,7 +1315,7 @@ export const getUpdateCourseUrl = (id: number,) => {
 
 
 
-  return `/api/courses/${id}`
+  return `/api/compass/courses/${id}`
 }
 
 /**
@@ -1387,7 +1387,7 @@ export const getListModulesUrl = (courseId: number,) => {
 
 
 
-  return `/api/courses/${courseId}/modules`
+  return `/api/compass/courses/${courseId}/modules`
 }
 
 /**
@@ -1410,7 +1410,7 @@ export const listModules = async (courseId: number, options?: RequestInit): Prom
 
 export const getListModulesQueryKey = (courseId: number,) => {
     return [
-    `/api/courses/${courseId}/modules`
+    `/api/compass/courses/${courseId}/modules`
     ] as const;
     }
 
@@ -1464,7 +1464,7 @@ export const getCreateModuleUrl = (courseId: number,) => {
 
 
 
-  return `/api/courses/${courseId}/modules`
+  return `/api/compass/courses/${courseId}/modules`
 }
 
 /**
@@ -1536,7 +1536,7 @@ export const getUpdateModuleUrl = (id: number,) => {
 
 
 
-  return `/api/modules/${id}`
+  return `/api/compass/modules/${id}`
 }
 
 /**
@@ -1608,7 +1608,7 @@ export const getDeleteModuleUrl = (id: number,) => {
 
 
 
-  return `/api/modules/${id}`
+  return `/api/compass/modules/${id}`
 }
 
 /**
@@ -1678,7 +1678,7 @@ export const getListObjectivesUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/objectives`
+  return `/api/compass/projects/${projectId}/objectives`
 }
 
 /**
@@ -1701,7 +1701,7 @@ export const listObjectives = async (projectId: number, options?: RequestInit): 
 
 export const getListObjectivesQueryKey = (projectId: number,) => {
     return [
-    `/api/projects/${projectId}/objectives`
+    `/api/compass/projects/${projectId}/objectives`
     ] as const;
     }
 
@@ -1755,7 +1755,7 @@ export const getCreateObjectiveUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/objectives`
+  return `/api/compass/projects/${projectId}/objectives`
 }
 
 /**
@@ -1827,7 +1827,7 @@ export const getUpdateObjectiveUrl = (id: number,) => {
 
 
 
-  return `/api/objectives/${id}`
+  return `/api/compass/objectives/${id}`
 }
 
 /**
@@ -1899,7 +1899,7 @@ export const getDeleteObjectiveUrl = (id: number,) => {
 
 
 
-  return `/api/objectives/${id}`
+  return `/api/compass/objectives/${id}`
 }
 
 /**
@@ -1969,7 +1969,7 @@ export const getListAssessmentsUrl = (courseId: number,) => {
 
 
 
-  return `/api/courses/${courseId}/assessments`
+  return `/api/compass/courses/${courseId}/assessments`
 }
 
 /**
@@ -1992,7 +1992,7 @@ export const listAssessments = async (courseId: number, options?: RequestInit): 
 
 export const getListAssessmentsQueryKey = (courseId: number,) => {
     return [
-    `/api/courses/${courseId}/assessments`
+    `/api/compass/courses/${courseId}/assessments`
     ] as const;
     }
 
@@ -2046,7 +2046,7 @@ export const getCreateAssessmentUrl = (courseId: number,) => {
 
 
 
-  return `/api/courses/${courseId}/assessments`
+  return `/api/compass/courses/${courseId}/assessments`
 }
 
 /**
@@ -2118,7 +2118,7 @@ export const getUpdateAssessmentUrl = (id: number,) => {
 
 
 
-  return `/api/assessments/${id}`
+  return `/api/compass/assessments/${id}`
 }
 
 /**
@@ -2190,7 +2190,7 @@ export const getDeleteAssessmentUrl = (id: number,) => {
 
 
 
-  return `/api/assessments/${id}`
+  return `/api/compass/assessments/${id}`
 }
 
 /**
@@ -2260,7 +2260,7 @@ export const getListActivitiesUrl = (courseId: number,) => {
 
 
 
-  return `/api/courses/${courseId}/activities`
+  return `/api/compass/courses/${courseId}/activities`
 }
 
 /**
@@ -2283,7 +2283,7 @@ export const listActivities = async (courseId: number, options?: RequestInit): P
 
 export const getListActivitiesQueryKey = (courseId: number,) => {
     return [
-    `/api/courses/${courseId}/activities`
+    `/api/compass/courses/${courseId}/activities`
     ] as const;
     }
 
@@ -2337,7 +2337,7 @@ export const getCreateActivityUrl = (courseId: number,) => {
 
 
 
-  return `/api/courses/${courseId}/activities`
+  return `/api/compass/courses/${courseId}/activities`
 }
 
 /**
@@ -2409,7 +2409,7 @@ export const getUpdateActivityUrl = (id: number,) => {
 
 
 
-  return `/api/activities/${id}`
+  return `/api/compass/activities/${id}`
 }
 
 /**
@@ -2481,7 +2481,7 @@ export const getDeleteActivityUrl = (id: number,) => {
 
 
 
-  return `/api/activities/${id}`
+  return `/api/compass/activities/${id}`
 }
 
 /**
@@ -2551,7 +2551,7 @@ export const getListLedgerEntriesUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/ledger`
+  return `/api/compass/projects/${projectId}/ledger`
 }
 
 /**
@@ -2574,7 +2574,7 @@ export const listLedgerEntries = async (projectId: number, options?: RequestInit
 
 export const getListLedgerEntriesQueryKey = (projectId: number,) => {
     return [
-    `/api/projects/${projectId}/ledger`
+    `/api/compass/projects/${projectId}/ledger`
     ] as const;
     }
 
@@ -2628,7 +2628,7 @@ export const getCreateLedgerEntryUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/ledger`
+  return `/api/compass/projects/${projectId}/ledger`
 }
 
 /**
@@ -2700,7 +2700,7 @@ export const getGetLedgerReportUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/ledger/report`
+  return `/api/compass/projects/${projectId}/ledger/report`
 }
 
 /**
@@ -2723,7 +2723,7 @@ export const getLedgerReport = async (projectId: number, options?: RequestInit):
 
 export const getGetLedgerReportQueryKey = (projectId: number,) => {
     return [
-    `/api/projects/${projectId}/ledger/report`
+    `/api/compass/projects/${projectId}/ledger/report`
     ] as const;
     }
 
@@ -2777,7 +2777,7 @@ export const getListQAChecksUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/qa`
+  return `/api/compass/projects/${projectId}/qa`
 }
 
 /**
@@ -2800,7 +2800,7 @@ export const listQAChecks = async (projectId: number, options?: RequestInit): Pr
 
 export const getListQAChecksQueryKey = (projectId: number,) => {
     return [
-    `/api/projects/${projectId}/qa`
+    `/api/compass/projects/${projectId}/qa`
     ] as const;
     }
 
@@ -2854,7 +2854,7 @@ export const getCreateQACheckUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/qa`
+  return `/api/compass/projects/${projectId}/qa`
 }
 
 /**
@@ -2926,7 +2926,7 @@ export const getUpdateQACheckUrl = (id: number,) => {
 
 
 
-  return `/api/qa-checks/${id}`
+  return `/api/compass/qa-checks/${id}`
 }
 
 /**
@@ -2998,7 +2998,7 @@ export const getListStandardsFrameworksUrl = () => {
 
 
 
-  return `/api/standards-frameworks`
+  return `/api/compass/standards-frameworks`
 }
 
 /**
@@ -3021,7 +3021,7 @@ export const listStandardsFrameworks = async ( options?: RequestInit): Promise<S
 
 export const getListStandardsFrameworksQueryKey = () => {
     return [
-    `/api/standards-frameworks`
+    `/api/compass/standards-frameworks`
     ] as const;
     }
 
@@ -3075,7 +3075,7 @@ export const getCreateStandardsFrameworkUrl = () => {
 
 
 
-  return `/api/standards-frameworks`
+  return `/api/compass/standards-frameworks`
 }
 
 /**
@@ -3146,7 +3146,7 @@ export const getListCompetenciesUrl = (id: number,) => {
 
 
 
-  return `/api/standards-frameworks/${id}/competencies`
+  return `/api/compass/standards-frameworks/${id}/competencies`
 }
 
 /**
@@ -3169,7 +3169,7 @@ export const listCompetencies = async (id: number, options?: RequestInit): Promi
 
 export const getListCompetenciesQueryKey = (id: number,) => {
     return [
-    `/api/standards-frameworks/${id}/competencies`
+    `/api/compass/standards-frameworks/${id}/competencies`
     ] as const;
     }
 
@@ -3223,7 +3223,7 @@ export const getCreateCompetencyUrl = (id: number,) => {
 
 
 
-  return `/api/standards-frameworks/${id}/competencies`
+  return `/api/compass/standards-frameworks/${id}/competencies`
 }
 
 /**
@@ -3295,7 +3295,7 @@ export const getListCrosswalkLinksUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/crosswalk`
+  return `/api/compass/projects/${projectId}/crosswalk`
 }
 
 /**
@@ -3318,7 +3318,7 @@ export const listCrosswalkLinks = async (projectId: number, options?: RequestIni
 
 export const getListCrosswalkLinksQueryKey = (projectId: number,) => {
     return [
-    `/api/projects/${projectId}/crosswalk`
+    `/api/compass/projects/${projectId}/crosswalk`
     ] as const;
     }
 
@@ -3372,7 +3372,7 @@ export const getCreateCrosswalkLinkUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/crosswalk`
+  return `/api/compass/projects/${projectId}/crosswalk`
 }
 
 /**
@@ -3444,7 +3444,7 @@ export const getDeleteCrosswalkLinkUrl = (id: number,) => {
 
 
 
-  return `/api/crosswalk-links/${id}`
+  return `/api/compass/crosswalk-links/${id}`
 }
 
 /**
@@ -3514,7 +3514,7 @@ export const getGetCrosswalkGapsUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/crosswalk/gaps`
+  return `/api/compass/projects/${projectId}/crosswalk/gaps`
 }
 
 /**
@@ -3537,7 +3537,7 @@ export const getCrosswalkGaps = async (projectId: number, options?: RequestInit)
 
 export const getGetCrosswalkGapsQueryKey = (projectId: number,) => {
     return [
-    `/api/projects/${projectId}/crosswalk/gaps`
+    `/api/compass/projects/${projectId}/crosswalk/gaps`
     ] as const;
     }
 
@@ -3591,7 +3591,7 @@ export const getGetIntakeProgressUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/intake-progress`
+  return `/api/compass/projects/${projectId}/intake-progress`
 }
 
 /**
@@ -3614,7 +3614,7 @@ export const getIntakeProgress = async (projectId: number, options?: RequestInit
 
 export const getGetIntakeProgressQueryKey = (projectId: number,) => {
     return [
-    `/api/projects/${projectId}/intake-progress`
+    `/api/compass/projects/${projectId}/intake-progress`
     ] as const;
     }
 
@@ -3668,7 +3668,7 @@ export const getUpdateIntakeProgressUrl = (projectId: number,) => {
 
 
 
-  return `/api/projects/${projectId}/intake-progress`
+  return `/api/compass/projects/${projectId}/intake-progress`
 }
 
 /**

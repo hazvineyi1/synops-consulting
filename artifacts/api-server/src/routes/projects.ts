@@ -19,6 +19,12 @@ import {
   AdvanceProjectStageBody,
   GetProjectGateStatusParams,
 } from "@workspace/api-zod";
+import {
+  clientOrgFilter,
+  denyCrossOrg,
+  getClientOrgId,
+  getProjectOrgId,
+} from "../lib/tenancy";
 
 const router = Router();
 
@@ -129,12 +135,19 @@ async function computeGateStatus(project: typeof projectsTable.$inferSelect): Pr
 }
 
 router.get("/projects", async (req, res): Promise<void> => {
-  const projects = await db
-    .select()
-    .from(projectsTable)
-    .orderBy(desc(projectsTable.updatedAt));
+  const actor = req.actor!;
+  const projects = actor.isGlobal
+    ? await db.select().from(projectsTable).orderBy(desc(projectsTable.updatedAt))
+    : (
+        await db
+          .select({ p: projectsTable })
+          .from(projectsTable)
+          .innerJoin(clientsTable, eq(projectsTable.clientId, clientsTable.id))
+          .where(eq(clientsTable.organizationId, actor.organizationId!))
+          .orderBy(desc(projectsTable.updatedAt))
+      ).map((r) => r.p);
 
-  const clients = await db.select().from(clientsTable);
+  const clients = await db.select().from(clientsTable).where(clientOrgFilter(actor));
   const clientMap = new Map(clients.map((c) => [c.id, c.name]));
 
   const result = projects.map((p) => ({
@@ -149,6 +162,11 @@ router.post("/projects", async (req, res): Promise<void> => {
   const parsed = CreateProjectBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  // The referenced client must live in the actor's organization.
+  if (denyCrossOrg(res, req.actor!, await getClientOrgId(parsed.data.clientId), "Client not found")) {
     return;
   }
 
@@ -188,6 +206,8 @@ router.get("/projects/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.id), "Project not found")) return;
+
   const [project] = await db
     .select()
     .from(projectsTable)
@@ -214,6 +234,8 @@ router.patch("/projects/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.id), "Project not found")) return;
 
   const updates: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) updates.title = parsed.data.title;
@@ -254,6 +276,8 @@ router.post("/projects/:id/advance-stage", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.id), "Project not found")) return;
 
   const [project] = await db
     .select()
@@ -315,6 +339,8 @@ router.get("/projects/:id/gate-status", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.id), "Project not found")) return;
 
   const [project] = await db
     .select()

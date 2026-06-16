@@ -8,6 +8,8 @@
 
 export interface Client {
   id: number;
+  /** Owning organization (tenant). Set by the server on creation. */
+  organizationId: number;
   name: string;
   /** @nullable */
   contactName?: string | null;

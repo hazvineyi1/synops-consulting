@@ -7,6 +7,7 @@ import {
   CreateLedgerEntryBody,
   GetLedgerReportParams,
 } from "@workspace/api-zod";
+import { denyCrossOrg, getProjectOrgId } from "../lib/tenancy";
 
 const router = Router();
 
@@ -14,6 +15,10 @@ router.get("/projects/:projectId/ledger", async (req, res): Promise<void> => {
   const params = ListLedgerEntriesParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
     return;
   }
 
@@ -39,6 +44,10 @@ router.post("/projects/:projectId/ledger", async (req, res): Promise<void> => {
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+    return;
+  }
+
   const [entry] = await db
     .insert(ledgerEntriesTable)
     .values({
@@ -60,6 +69,10 @@ router.get("/projects/:projectId/ledger/report", async (req, res): Promise<void>
   const params = GetLedgerReportParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
     return;
   }
 

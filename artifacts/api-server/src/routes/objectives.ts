@@ -9,6 +9,7 @@ import {
   UpdateObjectiveBody,
   DeleteObjectiveParams,
 } from "@workspace/api-zod";
+import { denyCrossOrg, getObjectiveOrgId, getProjectOrgId } from "../lib/tenancy";
 
 const router = Router();
 
@@ -26,6 +27,10 @@ router.get("/projects/:projectId/objectives", async (req, res): Promise<void> =>
   const params = ListObjectivesParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
     return;
   }
 
@@ -64,6 +69,10 @@ router.post("/projects/:projectId/objectives", async (req, res): Promise<void> =
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+    return;
+  }
+
   const [objective] = await db
     .insert(objectivesTable)
     .values({
@@ -93,6 +102,10 @@ router.patch("/objectives/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getObjectiveOrgId(params.data.id), "Objective not found")) {
+    return;
+  }
+
   const updates: Record<string, unknown> = {};
   if (parsed.data.level !== undefined) updates.level = parsed.data.level;
   if (parsed.data.text !== undefined) updates.text = parsed.data.text;
@@ -119,6 +132,10 @@ router.delete("/objectives/:id", async (req, res): Promise<void> => {
   const params = DeleteObjectiveParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getObjectiveOrgId(params.data.id), "Objective not found")) {
     return;
   }
 

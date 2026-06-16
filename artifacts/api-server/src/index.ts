@@ -1,6 +1,11 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { ensurePortalSeed, ensureDemoUsers, ensureMeridianSeed } from "./lib/seed";
+import {
+  ensureOrganizationsSeed,
+  ensurePortalSeed,
+  ensureDemoUsers,
+  ensureMeridianSeed,
+} from "./lib/seed";
 
 const rawPort = process.env["PORT"];
 
@@ -24,15 +29,15 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 
-  ensurePortalSeed(logger).catch((err) => {
-    logger.error({ err }, "Failed to seed portal resources");
-  });
-
-  ensureDemoUsers(logger).catch((err) => {
-    logger.error({ err }, "Failed to seed demo users");
-  });
-
-  ensureMeridianSeed(logger).catch((err) => {
-    logger.error({ err }, "Failed to seed Meridian data");
+  // Seeds run in dependency order: the internal organization must exist (all
+  // envs) before demo users can be bound to it. Demo users and Meridian data are
+  // dev-only (those functions self-skip in production).
+  void (async () => {
+    const { internalOrgId } = await ensureOrganizationsSeed(logger);
+    await ensurePortalSeed(logger);
+    await ensureDemoUsers(logger, internalOrgId);
+    await ensureMeridianSeed(logger);
+  })().catch((err) => {
+    logger.error({ err }, "Failed to run startup seeds");
   });
 });

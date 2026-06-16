@@ -6,6 +6,7 @@ import {
   UpdateIntakeProgressParams,
   UpdateIntakeProgressBody,
 } from "@workspace/api-zod";
+import { denyCrossOrg, getProjectOrgId } from "../lib/tenancy";
 
 const router = Router();
 
@@ -49,6 +50,10 @@ router.get("/projects/:projectId/intake-progress", async (req, res): Promise<voi
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+    return;
+  }
+
   const [row] = await db
     .select()
     .from(intakeProgressTable)
@@ -76,6 +81,10 @@ router.put("/projects/:projectId/intake-progress", async (req, res): Promise<voi
   const parsed = UpdateIntakeProgressBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
     return;
   }
 

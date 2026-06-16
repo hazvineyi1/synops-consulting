@@ -15,6 +15,12 @@ import {
   UpdateActivityBody,
   DeleteActivityParams,
 } from "@workspace/api-zod";
+import {
+  denyCrossOrg,
+  getActivityOrgId,
+  getAssessmentOrgId,
+  getCourseOrgId,
+} from "../lib/tenancy";
 
 const router = Router();
 
@@ -33,6 +39,10 @@ router.get("/courses/:courseId/assessments", async (req, res): Promise<void> => 
   const params = ListAssessmentsParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.courseId), "Course not found")) {
     return;
   }
 
@@ -60,6 +70,10 @@ router.post("/courses/:courseId/assessments", async (req, res): Promise<void> =>
   const parsed = CreateAssessmentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.courseId), "Course not found")) {
     return;
   }
 
@@ -96,6 +110,10 @@ router.patch("/assessments/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getAssessmentOrgId(params.data.id), "Assessment not found")) {
+    return;
+  }
+
   const updates: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) updates.title = parsed.data.title;
   if (parsed.data.assessmentType !== undefined) updates.assessmentType = parsed.data.assessmentType;
@@ -128,6 +146,10 @@ router.delete("/assessments/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getAssessmentOrgId(params.data.id), "Assessment not found")) {
+    return;
+  }
+
   const [deleted] = await db
     .delete(assessmentsTable)
     .where(eq(assessmentsTable.id, params.data.id))
@@ -146,6 +168,10 @@ router.get("/courses/:courseId/activities", async (req, res): Promise<void> => {
   const params = ListActivitiesParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.courseId), "Course not found")) {
     return;
   }
 
@@ -173,6 +199,10 @@ router.post("/courses/:courseId/activities", async (req, res): Promise<void> => 
   const parsed = CreateActivityBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.courseId), "Course not found")) {
     return;
   }
 
@@ -209,6 +239,10 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getActivityOrgId(params.data.id), "Activity not found")) {
+    return;
+  }
+
   const updates: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) updates.title = parsed.data.title;
   if (parsed.data.activityType !== undefined) updates.activityType = parsed.data.activityType;
@@ -238,6 +272,10 @@ router.delete("/activities/:id", async (req, res): Promise<void> => {
   const params = DeleteActivityParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getActivityOrgId(params.data.id), "Activity not found")) {
     return;
   }
 

@@ -15,6 +15,12 @@ import {
   UpdateModuleBody,
   DeleteModuleParams,
 } from "@workspace/api-zod";
+import {
+  denyCrossOrg,
+  getCourseOrgId,
+  getModuleOrgId,
+  getProjectOrgId,
+} from "../lib/tenancy";
 
 const router = Router();
 
@@ -23,6 +29,10 @@ router.get("/projects/:projectId/courses", async (req, res): Promise<void> => {
   const params = ListCoursesParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
     return;
   }
 
@@ -45,6 +55,10 @@ router.post("/projects/:projectId/courses", async (req, res): Promise<void> => {
   const parsed = CreateCourseBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
     return;
   }
 
@@ -73,6 +87,8 @@ router.get("/courses/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.id), "Course not found")) return;
+
   const [course] = await db
     .select()
     .from(coursesTable)
@@ -98,6 +114,8 @@ router.patch("/courses/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
+  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.id), "Course not found")) return;
 
   const updates: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) updates.title = parsed.data.title;
@@ -131,6 +149,10 @@ router.get("/courses/:courseId/modules", async (req, res): Promise<void> => {
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.courseId), "Course not found")) {
+    return;
+  }
+
   const modules = await db
     .select()
     .from(modulesTable)
@@ -150,6 +172,10 @@ router.post("/courses/:courseId/modules", async (req, res): Promise<void> => {
   const parsed = CreateModuleBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.courseId), "Course not found")) {
     return;
   }
 
@@ -182,6 +208,8 @@ router.patch("/modules/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getModuleOrgId(params.data.id), "Module not found")) return;
+
   const updates: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) updates.title = parsed.data.title;
   if (parsed.data.position !== undefined) updates.position = parsed.data.position;
@@ -210,6 +238,8 @@ router.delete("/modules/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+
+  if (denyCrossOrg(res, req.actor!, await getModuleOrgId(params.data.id), "Module not found")) return;
 
   const [deleted] = await db
     .delete(modulesTable)

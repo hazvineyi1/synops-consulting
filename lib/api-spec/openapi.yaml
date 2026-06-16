@@ -44,7 +44,7 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 
   # ── Dashboard ───────────────────────────────────────────────
-  /dashboard/summary:
+  /compass/dashboard/summary:
     get:
       operationId: getDashboardSummary
       tags: [dashboard]
@@ -57,7 +57,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
 
-  /dashboard/activity:
+  /compass/dashboard/activity:
     get:
       operationId: getDashboardActivity
       tags: [dashboard]
@@ -73,7 +73,7 @@ paths:
                   $ref: "#/components/schemas/ActivityFeedItem"
 
   # ── Clients ──────────────────────────────────────────────────
-  /clients:
+  /compass/clients:
     get:
       operationId: listClients
       tags: [clients]
@@ -105,7 +105,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Client"
 
-  /clients/{id}:
+  /compass/clients/{id}:
     get:
       operationId: getClient
       tags: [clients]
@@ -150,7 +150,7 @@ paths:
                 $ref: "#/components/schemas/Client"
 
   # ── Projects ─────────────────────────────────────────────────
-  /projects:
+  /compass/projects:
     get:
       operationId: listProjects
       tags: [projects]
@@ -182,7 +182,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Project"
 
-  /projects/{id}:
+  /compass/projects/{id}:
     get:
       operationId: getProject
       tags: [projects]
@@ -226,7 +226,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Project"
 
-  /projects/{id}/advance-stage:
+  /compass/projects/{id}/advance-stage:
     post:
       operationId: advanceProjectStage
       tags: [projects]
@@ -253,7 +253,7 @@ paths:
         "400":
           description: Gate requirements not met
 
-  /projects/{id}/gate-status:
+  /compass/projects/{id}/gate-status:
     get:
       operationId: getProjectGateStatus
       tags: [projects]
@@ -273,7 +273,7 @@ paths:
                 $ref: "#/components/schemas/GateStatus"
 
   # ── Courses ───────────────────────────────────────────────────
-  /projects/{projectId}/courses:
+  /compass/projects/{projectId}/courses:
     get:
       operationId: listCourses
       tags: [courses]
@@ -317,7 +317,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Course"
 
-  /courses/{id}:
+  /compass/courses/{id}:
     get:
       operationId: getCourse
       tags: [courses]
@@ -360,7 +360,7 @@ paths:
                 $ref: "#/components/schemas/Course"
 
   # ── Modules ───────────────────────────────────────────────────
-  /courses/{courseId}/modules:
+  /compass/courses/{courseId}/modules:
     get:
       operationId: listModules
       tags: [courses]
@@ -404,7 +404,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Module"
 
-  /modules/{id}:
+  /compass/modules/{id}:
     patch:
       operationId: updateModule
       tags: [courses]
@@ -443,7 +443,7 @@ paths:
           description: Deleted
 
   # ── Objectives Cascade ────────────────────────────────────────
-  /projects/{projectId}/objectives:
+  /compass/projects/{projectId}/objectives:
     get:
       operationId: listObjectives
       tags: [objectives]
@@ -487,7 +487,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Objective"
 
-  /objectives/{id}:
+  /compass/objectives/{id}:
     patch:
       operationId: updateObjective
       tags: [objectives]
@@ -526,7 +526,7 @@ paths:
           description: Deleted
 
   # ── Assessments ───────────────────────────────────────────────
-  /courses/{courseId}/assessments:
+  /compass/courses/{courseId}/assessments:
     get:
       operationId: listAssessments
       tags: [assessments]
@@ -570,7 +570,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Assessment"
 
-  /assessments/{id}:
+  /compass/assessments/{id}:
     patch:
       operationId: updateAssessment
       tags: [assessments]
@@ -609,7 +609,7 @@ paths:
           description: Deleted
 
   # ── Activities ────────────────────────────────────────────────
-  /courses/{courseId}/activities:
+  /compass/courses/{courseId}/activities:
     get:
       operationId: listActivities
       tags: [assessments]
@@ -653,7 +653,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Activity"
 
-  /activities/{id}:
+  /compass/activities/{id}:
     patch:
       operationId: updateActivity
       tags: [assessments]
@@ -692,7 +692,7 @@ paths:
           description: Deleted
 
   # ── Evidence Ledger ───────────────────────────────────────────
-  /projects/{projectId}/ledger:
+  /compass/projects/{projectId}/ledger:
     get:
       operationId: listLedgerEntries
       tags: [ledger]
@@ -736,7 +736,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/LedgerEntry"
 
-  /projects/{projectId}/ledger/report:
+  /compass/projects/{projectId}/ledger/report:
     get:
       operationId: getLedgerReport
       tags: [ledger]
@@ -756,7 +756,7 @@ paths:
                 $ref: "#/components/schemas/LedgerReport"
 
   # ── QA & Accessibility ────────────────────────────────────────
-  /projects/{projectId}/qa:
+  /compass/projects/{projectId}/qa:
     get:
       operationId: listQAChecks
       tags: [qa]
@@ -800,7 +800,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/QACheck"
 
-  /qa-checks/{id}:
+  /compass/qa-checks/{id}:
     patch:
       operationId: updateQACheck
       tags: [qa]
@@ -826,7 +826,7 @@ paths:
                 $ref: "#/components/schemas/QACheck"
 
   # ── Standards Frameworks ──────────────────────────────────────
-  /standards-frameworks:
+  /compass/standards-frameworks:
     get:
       operationId: listStandardsFrameworks
       tags: [standards]
@@ -858,7 +858,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/StandardsFramework"
 
-  /standards-frameworks/{id}/competencies:
+  /compass/standards-frameworks/{id}/competencies:
     get:
       operationId: listCompetencies
       tags: [standards]
@@ -902,7 +902,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/StandardCompetency"
 
-  /projects/{projectId}/crosswalk:
+  /compass/projects/{projectId}/crosswalk:
     get:
       operationId: listCrosswalkLinks
       tags: [standards]
@@ -946,7 +946,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CrosswalkLink"
 
-  /crosswalk-links/{id}:
+  /compass/crosswalk-links/{id}:
     delete:
       operationId: deleteCrosswalkLink
       tags: [standards]
@@ -961,7 +961,7 @@ paths:
         "204":
           description: Deleted
 
-  /projects/{projectId}/crosswalk/gaps:
+  /compass/projects/{projectId}/crosswalk/gaps:
     get:
       operationId: getCrosswalkGaps
       tags: [standards]
@@ -981,7 +981,7 @@ paths:
                 $ref: "#/components/schemas/CrosswalkGapReport"
 
   # ── Intake progress ───────────────────────────────────────────
-  /projects/{projectId}/intake-progress:
+  /compass/projects/{projectId}/intake-progress:
     get:
       operationId: getIntakeProgress
       tags: [intake]
@@ -2303,10 +2303,13 @@ components:
     # ── Client ────────────────────────────────────────────────────
     Client:
       type: object
-      required: [id, name, createdAt]
+      required: [id, organizationId, name, createdAt]
       properties:
         id:
           type: integer
+        organizationId:
+          type: integer
+          description: Owning organization (tenant). Set by the server on creation.
         name:
           type: string
         contactName:

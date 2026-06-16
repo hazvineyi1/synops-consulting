@@ -17,8 +17,13 @@ import {
   DeleteCrosswalkLinkParams,
   GetCrosswalkGapsParams,
 } from "@workspace/api-zod";
+import { denyCrossOrg, getCrosswalkLinkOrgId, getProjectOrgId } from "../lib/tenancy";
 
 const router = Router();
+
+// Standards frameworks and their competencies are a GLOBAL, shared catalog (not
+// owned by any one organization), so they are intentionally not org-scoped. The
+// per-project crosswalk that links them to curriculum IS org-scoped below.
 
 router.get("/standards-frameworks", async (_req, res): Promise<void> => {
   const frameworks = await db
@@ -110,6 +115,10 @@ router.get("/projects/:projectId/crosswalk", async (req, res): Promise<void> => 
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+    return;
+  }
+
   const links = await db
     .select()
     .from(crosswalkLinksTable)
@@ -144,6 +153,10 @@ router.post("/projects/:projectId/crosswalk", async (req, res): Promise<void> =>
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+    return;
+  }
+
   const [link] = await db
     .insert(crosswalkLinksTable)
     .values({
@@ -174,6 +187,10 @@ router.delete("/crosswalk-links/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  if (denyCrossOrg(res, req.actor!, await getCrosswalkLinkOrgId(params.data.id), "Crosswalk link not found")) {
+    return;
+  }
+
   const [deleted] = await db
     .delete(crosswalkLinksTable)
     .where(eq(crosswalkLinksTable.id, params.data.id))
@@ -191,6 +208,10 @@ router.get("/projects/:projectId/crosswalk/gaps", async (req, res): Promise<void
   const params = GetCrosswalkGapsParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
     return;
   }
 
