@@ -218,7 +218,7 @@ export async function ensureDemoAcademyCurriculum(log: MinimalLogger): Promise<v
     .values({
       clientId: client.id,
       title: "Ninth Grade Literacy Redesign",
-      stage: 2,
+      stage: 1,
       status: "active",
       modality: "Blended",
       description: "Standards-aligned redesign of the ninth grade literacy sequence.",

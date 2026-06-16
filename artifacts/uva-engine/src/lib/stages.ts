@@ -1,8 +1,6 @@
 import {
   BookOpen,
   PenTool,
-  LayoutTemplate,
-  Layers,
   CheckSquare,
   FileOutput,
   type LucideIcon,
@@ -10,7 +8,7 @@ import {
 
 /**
  * Canonical definition of the Compass curriculum pipeline. This is the single
- * source of truth for the six gate-driven stages every project moves through,
+ * source of truth for the four gate-driven stages every project moves through,
  * in order. Pages and the StageRail read from here so stage titles, order, and
  * routes never drift apart.
  *
@@ -41,27 +39,13 @@ export const STAGES: StageDef[] = [
   },
   {
     id: 2,
-    title: "Prototype",
-    slug: "prototype",
-    blurb: "Build one representative module to confirm the approach.",
-    icon: LayoutTemplate,
-  },
-  {
-    id: 3,
-    title: "Production",
-    slug: "production",
-    blurb: "Produce the remaining modules to the agreed standard.",
-    icon: Layers,
-  },
-  {
-    id: 4,
     title: "QA",
     slug: "qa",
     blurb: "Accessibility and quality review against WCAG 2.1 AA.",
     icon: CheckSquare,
   },
   {
-    id: 5,
+    id: 3,
     title: "Handoff",
     slug: "handoff",
     blurb: "Package, document, and transfer the finished course.",

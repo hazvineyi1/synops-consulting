@@ -173,7 +173,7 @@ export default function ProjectQA() {
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <Badge variant="outline">Stage 4</Badge>
+            <Badge variant="outline">Stage 2</Badge>
             <h1 className="text-3xl font-bold tracking-tight">QA and Accessibility</h1>
           </div>
           <p className="text-muted-foreground mt-1">{project.title}</p>

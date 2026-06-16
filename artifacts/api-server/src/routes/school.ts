@@ -21,8 +21,6 @@ const router = Router();
 const STAGE_LABELS = [
   "Kickoff & Intake",
   "Backward Design",
-  "Prototype",
-  "Production",
   "QA & Accessibility",
   "Handoff",
 ];

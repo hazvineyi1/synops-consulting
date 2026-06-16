@@ -253,7 +253,7 @@ export interface Project {
   /** @nullable */
   clientName?: string | null;
   title: string;
-  /** 0=Kickoff/Intake, 1=Backward Design, 2=Prototype, 3=Production, 4=QA, 5=Handoff */
+  /** 0=Kickoff/Intake, 1=Backward Design, 2=QA, 3=Handoff */
   stage: number;
   /** active | paused | complete | gate_blocked */
   status: string;

@@ -10,8 +10,6 @@ import NewProject from "@/pages/NewProject";
 import ProjectDetail from "@/pages/ProjectDetail";
 import ProjectIntake from "@/pages/ProjectIntake";
 import ProjectDesign from "@/pages/ProjectDesign";
-import ProjectPrototype from "@/pages/ProjectPrototype";
-import ProjectProduction from "@/pages/ProjectProduction";
 import ProjectQA from "@/pages/ProjectQA";
 import ProjectHandoff from "@/pages/ProjectHandoff";
 import Standards from "@/pages/Standards";
@@ -50,8 +48,6 @@ export function EngineApp() {
         <Route path="/projects/:id" component={ProjectDetail} />
         <Route path="/projects/:id/intake" component={ProjectIntake} />
         <Route path="/projects/:id/design" component={ProjectDesign} />
-        <Route path="/projects/:id/prototype" component={ProjectPrototype} />
-        <Route path="/projects/:id/production" component={ProjectProduction} />
         <Route path="/projects/:id/qa" component={ProjectQA} />
         <Route path="/projects/:id/handoff" component={ProjectHandoff} />
         <Route path="/standards" component={Standards} />

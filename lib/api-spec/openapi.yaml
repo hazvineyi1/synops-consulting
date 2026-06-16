@@ -2061,7 +2061,7 @@ components:
           type: string
         stage:
           type: integer
-          description: "0=Kickoff/Intake, 1=Backward Design, 2=Prototype, 3=Production, 4=QA, 5=Handoff"
+          description: "0=Kickoff/Intake, 1=Backward Design, 2=QA, 3=Handoff"
         status:
           type: string
           description: "active | paused | complete | gate_blocked"

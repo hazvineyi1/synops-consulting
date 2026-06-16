@@ -34,8 +34,6 @@ const router = Router();
 const STAGE_LABELS = [
   "Kickoff & Intake",
   "Backward Design",
-  "Prototype",
-  "Production",
   "QA & Accessibility",
   "Handoff",
 ];
@@ -91,29 +89,13 @@ async function computeGateStatus(project: typeof projectsTable.$inferSelect): Pr
     ],
     1: [
       {
-        label: "Assessments aligned to objectives",
+        label: "Learning objectives defined",
         met: unflaggedObjectives.length > 0,
         blocking: true,
-        detail: null,
+        detail: unflaggedObjectives.length > 0 ? null : "Define objectives in the Design workspace",
       },
     ],
     2: [
-      {
-        label: "Prototype module approved",
-        met: courses.length > 0,
-        blocking: true,
-        detail: null,
-      },
-    ],
-    3: [
-      {
-        label: "All modules in production",
-        met: true,
-        blocking: false,
-        detail: null,
-      },
-    ],
-    4: [
       {
         label: "No blocking QA failures",
         met: !hasBlockingFail,
@@ -121,7 +103,7 @@ async function computeGateStatus(project: typeof projectsTable.$inferSelect): Pr
         detail: hasBlockingFail ? "Resolve blocking QA findings before handoff" : null,
       },
     ],
-    5: [
+    3: [
       {
         label: "Evidence Ledger complete",
         met: true,
@@ -132,7 +114,7 @@ async function computeGateStatus(project: typeof projectsTable.$inferSelect): Pr
   };
 
   const requirements = requirementSets[project.stage] ?? [];
-  const canAdvance = project.stage < 5 && requirements.every((r) => !r.blocking || r.met);
+  const canAdvance = project.stage < 3 && requirements.every((r) => !r.blocking || r.met);
 
   return { stage: project.stage, canAdvance, requirements };
 }
@@ -305,7 +287,7 @@ router.post("/projects/:id/advance-stage", async (req, res): Promise<void> => {
     return;
   }
 
-  if (project.stage >= 5) {
+  if (project.stage >= 3) {
     res.status(400).json({ error: "Project is already at final stage" });
     return;
   }
