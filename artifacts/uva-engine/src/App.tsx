@@ -1,11 +1,12 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Redirect, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { AuthProvider } from "@/lib/auth-context";
 import { PublicLayout } from "@/components/layout/PublicLayout";
-import { ProtectedPortal } from "@/components/portal/ProtectedPortal";
+import { ProtectedProduct } from "@/components/portal/ProtectedProduct";
+import { PRODUCTS } from "@/lib/products";
 
 import Home from "@/pages/public/Home";
 import About from "@/pages/public/About";
@@ -16,8 +17,9 @@ import Government from "@/pages/public/Government";
 import Insights from "@/pages/public/Insights";
 import InsightArticle from "@/pages/public/InsightArticle";
 import Contact from "@/pages/public/Contact";
-import Login from "@/pages/portal/Login";
-import Register from "@/pages/portal/Register";
+import Portals from "@/pages/public/Portals";
+import ProductLogin from "@/pages/auth/ProductLogin";
+import ProductRegister from "@/pages/auth/ProductRegister";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -42,6 +44,7 @@ function PublicSite() {
         <Route path="/insights" component={Insights} />
         <Route path="/insights/:slug" component={InsightArticle} />
         <Route path="/contact" component={Contact} />
+        <Route path="/portals" component={Portals} />
         <Route component={NotFound} />
       </Switch>
     </PublicLayout>
@@ -51,11 +54,38 @@ function PublicSite() {
 function Router() {
   return (
     <Switch>
-      <Route path="/portal/login" component={Login} />
-      <Route path="/portal/register" component={Register} />
-      <Route path="/portal" nest>
-        <ProtectedPortal />
+      {/* Legacy portal paths redirect to Hub. */}
+      <Route path="/portal/login">
+        <Redirect to="/hub/login" />
       </Route>
+      <Route path="/portal/register">
+        <Redirect to="/hub/register" />
+      </Route>
+      <Route path="/portal" nest>
+        <Redirect to="~/hub" />
+      </Route>
+
+      {/* Per-product branded register (only where self-service is enabled). */}
+      {PRODUCTS.filter((p) => p.hasRegister).map((p) => (
+        <Route key={`reg-${p.key}`} path={`/${p.key}/register`}>
+          {() => <ProductRegister product={p} />}
+        </Route>
+      ))}
+
+      {/* Per-product branded login. */}
+      {PRODUCTS.map((p) => (
+        <Route key={`login-${p.key}`} path={`/${p.key}/login`}>
+          {() => <ProductLogin product={p} />}
+        </Route>
+      ))}
+
+      {/* Per-product gated workspace. */}
+      {PRODUCTS.map((p) => (
+        <Route key={`app-${p.key}`} path={`/${p.key}`} nest>
+          <ProtectedProduct product={p} />
+        </Route>
+      ))}
+
       <Route component={PublicSite} />
     </Switch>
   );

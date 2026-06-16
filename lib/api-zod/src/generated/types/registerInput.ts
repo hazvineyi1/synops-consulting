@@ -5,6 +5,7 @@
  * UVA Production Engine API
  * OpenAPI spec version: 0.1.0
  */
+import type { ProductKey } from './productKey';
 
 export interface RegisterInput {
   email: string;
@@ -12,4 +13,5 @@ export interface RegisterInput {
   password: string;
   name: string;
   organization?: string;
+  productKey?: ProductKey;
 }

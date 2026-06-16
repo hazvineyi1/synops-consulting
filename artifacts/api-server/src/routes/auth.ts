@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 import { db, usersTable, engagementsTable } from "@workspace/db";
 import type { UserRow } from "@workspace/db";
 import { hashPassword, verifyPassword } from "../lib/auth";
+import { PRODUCT_KEYS, isSelfServiceProductKey } from "../lib/products";
 
 const router = Router();
 
@@ -21,6 +22,7 @@ const registerSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters").max(200),
   name: z.string().min(1).max(200),
   organization: z.string().max(200).optional(),
+  productKey: z.enum(PRODUCT_KEYS).optional(),
 });
 
 const loginSchema = z.object({
@@ -35,6 +37,7 @@ function publicUser(u: UserRow) {
     name: u.name,
     organization: u.organization,
     role: u.role,
+    productKey: u.productKey,
     createdAt: u.createdAt.toISOString(),
   };
 }
@@ -73,6 +76,17 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
   }
   const email = parsed.data.email.toLowerCase().trim();
 
+  // Public self-registration is allowed only for self-service products (Hub).
+  // Every other product is provisioned by the engagement team, so reject an
+  // attempt to self-register into one even though the client never offers it.
+  const productKey = parsed.data.productKey ?? "hub";
+  if (!isSelfServiceProductKey(productKey)) {
+    res
+      .status(403)
+      .json({ error: "This product is provisioned by your engagement team." });
+    return;
+  }
+
   const existing = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (existing.length > 0) {
     res.status(409).json({ error: "An account with this email already exists." });
@@ -87,10 +101,15 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
       passwordHash,
       name: parsed.data.name.trim(),
       organization: parsed.data.organization?.trim() || null,
+      productKey,
     })
     .returning();
 
-  await db.insert(engagementsTable).values(sampleEngagements(user.id));
+  // Hub clients get a few sample engagements so the portal is not empty on
+  // first sign-in. Other products manage their own data.
+  if (productKey === "hub") {
+    await db.insert(engagementsTable).values(sampleEngagements(user.id));
+  }
 
   req.session.userId = user.id;
   req.session.role = user.role;

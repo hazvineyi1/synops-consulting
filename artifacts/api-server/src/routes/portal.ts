@@ -8,17 +8,22 @@ import {
   contactSubmissionsTable,
   usersTable,
 } from "@workspace/db";
-import { requireAuth } from "../lib/auth";
+import { requireAuth, requireProduct } from "../lib/auth";
 import { sendContactNotification } from "../lib/email";
 
 const router = Router();
+
+// Hub is a product; only users bound to "hub" (and admins) may reach the client
+// portal endpoints. Mirrors the server-as-security-boundary rule applied to the
+// other product engines.
+const requireHub = requireProduct("hub");
 
 const messageSchema = z.object({
   subject: z.string().min(1).max(200),
   message: z.string().min(1).max(5000),
 });
 
-router.get("/portal/engagements", requireAuth, async (req, res): Promise<void> => {
+router.get("/portal/engagements", requireAuth, requireHub, async (req, res): Promise<void> => {
   const rows = await db
     .select()
     .from(engagementsTable)
@@ -27,7 +32,7 @@ router.get("/portal/engagements", requireAuth, async (req, res): Promise<void> =
   res.json(rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })));
 });
 
-router.get("/portal/resources", requireAuth, async (_req, res): Promise<void> => {
+router.get("/portal/resources", requireAuth, requireHub, async (_req, res): Promise<void> => {
   const rows = await db
     .select()
     .from(portalResourcesTable)
@@ -35,7 +40,7 @@ router.get("/portal/resources", requireAuth, async (_req, res): Promise<void> =>
   res.json(rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })));
 });
 
-router.post("/portal/messages", requireAuth, async (req, res): Promise<void> => {
+router.post("/portal/messages", requireAuth, requireHub, async (req, res): Promise<void> => {
   const parsed = messageSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid input" });

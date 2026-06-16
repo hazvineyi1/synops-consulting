@@ -13,4 +13,8 @@ export * from "./intake";
 export * from "./users";
 export * from "./marketing";
 export * from "./portal";
+export * from "./cadence";
+export * from "./learning";
+export * from "./providers";
+export * from "./roadmap";
 export * from "./sessions";

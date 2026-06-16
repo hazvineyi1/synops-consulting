@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { ensurePortalSeed } from "./lib/seed";
+import { ensurePortalSeed, ensureDemoUsers, ensureMeridianSeed } from "./lib/seed";
 
 const rawPort = process.env["PORT"];
 
@@ -26,5 +26,13 @@ app.listen(port, (err) => {
 
   ensurePortalSeed(logger).catch((err) => {
     logger.error({ err }, "Failed to seed portal resources");
+  });
+
+  ensureDemoUsers(logger).catch((err) => {
+    logger.error({ err }, "Failed to seed demo users");
+  });
+
+  ensureMeridianSeed(logger).catch((err) => {
+    logger.error({ err }, "Failed to seed Meridian data");
   });
 });

@@ -13,6 +13,7 @@ router.get("/admin/users", requireAdmin, async (_req, res): Promise<void> => {
       name: usersTable.name,
       organization: usersTable.organization,
       role: usersTable.role,
+      productKey: usersTable.productKey,
       createdAt: usersTable.createdAt,
     })
     .from(usersTable)

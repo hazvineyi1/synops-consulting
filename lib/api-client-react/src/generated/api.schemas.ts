@@ -5,6 +5,25 @@
  * UVA Production Engine API
  * OpenAPI spec version: 0.1.0
  */
+/**
+ * The product/portal a user belongs to.
+ */
+export type ProductKey = typeof ProductKey[keyof typeof ProductKey];
+
+
+export const ProductKey = {
+  hub: 'hub',
+  cadence: 'cadence',
+  rise: 'rise',
+  compass: 'compass',
+  meridian: 'meridian',
+  spark: 'spark',
+  aria: 'aria',
+  pulse: 'pulse',
+  sentinel: 'sentinel',
+  tend: 'tend',
+} as const;
+
 export interface AuthUser {
   id: number;
   email: string;
@@ -12,6 +31,7 @@ export interface AuthUser {
   /** @nullable */
   organization?: string | null;
   role: string;
+  productKey: ProductKey;
   createdAt: string;
 }
 
@@ -21,6 +41,7 @@ export interface RegisterInput {
   password: string;
   name: string;
   organization?: string;
+  productKey?: ProductKey;
 }
 
 export interface LoginInput {
@@ -120,6 +141,143 @@ export interface DemoSessionInput {
   path: DemoPathStep[];
 }
 
+export interface RiseLevelOption {
+  value: string;
+  label: string;
+}
+
+export interface RiseBankItem {
+  id: string;
+  difficulty: number;
+  skill: string;
+  passage: string;
+  question: string;
+  options: string[];
+}
+
+export interface RiseBank {
+  level: string;
+  items: RiseBankItem[];
+}
+
+export interface RiseAnswerInput {
+  itemId: string;
+  optionIndex: number;
+}
+
+export interface RiseAnswerResult {
+  correct: boolean;
+  correctIndex: number;
+  /** @nullable */
+  hint?: string | null;
+}
+
+export interface RisePathStep {
+  itemId: string;
+  difficulty: number;
+  correct: boolean;
+}
+
+export type RiseSessionInputLevel = typeof RiseSessionInputLevel[keyof typeof RiseSessionInputLevel];
+
+
+export const RiseSessionInputLevel = {
+  elementary: 'elementary',
+  secondary: 'secondary',
+  higher: 'higher',
+} as const;
+
+export interface RiseSessionInput {
+  level: RiseSessionInputLevel;
+  itemsAttempted: number;
+  correctCount: number;
+  masteryEstimate: number;
+  finalRung?: string;
+  path: RisePathStep[];
+}
+
+export interface RiseSession {
+  id: number;
+  /** @nullable */
+  userId?: number | null;
+  level: string;
+  itemsAttempted: number;
+  correctCount: number;
+  masteryEstimate: number;
+  /** @nullable */
+  finalRung?: string | null;
+  path: RisePathStep[];
+  createdAt: string;
+}
+
+export interface Provider {
+  id: number;
+  name: string;
+  specialty: string;
+  region: string;
+  networkStatus: string;
+  acceptingPatients: boolean;
+  panelSize: number;
+  createdAt: string;
+}
+
+export interface NetworkAdequacyReview {
+  id: number;
+  region: string;
+  specialty: string;
+  requiredProviders: number;
+  actualProviders: number;
+  status: string;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface ProviderDisputeNote {
+  author: string;
+  body: string;
+  at: string;
+}
+
+export interface ProviderDispute {
+  id: number;
+  /** @nullable */
+  providerId?: number | null;
+  subject: string;
+  category: string;
+  status: string;
+  priority: string;
+  notes: ProviderDisputeNote[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DisputeUpdateInputStatus = typeof DisputeUpdateInputStatus[keyof typeof DisputeUpdateInputStatus];
+
+
+export const DisputeUpdateInputStatus = {
+  Open: 'Open',
+  In_review: 'In review',
+  Resolved: 'Resolved',
+  Escalated: 'Escalated',
+} as const;
+
+export type DisputeUpdateInputPriority = typeof DisputeUpdateInputPriority[keyof typeof DisputeUpdateInputPriority];
+
+
+export const DisputeUpdateInputPriority = {
+  Low: 'Low',
+  Normal: 'Normal',
+  High: 'High',
+  Urgent: 'Urgent',
+} as const;
+
+export interface DisputeUpdateInput {
+  status?: DisputeUpdateInputStatus;
+  priority?: DisputeUpdateInputPriority;
+  note?: string;
+}
+
 export interface Engagement {
   id: number;
   userId: number;
@@ -154,6 +312,7 @@ export interface AdminUser {
   /** @nullable */
   organization?: string | null;
   role: string;
+  productKey: ProductKey;
   createdAt: string;
 }
 
@@ -169,6 +328,75 @@ export interface ContactSubmission {
   message: string;
   source: string;
   createdAt: string;
+}
+
+export interface CadenceEngagement {
+  id: number;
+  userId: number;
+  title: string;
+  practiceArea: string;
+  status: string;
+  /** @nullable */
+  nextMilestone?: string | null;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  createdAt: string;
+  milestoneCount: number;
+  deliverableCount: number;
+  completedDeliverableCount: number;
+}
+
+export interface CadenceMilestone {
+  id: number;
+  engagementId: number;
+  title: string;
+  status: string;
+  /** @nullable */
+  dueDate?: string | null;
+  orderIndex: number;
+  createdAt: string;
+}
+
+export interface CadenceDeliverable {
+  id: number;
+  engagementId: number;
+  /** @nullable */
+  milestoneId?: number | null;
+  title: string;
+  status: string;
+  /** pending, passed, or failed */
+  qaGateStatus: string;
+  /** @nullable */
+  qaNotes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CadenceEngagementDetail {
+  engagement: CadenceEngagement;
+  milestones: CadenceMilestone[];
+  deliverables: CadenceDeliverable[];
+}
+
+export type DeliverableUpdateInputQaGateStatus = typeof DeliverableUpdateInputQaGateStatus[keyof typeof DeliverableUpdateInputQaGateStatus];
+
+
+export const DeliverableUpdateInputQaGateStatus = {
+  pending: 'pending',
+  passed: 'passed',
+  failed: 'failed',
+} as const;
+
+export interface DeliverableUpdateInput {
+  status?: string;
+  qaGateStatus?: DeliverableUpdateInputQaGateStatus;
+  qaNotes?: string;
+}
+
+export interface MilestoneUpdateInput {
+  status: string;
 }
 
 export type IntakeProgressInputNotes = {[key: string]: string};
@@ -686,6 +914,19 @@ export type GetDemoBankLevel = typeof GetDemoBankLevel[keyof typeof GetDemoBankL
 
 
 export const GetDemoBankLevel = {
+  elementary: 'elementary',
+  secondary: 'secondary',
+  higher: 'higher',
+} as const;
+
+export type GetRiseBankParams = {
+level: GetRiseBankLevel;
+};
+
+export type GetRiseBankLevel = typeof GetRiseBankLevel[keyof typeof GetRiseBankLevel];
+
+
+export const GetRiseBankLevel = {
   elementary: 'elementary',
   secondary: 'secondary',
   higher: 'higher',

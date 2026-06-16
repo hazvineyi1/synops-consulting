@@ -7,6 +7,9 @@ export const usersTable = pgTable("users", {
   name: text("name").notNull(),
   organization: text("organization"),
   role: text("role").notNull().default("client"),
+  // Which product/portal this user belongs to (hub, cadence, rise, compass,
+  // meridian, ...). Admins can access every product regardless of this value.
+  productKey: text("product_key").notNull().default("hub"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

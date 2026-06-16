@@ -5,6 +5,7 @@
  * UVA Production Engine API
  * OpenAPI spec version: 0.1.0
  */
+import type { ProductKey } from './productKey';
 
 export interface AuthUser {
   id: number;
@@ -13,5 +14,6 @@ export interface AuthUser {
   /** @nullable */
   organization?: string | null;
   role: string;
+  productKey: ProductKey;
   createdAt: Date;
 }

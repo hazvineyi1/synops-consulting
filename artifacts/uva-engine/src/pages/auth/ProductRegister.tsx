@@ -6,9 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthShell } from "@/components/portal/AuthShell";
+import type { RegisterInput } from "@workspace/api-client-react";
+import type { Product } from "@/lib/products";
 
-export default function Register() {
-  usePageMeta("Create a client account", "Register for the Synops Advisory Group client portal.");
+export default function ProductRegister({ product }: { product: Product }) {
+  usePageMeta(
+    `Create your ${product.name} account`,
+    `Register for ${product.name}, the ${product.title} from Synops Advisory Group.`,
+  );
   const { user, register } = useAuth();
 
   const [name, setName] = useState("");
@@ -18,10 +23,8 @@ export default function Register() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Redirect once auth state reflects the new session, rather than navigating
-  // imperatively (which races the auth-context re-render and bounces back).
   if (user) {
-    return <Redirect to="~/portal/dashboard" />;
+    return <Redirect to={`~/${user.productKey}`} />;
   }
 
   async function onSubmit(e: FormEvent) {
@@ -40,6 +43,7 @@ export default function Register() {
         email,
         password,
         organization: organization.trim() || undefined,
+        productKey: product.key as RegisterInput["productKey"],
       });
     } catch (err) {
       setError(authErrorMessage(err));
@@ -49,12 +53,19 @@ export default function Register() {
 
   return (
     <AuthShell
-      title="Create your account"
-      subtitle="Set up access to your client portal."
+      title={`Create your ${product.name} account`}
+      subtitle={`Set up access to ${product.title}.`}
+      eyebrow={`${product.name} \u00b7 ${product.vertical}`}
+      panelLine={product.panelLine}
+      accent={product.accent}
       footer={
         <p>
           Already have an account?{" "}
-          <Link href="/portal/login" className="font-medium text-primary hover:underline">
+          <Link
+            href={`/${product.key}/login`}
+            className="font-medium hover:underline"
+            style={{ color: product.accent }}
+          >
             Sign in
           </Link>
         </p>
@@ -62,7 +73,10 @@ export default function Register() {
     >
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         {error && (
-          <div role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <div
+            role="alert"
+            className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
             {error}
           </div>
         )}
@@ -71,8 +85,15 @@ export default function Register() {
           <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="organization">Organization <span className="text-muted-foreground">(optional)</span></Label>
-          <Input id="organization" value={organization} onChange={(e) => setOrganization(e.target.value)} autoComplete="organization" />
+          <Label htmlFor="organization">
+            Organization <span className="text-muted-foreground">(optional)</span>
+          </Label>
+          <Input
+            id="organization"
+            value={organization}
+            onChange={(e) => setOrganization(e.target.value)}
+            autoComplete="organization"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -80,11 +101,24 @@ export default function Register() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+          <Input
+            id="password"
+            type="password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+          />
           <p className="text-xs text-muted-foreground">At least 8 characters.</p>
         </div>
-        <Button type="submit" className="w-full" disabled={submitting}>
-          {submitting ? "Creating account…" : "Create account"}
+        <Button
+          type="submit"
+          className="w-full text-white hover:opacity-90"
+          style={{ backgroundColor: product.accent }}
+          disabled={submitting}
+        >
+          {submitting ? "Creating account..." : "Create account"}
         </Button>
       </form>
     </AuthShell>

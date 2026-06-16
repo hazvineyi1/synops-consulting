@@ -1069,7 +1069,8 @@ export const RegisterBody = zod.object({
   "email": zod.string().email(),
   "password": zod.string().min(registerBodyPasswordMin),
   "name": zod.string(),
-  "organization": zod.string().optional()
+  "organization": zod.string().optional(),
+  "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian', 'spark', 'aria', 'pulse', 'sentinel', 'tend']).optional().describe('The product\/portal a user belongs to.')
 })
 
 
@@ -1087,6 +1088,7 @@ export const LoginResponse = zod.object({
   "name": zod.string(),
   "organization": zod.string().nullish(),
   "role": zod.string(),
+  "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian', 'spark', 'aria', 'pulse', 'sentinel', 'tend']).describe('The product\/portal a user belongs to.'),
   "createdAt": zod.coerce.date()
 })
 
@@ -1108,6 +1110,7 @@ export const GetCurrentUserResponse = zod.object({
   "name": zod.string(),
   "organization": zod.string().nullish(),
   "role": zod.string(),
+  "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian', 'spark', 'aria', 'pulse', 'sentinel', 'tend']).describe('The product\/portal a user belongs to.'),
   "createdAt": zod.coerce.date()
 })
 
@@ -1198,6 +1201,172 @@ export const SaveDemoSessionBody = zod.object({
 
 
 /**
+ * @summary List available reading levels (Rise)
+ */
+export const GetRiseLevelsResponseItem = zod.object({
+  "value": zod.string(),
+  "label": zod.string()
+})
+export const GetRiseLevelsResponse = zod.array(GetRiseLevelsResponseItem)
+
+
+/**
+ * @summary Get the Rise item bank for a level (no answer keys)
+ */
+export const GetRiseBankQueryParams = zod.object({
+  "level": zod.enum(['elementary', 'secondary', 'higher'])
+})
+
+export const GetRiseBankResponse = zod.object({
+  "level": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "difficulty": zod.number(),
+  "skill": zod.string(),
+  "passage": zod.string(),
+  "question": zod.string(),
+  "options": zod.array(zod.string())
+}))
+})
+
+
+/**
+ * @summary Grade a single Rise answer
+ */
+export const AnswerRiseItemBody = zod.object({
+  "itemId": zod.string(),
+  "optionIndex": zod.number()
+})
+
+export const AnswerRiseItemResponse = zod.object({
+  "correct": zod.boolean(),
+  "correctIndex": zod.number(),
+  "hint": zod.string().nullish()
+})
+
+
+/**
+ * @summary List the learner's past Rise runs
+ */
+export const GetRiseSessionsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "level": zod.string(),
+  "itemsAttempted": zod.number(),
+  "correctCount": zod.number(),
+  "masteryEstimate": zod.number(),
+  "finalRung": zod.string().nullish(),
+  "path": zod.array(zod.object({
+  "itemId": zod.string(),
+  "difficulty": zod.number(),
+  "correct": zod.boolean()
+})),
+  "createdAt": zod.coerce.date()
+})
+export const GetRiseSessionsResponse = zod.array(GetRiseSessionsResponseItem)
+
+
+/**
+ * @summary Persist a completed Rise run for the signed-in learner
+ */
+export const SaveRiseSessionBody = zod.object({
+  "level": zod.enum(['elementary', 'secondary', 'higher']),
+  "itemsAttempted": zod.number(),
+  "correctCount": zod.number(),
+  "masteryEstimate": zod.number(),
+  "finalRung": zod.string().optional(),
+  "path": zod.array(zod.object({
+  "itemId": zod.string(),
+  "difficulty": zod.number(),
+  "correct": zod.boolean()
+}))
+})
+
+
+/**
+ * @summary List network providers (Meridian)
+ */
+export const GetMeridianProvidersResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "specialty": zod.string(),
+  "region": zod.string(),
+  "networkStatus": zod.string(),
+  "acceptingPatients": zod.boolean(),
+  "panelSize": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+export const GetMeridianProvidersResponse = zod.array(GetMeridianProvidersResponseItem)
+
+
+/**
+ * @summary List network-adequacy reviews (Meridian)
+ */
+export const GetMeridianNetworkAdequacyResponseItem = zod.object({
+  "id": zod.number(),
+  "region": zod.string(),
+  "specialty": zod.string(),
+  "requiredProviders": zod.number(),
+  "actualProviders": zod.number(),
+  "status": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const GetMeridianNetworkAdequacyResponse = zod.array(GetMeridianNetworkAdequacyResponseItem)
+
+
+/**
+ * @summary List provider disputes (Meridian)
+ */
+export const GetMeridianDisputesResponseItem = zod.object({
+  "id": zod.number(),
+  "providerId": zod.number().nullish(),
+  "subject": zod.string(),
+  "category": zod.string(),
+  "status": zod.string(),
+  "priority": zod.string(),
+  "notes": zod.array(zod.object({
+  "author": zod.string(),
+  "body": zod.string(),
+  "at": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const GetMeridianDisputesResponse = zod.array(GetMeridianDisputesResponseItem)
+
+
+/**
+ * @summary Update a dispute status/priority and optionally append a note
+ */
+export const UpdateMeridianDisputeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateMeridianDisputeBody = zod.object({
+  "status": zod.enum(['Open', 'In review', 'Resolved', 'Escalated']).optional(),
+  "priority": zod.enum(['Low', 'Normal', 'High', 'Urgent']).optional(),
+  "note": zod.string().optional()
+})
+
+export const UpdateMeridianDisputeResponse = zod.object({
+  "id": zod.number(),
+  "providerId": zod.number().nullish(),
+  "subject": zod.string(),
+  "category": zod.string(),
+  "status": zod.string(),
+  "priority": zod.string(),
+  "notes": zod.array(zod.object({
+  "author": zod.string(),
+  "body": zod.string(),
+  "at": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List engagements for the current user
  */
 export const GetPortalEngagementsResponseItem = zod.object({
@@ -1244,6 +1413,7 @@ export const ListAdminUsersResponseItem = zod.object({
   "name": zod.string(),
   "organization": zod.string().nullish(),
   "role": zod.string(),
+  "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian', 'spark', 'aria', 'pulse', 'sentinel', 'tend']).describe('The product\/portal a user belongs to.'),
   "createdAt": zod.coerce.date()
 })
 export const ListAdminUsersResponse = zod.array(ListAdminUsersResponseItem)
@@ -1264,5 +1434,118 @@ export const ListAdminSubmissionsResponseItem = zod.object({
   "createdAt": zod.coerce.date()
 })
 export const ListAdminSubmissionsResponse = zod.array(ListAdminSubmissionsResponseItem)
+
+
+/**
+ * @summary List engagements with milestone and deliverable progress
+ */
+export const GetCadenceEngagementsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "title": zod.string(),
+  "practiceArea": zod.string(),
+  "status": zod.string(),
+  "nextMilestone": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "dueDate": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "milestoneCount": zod.number(),
+  "deliverableCount": zod.number(),
+  "completedDeliverableCount": zod.number()
+})
+export const GetCadenceEngagementsResponse = zod.array(GetCadenceEngagementsResponseItem)
+
+
+/**
+ * @summary Get one engagement with its milestones and deliverables
+ */
+export const GetCadenceEngagementParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetCadenceEngagementResponse = zod.object({
+  "engagement": zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "title": zod.string(),
+  "practiceArea": zod.string(),
+  "status": zod.string(),
+  "nextMilestone": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "dueDate": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "milestoneCount": zod.number(),
+  "deliverableCount": zod.number(),
+  "completedDeliverableCount": zod.number()
+}),
+  "milestones": zod.array(zod.object({
+  "id": zod.number(),
+  "engagementId": zod.number(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "dueDate": zod.coerce.date().nullish(),
+  "orderIndex": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "deliverables": zod.array(zod.object({
+  "id": zod.number(),
+  "engagementId": zod.number(),
+  "milestoneId": zod.number().nullish(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "qaGateStatus": zod.string().describe('pending, passed, or failed'),
+  "qaNotes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Update a deliverable status or QA gate
+ */
+export const UpdateCadenceDeliverableParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCadenceDeliverableBody = zod.object({
+  "status": zod.string().optional(),
+  "qaGateStatus": zod.enum(['pending', 'passed', 'failed']).optional(),
+  "qaNotes": zod.string().optional()
+})
+
+export const UpdateCadenceDeliverableResponse = zod.object({
+  "id": zod.number(),
+  "engagementId": zod.number(),
+  "milestoneId": zod.number().nullish(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "qaGateStatus": zod.string().describe('pending, passed, or failed'),
+  "qaNotes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a milestone status
+ */
+export const UpdateCadenceMilestoneParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCadenceMilestoneBody = zod.object({
+  "status": zod.string()
+})
+
+export const UpdateCadenceMilestoneResponse = zod.object({
+  "id": zod.number(),
+  "engagementId": zod.number(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "dueDate": zod.coerce.date().nullish(),
+  "orderIndex": zod.number(),
+  "createdAt": zod.coerce.date()
+})
 
 

@@ -29,6 +29,10 @@ import type {
   AssessmentInput,
   AssessmentUpdate,
   AuthUser,
+  CadenceDeliverable,
+  CadenceEngagement,
+  CadenceEngagementDetail,
+  CadenceMilestone,
   Client,
   ClientInput,
   ClientUpdate,
@@ -41,14 +45,17 @@ import type {
   CrosswalkLink,
   CrosswalkLinkInput,
   DashboardSummary,
+  DeliverableUpdateInput,
   DemoAnswerInput,
   DemoAnswerResult,
   DemoBank,
   DemoLevelOption,
   DemoSessionInput,
+  DisputeUpdateInput,
   Engagement,
   GateStatus,
   GetDemoBankParams,
+  GetRiseBankParams,
   HealthStatus,
   IntakeProgress,
   IntakeProgressInput,
@@ -56,9 +63,11 @@ import type {
   LedgerEntryInput,
   LedgerReport,
   LoginInput,
+  MilestoneUpdateInput,
   Module,
   ModuleInput,
   ModuleUpdate,
+  NetworkAdequacyReview,
   NewsletterInput,
   Objective,
   ObjectiveInput,
@@ -69,10 +78,18 @@ import type {
   Project,
   ProjectInput,
   ProjectUpdate,
+  Provider,
+  ProviderDispute,
   QACheck,
   QACheckInput,
   QACheckUpdate,
   RegisterInput,
+  RiseAnswerInput,
+  RiseAnswerResult,
+  RiseBank,
+  RiseLevelOption,
+  RiseSession,
+  RiseSessionInput,
   StageAdvanceInput,
   StandardCompetency,
   StandardCompetencyInput,
@@ -4452,6 +4469,689 @@ export const useSaveDemoSession = <TError = ErrorType<unknown>,
       return useMutation(getSaveDemoSessionMutationOptions(options));
     }
 
+export const getGetRiseLevelsUrl = () => {
+
+
+
+
+  return `/api/rise/levels`
+}
+
+/**
+ * @summary List available reading levels (Rise)
+ */
+export const getRiseLevels = async ( options?: RequestInit): Promise<RiseLevelOption[]> => {
+
+  return customFetch<RiseLevelOption[]>(getGetRiseLevelsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRiseLevelsQueryKey = () => {
+    return [
+    `/api/rise/levels`
+    ] as const;
+    }
+
+
+export const getGetRiseLevelsQueryOptions = <TData = Awaited<ReturnType<typeof getRiseLevels>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiseLevels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRiseLevelsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRiseLevels>>> = ({ signal }) => getRiseLevels({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRiseLevels>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRiseLevelsQueryResult = NonNullable<Awaited<ReturnType<typeof getRiseLevels>>>
+export type GetRiseLevelsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List available reading levels (Rise)
+ */
+
+export function useGetRiseLevels<TData = Awaited<ReturnType<typeof getRiseLevels>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiseLevels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRiseLevelsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetRiseBankUrl = (params: GetRiseBankParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/rise/bank?${stringifiedParams}` : `/api/rise/bank`
+}
+
+/**
+ * @summary Get the Rise item bank for a level (no answer keys)
+ */
+export const getRiseBank = async (params: GetRiseBankParams, options?: RequestInit): Promise<RiseBank> => {
+
+  return customFetch<RiseBank>(getGetRiseBankUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRiseBankQueryKey = (params?: GetRiseBankParams,) => {
+    return [
+    `/api/rise/bank`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetRiseBankQueryOptions = <TData = Awaited<ReturnType<typeof getRiseBank>>, TError = ErrorType<unknown>>(params: GetRiseBankParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiseBank>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRiseBankQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRiseBank>>> = ({ signal }) => getRiseBank(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRiseBank>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRiseBankQueryResult = NonNullable<Awaited<ReturnType<typeof getRiseBank>>>
+export type GetRiseBankQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the Rise item bank for a level (no answer keys)
+ */
+
+export function useGetRiseBank<TData = Awaited<ReturnType<typeof getRiseBank>>, TError = ErrorType<unknown>>(
+ params: GetRiseBankParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiseBank>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRiseBankQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAnswerRiseItemUrl = () => {
+
+
+
+
+  return `/api/rise/answer`
+}
+
+/**
+ * @summary Grade a single Rise answer
+ */
+export const answerRiseItem = async (riseAnswerInput: RiseAnswerInput, options?: RequestInit): Promise<RiseAnswerResult> => {
+
+  return customFetch<RiseAnswerResult>(getAnswerRiseItemUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      riseAnswerInput,)
+  }
+);}
+
+
+
+
+export const getAnswerRiseItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof answerRiseItem>>, TError,{data: BodyType<RiseAnswerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof answerRiseItem>>, TError,{data: BodyType<RiseAnswerInput>}, TContext> => {
+
+const mutationKey = ['answerRiseItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof answerRiseItem>>, {data: BodyType<RiseAnswerInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  answerRiseItem(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnswerRiseItemMutationResult = NonNullable<Awaited<ReturnType<typeof answerRiseItem>>>
+    export type AnswerRiseItemMutationBody = BodyType<RiseAnswerInput>
+    export type AnswerRiseItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Grade a single Rise answer
+ */
+export const useAnswerRiseItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof answerRiseItem>>, TError,{data: BodyType<RiseAnswerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof answerRiseItem>>,
+        TError,
+        {data: BodyType<RiseAnswerInput>},
+        TContext
+      > => {
+      return useMutation(getAnswerRiseItemMutationOptions(options));
+    }
+
+export const getGetRiseSessionsUrl = () => {
+
+
+
+
+  return `/api/rise/sessions`
+}
+
+/**
+ * @summary List the learner's past Rise runs
+ */
+export const getRiseSessions = async ( options?: RequestInit): Promise<RiseSession[]> => {
+
+  return customFetch<RiseSession[]>(getGetRiseSessionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRiseSessionsQueryKey = () => {
+    return [
+    `/api/rise/sessions`
+    ] as const;
+    }
+
+
+export const getGetRiseSessionsQueryOptions = <TData = Awaited<ReturnType<typeof getRiseSessions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiseSessions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRiseSessionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRiseSessions>>> = ({ signal }) => getRiseSessions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRiseSessions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRiseSessionsQueryResult = NonNullable<Awaited<ReturnType<typeof getRiseSessions>>>
+export type GetRiseSessionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the learner's past Rise runs
+ */
+
+export function useGetRiseSessions<TData = Awaited<ReturnType<typeof getRiseSessions>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiseSessions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRiseSessionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSaveRiseSessionUrl = () => {
+
+
+
+
+  return `/api/rise/sessions`
+}
+
+/**
+ * @summary Persist a completed Rise run for the signed-in learner
+ */
+export const saveRiseSession = async (riseSessionInput: RiseSessionInput, options?: RequestInit): Promise<RiseSession> => {
+
+  return customFetch<RiseSession>(getSaveRiseSessionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      riseSessionInput,)
+  }
+);}
+
+
+
+
+export const getSaveRiseSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveRiseSession>>, TError,{data: BodyType<RiseSessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveRiseSession>>, TError,{data: BodyType<RiseSessionInput>}, TContext> => {
+
+const mutationKey = ['saveRiseSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveRiseSession>>, {data: BodyType<RiseSessionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveRiseSession(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveRiseSessionMutationResult = NonNullable<Awaited<ReturnType<typeof saveRiseSession>>>
+    export type SaveRiseSessionMutationBody = BodyType<RiseSessionInput>
+    export type SaveRiseSessionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Persist a completed Rise run for the signed-in learner
+ */
+export const useSaveRiseSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveRiseSession>>, TError,{data: BodyType<RiseSessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveRiseSession>>,
+        TError,
+        {data: BodyType<RiseSessionInput>},
+        TContext
+      > => {
+      return useMutation(getSaveRiseSessionMutationOptions(options));
+    }
+
+export const getGetMeridianProvidersUrl = () => {
+
+
+
+
+  return `/api/meridian/providers`
+}
+
+/**
+ * @summary List network providers (Meridian)
+ */
+export const getMeridianProviders = async ( options?: RequestInit): Promise<Provider[]> => {
+
+  return customFetch<Provider[]>(getGetMeridianProvidersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMeridianProvidersQueryKey = () => {
+    return [
+    `/api/meridian/providers`
+    ] as const;
+    }
+
+
+export const getGetMeridianProvidersQueryOptions = <TData = Awaited<ReturnType<typeof getMeridianProviders>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMeridianProviders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMeridianProvidersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMeridianProviders>>> = ({ signal }) => getMeridianProviders({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMeridianProviders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMeridianProvidersQueryResult = NonNullable<Awaited<ReturnType<typeof getMeridianProviders>>>
+export type GetMeridianProvidersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List network providers (Meridian)
+ */
+
+export function useGetMeridianProviders<TData = Awaited<ReturnType<typeof getMeridianProviders>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMeridianProviders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMeridianProvidersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMeridianNetworkAdequacyUrl = () => {
+
+
+
+
+  return `/api/meridian/network-adequacy`
+}
+
+/**
+ * @summary List network-adequacy reviews (Meridian)
+ */
+export const getMeridianNetworkAdequacy = async ( options?: RequestInit): Promise<NetworkAdequacyReview[]> => {
+
+  return customFetch<NetworkAdequacyReview[]>(getGetMeridianNetworkAdequacyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMeridianNetworkAdequacyQueryKey = () => {
+    return [
+    `/api/meridian/network-adequacy`
+    ] as const;
+    }
+
+
+export const getGetMeridianNetworkAdequacyQueryOptions = <TData = Awaited<ReturnType<typeof getMeridianNetworkAdequacy>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMeridianNetworkAdequacy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMeridianNetworkAdequacyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMeridianNetworkAdequacy>>> = ({ signal }) => getMeridianNetworkAdequacy({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMeridianNetworkAdequacy>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMeridianNetworkAdequacyQueryResult = NonNullable<Awaited<ReturnType<typeof getMeridianNetworkAdequacy>>>
+export type GetMeridianNetworkAdequacyQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List network-adequacy reviews (Meridian)
+ */
+
+export function useGetMeridianNetworkAdequacy<TData = Awaited<ReturnType<typeof getMeridianNetworkAdequacy>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMeridianNetworkAdequacy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMeridianNetworkAdequacyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMeridianDisputesUrl = () => {
+
+
+
+
+  return `/api/meridian/disputes`
+}
+
+/**
+ * @summary List provider disputes (Meridian)
+ */
+export const getMeridianDisputes = async ( options?: RequestInit): Promise<ProviderDispute[]> => {
+
+  return customFetch<ProviderDispute[]>(getGetMeridianDisputesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMeridianDisputesQueryKey = () => {
+    return [
+    `/api/meridian/disputes`
+    ] as const;
+    }
+
+
+export const getGetMeridianDisputesQueryOptions = <TData = Awaited<ReturnType<typeof getMeridianDisputes>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMeridianDisputes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMeridianDisputesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMeridianDisputes>>> = ({ signal }) => getMeridianDisputes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMeridianDisputes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMeridianDisputesQueryResult = NonNullable<Awaited<ReturnType<typeof getMeridianDisputes>>>
+export type GetMeridianDisputesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List provider disputes (Meridian)
+ */
+
+export function useGetMeridianDisputes<TData = Awaited<ReturnType<typeof getMeridianDisputes>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMeridianDisputes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMeridianDisputesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateMeridianDisputeUrl = (id: number,) => {
+
+
+
+
+  return `/api/meridian/disputes/${id}`
+}
+
+/**
+ * @summary Update a dispute status/priority and optionally append a note
+ */
+export const updateMeridianDispute = async (id: number,
+    disputeUpdateInput: DisputeUpdateInput, options?: RequestInit): Promise<ProviderDispute> => {
+
+  return customFetch<ProviderDispute>(getUpdateMeridianDisputeUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      disputeUpdateInput,)
+  }
+);}
+
+
+
+
+export const getUpdateMeridianDisputeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMeridianDispute>>, TError,{id: number;data: BodyType<DisputeUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMeridianDispute>>, TError,{id: number;data: BodyType<DisputeUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateMeridianDispute'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMeridianDispute>>, {id: number;data: BodyType<DisputeUpdateInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateMeridianDispute(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMeridianDisputeMutationResult = NonNullable<Awaited<ReturnType<typeof updateMeridianDispute>>>
+    export type UpdateMeridianDisputeMutationBody = BodyType<DisputeUpdateInput>
+    export type UpdateMeridianDisputeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a dispute status/priority and optionally append a note
+ */
+export const useUpdateMeridianDispute = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMeridianDispute>>, TError,{id: number;data: BodyType<DisputeUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMeridianDispute>>,
+        TError,
+        {id: number;data: BodyType<DisputeUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateMeridianDisputeMutationOptions(options));
+    }
+
 export const getGetPortalEngagementsUrl = () => {
 
 
@@ -4830,4 +5530,302 @@ export function useListAdminSubmissions<TData = Awaited<ReturnType<typeof listAd
 
 
 
+
+export const getGetCadenceEngagementsUrl = () => {
+
+
+
+
+  return `/api/cadence/engagements`
+}
+
+/**
+ * @summary List engagements with milestone and deliverable progress
+ */
+export const getCadenceEngagements = async ( options?: RequestInit): Promise<CadenceEngagement[]> => {
+
+  return customFetch<CadenceEngagement[]>(getGetCadenceEngagementsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCadenceEngagementsQueryKey = () => {
+    return [
+    `/api/cadence/engagements`
+    ] as const;
+    }
+
+
+export const getGetCadenceEngagementsQueryOptions = <TData = Awaited<ReturnType<typeof getCadenceEngagements>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCadenceEngagements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCadenceEngagementsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCadenceEngagements>>> = ({ signal }) => getCadenceEngagements({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCadenceEngagements>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCadenceEngagementsQueryResult = NonNullable<Awaited<ReturnType<typeof getCadenceEngagements>>>
+export type GetCadenceEngagementsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List engagements with milestone and deliverable progress
+ */
+
+export function useGetCadenceEngagements<TData = Awaited<ReturnType<typeof getCadenceEngagements>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCadenceEngagements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCadenceEngagementsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetCadenceEngagementUrl = (id: number,) => {
+
+
+
+
+  return `/api/cadence/engagements/${id}`
+}
+
+/**
+ * @summary Get one engagement with its milestones and deliverables
+ */
+export const getCadenceEngagement = async (id: number, options?: RequestInit): Promise<CadenceEngagementDetail> => {
+
+  return customFetch<CadenceEngagementDetail>(getGetCadenceEngagementUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCadenceEngagementQueryKey = (id: number,) => {
+    return [
+    `/api/cadence/engagements/${id}`
+    ] as const;
+    }
+
+
+export const getGetCadenceEngagementQueryOptions = <TData = Awaited<ReturnType<typeof getCadenceEngagement>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCadenceEngagement>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCadenceEngagementQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCadenceEngagement>>> = ({ signal }) => getCadenceEngagement(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCadenceEngagement>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCadenceEngagementQueryResult = NonNullable<Awaited<ReturnType<typeof getCadenceEngagement>>>
+export type GetCadenceEngagementQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get one engagement with its milestones and deliverables
+ */
+
+export function useGetCadenceEngagement<TData = Awaited<ReturnType<typeof getCadenceEngagement>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCadenceEngagement>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCadenceEngagementQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateCadenceDeliverableUrl = (id: number,) => {
+
+
+
+
+  return `/api/cadence/deliverables/${id}`
+}
+
+/**
+ * @summary Update a deliverable status or QA gate
+ */
+export const updateCadenceDeliverable = async (id: number,
+    deliverableUpdateInput: DeliverableUpdateInput, options?: RequestInit): Promise<CadenceDeliverable> => {
+
+  return customFetch<CadenceDeliverable>(getUpdateCadenceDeliverableUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deliverableUpdateInput,)
+  }
+);}
+
+
+
+
+export const getUpdateCadenceDeliverableMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCadenceDeliverable>>, TError,{id: number;data: BodyType<DeliverableUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCadenceDeliverable>>, TError,{id: number;data: BodyType<DeliverableUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateCadenceDeliverable'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCadenceDeliverable>>, {id: number;data: BodyType<DeliverableUpdateInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateCadenceDeliverable(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCadenceDeliverableMutationResult = NonNullable<Awaited<ReturnType<typeof updateCadenceDeliverable>>>
+    export type UpdateCadenceDeliverableMutationBody = BodyType<DeliverableUpdateInput>
+    export type UpdateCadenceDeliverableMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a deliverable status or QA gate
+ */
+export const useUpdateCadenceDeliverable = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCadenceDeliverable>>, TError,{id: number;data: BodyType<DeliverableUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCadenceDeliverable>>,
+        TError,
+        {id: number;data: BodyType<DeliverableUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateCadenceDeliverableMutationOptions(options));
+    }
+
+export const getUpdateCadenceMilestoneUrl = (id: number,) => {
+
+
+
+
+  return `/api/cadence/milestones/${id}`
+}
+
+/**
+ * @summary Update a milestone status
+ */
+export const updateCadenceMilestone = async (id: number,
+    milestoneUpdateInput: MilestoneUpdateInput, options?: RequestInit): Promise<CadenceMilestone> => {
+
+  return customFetch<CadenceMilestone>(getUpdateCadenceMilestoneUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      milestoneUpdateInput,)
+  }
+);}
+
+
+
+
+export const getUpdateCadenceMilestoneMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCadenceMilestone>>, TError,{id: number;data: BodyType<MilestoneUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCadenceMilestone>>, TError,{id: number;data: BodyType<MilestoneUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateCadenceMilestone'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCadenceMilestone>>, {id: number;data: BodyType<MilestoneUpdateInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateCadenceMilestone(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCadenceMilestoneMutationResult = NonNullable<Awaited<ReturnType<typeof updateCadenceMilestone>>>
+    export type UpdateCadenceMilestoneMutationBody = BodyType<MilestoneUpdateInput>
+    export type UpdateCadenceMilestoneMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a milestone status
+ */
+export const useUpdateCadenceMilestone = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCadenceMilestone>>, TError,{id: number;data: BodyType<MilestoneUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCadenceMilestone>>,
+        TError,
+        {id: number;data: BodyType<MilestoneUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateCadenceMilestoneMutationOptions(options));
+    }
 

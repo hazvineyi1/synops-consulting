@@ -2,18 +2,27 @@ import { type ReactNode } from "react";
 import { Link } from "wouter";
 
 /**
- * Shared layout for the public portal auth screens (login / register).
+ * Shared layout for the per-product auth screens (login / register). When an
+ * `accent` is supplied the side panel adopts that product's brand color.
  */
 export function AuthShell({
   title,
   subtitle,
   children,
   footer,
+  eyebrow = "Client Portal",
+  panelLine = "One platform for the Synops Advisory Group products you rely on.",
+  panelNote,
+  accent,
 }: {
   title: string;
   subtitle?: string;
   children: ReactNode;
   footer?: ReactNode;
+  eyebrow?: string;
+  panelLine?: string;
+  panelNote?: string;
+  accent?: string;
 }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -41,20 +50,22 @@ export function AuthShell({
         </div>
       </div>
 
-      <div className="relative hidden items-center justify-center bg-gradient-to-br from-primary to-teal-700 p-12 text-primary-foreground lg:flex">
-        <div className="max-w-md space-y-6">
-          <p className="text-sm font-medium uppercase tracking-widest text-primary-foreground/70">
-            Client Portal
+      <div
+        className="relative hidden items-center justify-center p-12 text-white lg:flex"
+        style={accent ? { backgroundColor: accent } : undefined}
+      >
+        {!accent && (
+          <div
+            className="absolute inset-0 bg-gradient-to-br from-primary to-teal-700"
+            aria-hidden="true"
+          />
+        )}
+        <div className="relative max-w-md space-y-6">
+          <p className="text-sm font-medium uppercase tracking-widest text-white/70">
+            {eyebrow}
           </p>
-          <p className="text-2xl font-semibold leading-snug">
-            One engine for curriculum development, built to adapt across every
-            level and institution.
-          </p>
-          <p className="text-sm text-primary-foreground/80">
-            Track engagements, access shared resources, and work inside the
-            institution-agnostic curriculum portal. No PHI or regulated health
-            data until a compliance review is complete.
-          </p>
+          <p className="text-2xl font-semibold leading-snug">{panelLine}</p>
+          {panelNote && <p className="text-sm text-white/80">{panelNote}</p>}
         </div>
       </div>
     </div>

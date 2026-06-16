@@ -28,6 +28,43 @@ export const requireAuth: RequestHandler = (req, res, next) => {
   next();
 };
 
+/**
+ * Gate a route to users who belong to a specific product (admins bypass).
+ * Reads role + productKey from the DB rather than trusting the session.
+ */
+export function requireProduct(productKey: string): RequestHandler {
+  return (req, res, next) => {
+    const userId = req.session?.userId;
+    if (!userId) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    void (async () => {
+      try {
+        const [user] = await db
+          .select({ role: usersTable.role, productKey: usersTable.productKey })
+          .from(usersTable)
+          .where(eq(usersTable.id, userId));
+
+        if (!user) {
+          req.session.destroy(() => undefined);
+          res.status(401).json({ error: "Authentication required" });
+          return;
+        }
+
+        if (user.role === "admin" || user.productKey === productKey) {
+          next();
+          return;
+        }
+
+        res.status(403).json({ error: "You do not have access to this product." });
+      } catch (err) {
+        next(err);
+      }
+    })();
+  };
+}
+
 export const requireAdmin: RequestHandler = (req, res, next) => {
   const userId = req.session?.userId;
   if (!userId) {

@@ -7,6 +7,8 @@ export const engagementsTable = pgTable("engagements", {
   practiceArea: text("practice_area").notNull(),
   status: text("status").notNull().default("Active"),
   nextMilestone: text("next_milestone"),
+  description: text("description"),
+  dueDate: timestamp("due_date", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

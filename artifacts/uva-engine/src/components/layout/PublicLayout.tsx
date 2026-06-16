@@ -74,7 +74,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
 
           <div className="hidden items-center gap-2 lg:flex">
             <Link
-              href="/portal/login"
+              href="/portals"
               className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Client portal
@@ -115,7 +115,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
               ))}
               <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
                 <Link
-                  href="/portal/login"
+                  href="/portals"
                   onClick={() => setMobileOpen(false)}
                   className="block rounded-md px-3 py-2 text-base font-medium text-foreground hover:bg-muted"
                 >
@@ -162,7 +162,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
               <li><Link href="/about" className="hover:text-foreground">About</Link></li>
               <li><Link href="/insights" className="hover:text-foreground">Insights</Link></li>
               <li><Link href="/contact" className="hover:text-foreground">Contact</Link></li>
-              <li><Link href="/portal/login" className="hover:text-foreground">Client portal</Link></li>
+              <li><Link href="/portals" className="hover:text-foreground">Client portal</Link></li>
             </ul>
           </div>
 

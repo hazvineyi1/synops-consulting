@@ -1,1 +1,2 @@
-- [Gated pipeline enforcement](gated-pipeline-enforcement.md) — stage advancement must enforce gate requirements server-side, not just disable a client button.
+- [Per-product API route gating](product-route-gating.md) — scope requireProduct(key) per-route or by path prefix; a pathless router.use gate blocks every other product; cover EVERY route incl destructive ones.
+- [Self-service registration policy](self-service-registration.md) — server must not trust client productKey on register; only allow self-service products, others are admin-provisioned.

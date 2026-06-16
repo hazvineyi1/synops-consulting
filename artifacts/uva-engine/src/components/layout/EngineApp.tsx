@@ -16,8 +16,8 @@ import Standards from "@/pages/Standards";
 import NotFound from "@/pages/not-found";
 
 /**
- * The institution-agnostic curriculum engine. Mounted behind the client-portal
- * auth gate at /portal/engine via wouter's `nest`, so every Link inside the
+ * The institution-agnostic curriculum engine, branded as Compass. Mounted behind
+ * the product auth gate at /compass via wouter's `nest`, so every Link inside the
  * engine (and its Shell) resolves relative to that base automatically.
  */
 export function EngineApp() {
