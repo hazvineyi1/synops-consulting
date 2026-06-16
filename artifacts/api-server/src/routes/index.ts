@@ -13,6 +13,10 @@ import qaRouter from "./qa";
 import standardsRouter from "./standards";
 import dashboardRouter from "./dashboard";
 import intakeRouter from "./intake";
+import buildersRouter from "./builders";
+import allocationsRouter from "./allocations";
+import classesRouter from "./classes";
+import schoolRouter from "./school";
 import portalRouter from "./portal";
 import adminRouter from "./admin";
 import cadenceRouter from "./cadence";
@@ -49,6 +53,10 @@ engineRouter.use(ledgerRouter);
 engineRouter.use(qaRouter);
 engineRouter.use(standardsRouter);
 engineRouter.use(intakeRouter);
+engineRouter.use(buildersRouter);
+engineRouter.use(allocationsRouter);
+engineRouter.use(classesRouter);
+engineRouter.use(schoolRouter);
 router.use("/compass", engineRouter);
 
 // ── Authenticated routes ────────────────────────────────────

@@ -13,6 +13,10 @@ export const usersTable = pgTable("users", {
   // school_admin/builder MUST have one; admin/super_admin are global.
   organizationId: integer("organization_id"),
   role: text("role").notNull().default("client"),
+  // Account lifecycle. "deactivated" users are provisioned but blocked from
+  // authenticating (rejected at login/me and at every product/admin/actor gate).
+  // School admins toggle this for the builders they manage.
+  status: text("status").notNull().default("active"),
   // Which product/portal this user belongs to (hub, cadence, rise, compass,
   // meridian, ...). Admins can access every product regardless of this value.
   productKey: text("product_key").notNull().default("hub"),

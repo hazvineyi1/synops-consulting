@@ -27,6 +27,16 @@ export interface AuthUser {
   organization?: string | null;
   role: string;
   productKey: ProductKey;
+  /** Account lifecycle status (active or deactivated). */
+  status: string;
+  /** @nullable */
+  organizationId?: number | null;
+  /** @nullable */
+  organizationName?: string | null;
+  /** @nullable */
+  organizationType?: string | null;
+  /** @nullable */
+  organizationSlug?: string | null;
   createdAt: string;
 }
 
@@ -902,6 +912,241 @@ export interface CrosswalkGapReport {
   deliveryBlocked?: boolean;
   gaps: StandardCompetency[];
 }
+
+export interface Builder {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  /** @nullable */
+  organizationId: number | null;
+  /** @nullable */
+  organizationName?: string | null;
+  createdAt: string;
+  activeAllocationCount: number;
+}
+
+export interface CreateBuilderInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /** @maxLength 255 */
+  email: string;
+  /**
+     * @minLength 8
+     * @maxLength 200
+     */
+  password: string;
+  /** Required for global admins; ignored for school admins (their own org is used). */
+  organizationId?: number;
+}
+
+export type UpdateBuilderStatusInputStatus = typeof UpdateBuilderStatusInputStatus[keyof typeof UpdateBuilderStatusInputStatus];
+
+
+export const UpdateBuilderStatusInputStatus = {
+  active: 'active',
+  deactivated: 'deactivated',
+} as const;
+
+export interface UpdateBuilderStatusInput {
+  status: UpdateBuilderStatusInputStatus;
+}
+
+export interface ResetBuilderPasswordInput {
+  /**
+     * @minLength 8
+     * @maxLength 200
+     */
+  password: string;
+}
+
+export type AllocationScopeType = typeof AllocationScopeType[keyof typeof AllocationScopeType];
+
+
+export const AllocationScopeType = {
+  project: 'project',
+  course: 'course',
+  class: 'class',
+} as const;
+
+export type AllocationStatus = typeof AllocationStatus[keyof typeof AllocationStatus];
+
+
+export const AllocationStatus = {
+  active: 'active',
+  revoked: 'revoked',
+} as const;
+
+export interface Allocation {
+  id: number;
+  organizationId: number;
+  builderUserId: number;
+  /** @nullable */
+  builderName?: string | null;
+  scopeType: AllocationScopeType;
+  scopeId: number;
+  scopeTitle: string;
+  /** @nullable */
+  projectId?: number | null;
+  /** @nullable */
+  projectTitle?: string | null;
+  status: AllocationStatus;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateAllocationInputScopeType = typeof CreateAllocationInputScopeType[keyof typeof CreateAllocationInputScopeType];
+
+
+export const CreateAllocationInputScopeType = {
+  project: 'project',
+  course: 'course',
+  class: 'class',
+} as const;
+
+export interface CreateAllocationInput {
+  builderUserId: number;
+  scopeType: CreateAllocationInputScopeType;
+  scopeId: number;
+  /** @maxLength 1000 */
+  notes?: string;
+}
+
+export interface Class {
+  id: number;
+  courseId: number;
+  name: string;
+  /** @nullable */
+  section?: string | null;
+  /** @nullable */
+  term?: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ClassInputStatus = typeof ClassInputStatus[keyof typeof ClassInputStatus];
+
+
+export const ClassInputStatus = {
+  active: 'active',
+  archived: 'archived',
+} as const;
+
+export interface ClassInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  section?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  term?: string | null;
+  status?: ClassInputStatus;
+}
+
+export type ClassUpdateStatus = typeof ClassUpdateStatus[keyof typeof ClassUpdateStatus];
+
+
+export const ClassUpdateStatus = {
+  active: 'active',
+  archived: 'archived',
+} as const;
+
+export interface ClassUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name?: string;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  section?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  term?: string | null;
+  status?: ClassUpdateStatus;
+}
+
+export interface SchoolReportTotals {
+  clients: number;
+  projects: number;
+  activeProjects: number;
+  courses: number;
+  classes: number;
+  builders: number;
+  activeAllocations: number;
+}
+
+export interface SchoolReportStage {
+  stage: number;
+  label: string;
+  count: number;
+}
+
+export type SchoolReportBuilderAllocationsByScope = {
+  project: number;
+  course: number;
+  class: number;
+};
+
+export interface SchoolReportBuilder {
+  id: number;
+  name: string;
+  email: string;
+  status: string;
+  activeAllocations: number;
+  allocationsByScope: SchoolReportBuilderAllocationsByScope;
+}
+
+export type SchoolReportOrganization = {
+  id: number;
+  name: string;
+  slug: string;
+  type: string;
+};
+
+export interface SchoolReport {
+  organization: SchoolReportOrganization;
+  generatedAt: string;
+  totals: SchoolReportTotals;
+  projectsByStage: SchoolReportStage[];
+  builders: SchoolReportBuilder[];
+}
+
+export type ListBuildersParams = {
+organizationId?: number;
+};
+
+export type ListAllocationsParams = {
+organizationId?: number;
+builderUserId?: number;
+};
+
+export type GetSchoolReportParams = {
+organizationId?: number;
+};
+
+export type GetSchoolReportMarkdownParams = {
+organizationId?: number;
+};
 
 export type GetDemoBankParams = {
 level: GetDemoBankLevel;

@@ -1023,6 +1023,303 @@ paths:
               schema:
                 $ref: "#/components/schemas/IntakeProgress"
 
+  # ── Builders (school admin management) ───────────────────────
+  /compass/builders:
+    get:
+      operationId: listBuilders
+      tags: [builders]
+      summary: List builders the actor manages
+      parameters:
+        - name: organizationId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of builders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Builder"
+    post:
+      operationId: createBuilder
+      tags: [builders]
+      summary: Provision a builder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBuilderInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Builder"
+
+  /compass/builders/{id}/status:
+    patch:
+      operationId: updateBuilderStatus
+      tags: [builders]
+      summary: Activate or deactivate a builder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBuilderStatusInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Builder"
+
+  /compass/builders/{id}/password:
+    post:
+      operationId: resetBuilderPassword
+      tags: [builders]
+      summary: Reset a builder's password
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetBuilderPasswordInput"
+      responses:
+        "200":
+          description: Reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /compass/builders/{id}/activity:
+    get:
+      operationId: getBuilderActivity
+      tags: [builders]
+      summary: Per-builder activity feed
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Builder activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityFeedItem"
+
+  # ── Allocations ──────────────────────────────────────────────
+  /compass/allocations:
+    get:
+      operationId: listAllocations
+      tags: [allocations]
+      summary: List allocations the actor manages
+      parameters:
+        - name: organizationId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: builderUserId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of allocations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Allocation"
+    post:
+      operationId: createAllocation
+      tags: [allocations]
+      summary: Allocate a builder to a scope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAllocationInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Allocation"
+
+  /compass/allocations/{id}/revoke:
+    patch:
+      operationId: revokeAllocation
+      tags: [allocations]
+      summary: Revoke an allocation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Allocation"
+
+  /compass/my/allocations:
+    get:
+      operationId: getMyAllocations
+      tags: [allocations]
+      summary: The caller's own active allocations
+      responses:
+        "200":
+          description: Active allocations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Allocation"
+
+  # ── Classes ──────────────────────────────────────────────────
+  /compass/courses/{courseId}/classes:
+    get:
+      operationId: listClasses
+      tags: [classes]
+      summary: List classes under a course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of classes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Class"
+    post:
+      operationId: createClass
+      tags: [classes]
+      summary: Create a class under a course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Class"
+
+  /compass/classes/{id}:
+    patch:
+      operationId: updateClass
+      tags: [classes]
+      summary: Update a class
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Class"
+
+  # ── School report ────────────────────────────────────────────
+  /compass/school/report:
+    get:
+      operationId: getSchoolReport
+      tags: [school]
+      summary: Organization curriculum and builder rollup
+      parameters:
+        - name: organizationId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: School report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchoolReport"
+
+  /compass/school/report.md:
+    get:
+      operationId: getSchoolReportMarkdown
+      tags: [school]
+      summary: School report as downloadable markdown
+      parameters:
+        - name: organizationId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: School report markdown
+          content:
+            text/markdown:
+              schema:
+                type: string
+
   # ── Auth ─────────────────────────────────────────────────────
   /auth/register:
     post:
@@ -1553,7 +1850,7 @@ components:
 
     AuthUser:
       type: object
-      required: [id, email, name, role, productKey, createdAt]
+      required: [id, email, name, role, productKey, status, createdAt]
       properties:
         id:
           type: integer
@@ -1567,6 +1864,17 @@ components:
           type: string
         productKey:
           $ref: "#/components/schemas/ProductKey"
+        status:
+          type: string
+          description: Account lifecycle status (active or deactivated).
+        organizationId:
+          type: ["integer", "null"]
+        organizationName:
+          type: ["string", "null"]
+        organizationType:
+          type: ["string", "null"]
+        organizationSlug:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -3067,3 +3375,258 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/StandardCompetency"
+
+    # ── Builders / Allocations / Classes / School (Task 3) ────────
+    Builder:
+      type: object
+      required: [id, name, email, role, status, organizationId, createdAt, activeAllocationCount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+        organizationId:
+          type: ["integer", "null"]
+        organizationName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        activeAllocationCount:
+          type: integer
+
+    CreateBuilderInput:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          minLength: 8
+          maxLength: 200
+        organizationId:
+          type: integer
+          description: Required for global admins; ignored for school admins (their own org is used).
+
+    UpdateBuilderStatusInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [active, deactivated]
+
+    ResetBuilderPasswordInput:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 8
+          maxLength: 200
+
+    Allocation:
+      type: object
+      required: [id, organizationId, builderUserId, scopeType, scopeId, scopeTitle, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        organizationId:
+          type: integer
+        builderUserId:
+          type: integer
+        builderName:
+          type: ["string", "null"]
+        scopeType:
+          type: string
+          enum: [project, course, class]
+        scopeId:
+          type: integer
+        scopeTitle:
+          type: string
+        projectId:
+          type: ["integer", "null"]
+        projectTitle:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, revoked]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateAllocationInput:
+      type: object
+      required: [builderUserId, scopeType, scopeId]
+      properties:
+        builderUserId:
+          type: integer
+        scopeType:
+          type: string
+          enum: [project, course, class]
+        scopeId:
+          type: integer
+        notes:
+          type: string
+          maxLength: 1000
+
+    Class:
+      type: object
+      required: [id, courseId, name, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        courseId:
+          type: integer
+        name:
+          type: string
+        section:
+          type: ["string", "null"]
+        term:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ClassInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        section:
+          type: ["string", "null"]
+          maxLength: 100
+        term:
+          type: ["string", "null"]
+          maxLength: 100
+        status:
+          type: string
+          enum: [active, archived]
+
+    ClassUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        section:
+          type: ["string", "null"]
+          maxLength: 100
+        term:
+          type: ["string", "null"]
+          maxLength: 100
+        status:
+          type: string
+          enum: [active, archived]
+
+    SchoolReportTotals:
+      type: object
+      required: [clients, projects, activeProjects, courses, classes, builders, activeAllocations]
+      properties:
+        clients:
+          type: integer
+        projects:
+          type: integer
+        activeProjects:
+          type: integer
+        courses:
+          type: integer
+        classes:
+          type: integer
+        builders:
+          type: integer
+        activeAllocations:
+          type: integer
+
+    SchoolReportStage:
+      type: object
+      required: [stage, label, count]
+      properties:
+        stage:
+          type: integer
+        label:
+          type: string
+        count:
+          type: integer
+
+    SchoolReportBuilder:
+      type: object
+      required: [id, name, email, status, activeAllocations, allocationsByScope]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+        activeAllocations:
+          type: integer
+        allocationsByScope:
+          type: object
+          required: [project, course, class]
+          properties:
+            project:
+              type: integer
+            course:
+              type: integer
+            class:
+              type: integer
+
+    SchoolReport:
+      type: object
+      required: [organization, generatedAt, totals, projectsByStage, builders]
+      properties:
+        organization:
+          type: object
+          required: [id, name, slug, type]
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            slug:
+              type: string
+            type:
+              type: string
+        generatedAt:
+          type: string
+          format: date-time
+        totals:
+          $ref: "#/components/schemas/SchoolReportTotals"
+        projectsByStage:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchoolReportStage"
+        builders:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchoolReportBuilder"

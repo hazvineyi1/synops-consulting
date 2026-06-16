@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { count, eq, desc } from "drizzle-orm";
 import { db, projectsTable, clientsTable, auditEventsTable } from "@workspace/db";
-import { clientOrgFilter } from "../lib/tenancy";
+import { builderClientIds, clientOrgFilter, loadBuilderScope } from "../lib/tenancy";
 
 const router = Router();
 
@@ -19,11 +19,12 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
 
   // Project metrics scoped to the actor's organization (global actors see all).
   const projectCols = {
+    id: projectsTable.id,
     status: projectsTable.status,
     stage: projectsTable.stage,
     targetDeliveryDate: projectsTable.targetDeliveryDate,
   };
-  const projects = actor.isGlobal
+  let projects = actor.isGlobal
     ? await db.select(projectCols).from(projectsTable)
     : await db
         .select(projectCols)
@@ -31,10 +32,19 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
         .innerJoin(clientsTable, eq(projectsTable.clientId, clientsTable.id))
         .where(eq(clientsTable.organizationId, actor.organizationId!));
 
-  const [{ total: totalClients }] = await db
-    .select({ total: count() })
-    .from(clientsTable)
-    .where(clientOrgFilter(actor));
+  // Builders see metrics for their allocated projects/clients only.
+  let totalClients: number;
+  if (actor.role === "builder") {
+    const bs = await loadBuilderScope(actor.userId);
+    projects = projects.filter((p) => bs.accessibleProjects.has(p.id));
+    totalClients = (await builderClientIds(bs)).size;
+  } else {
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(clientsTable)
+      .where(clientOrgFilter(actor));
+    totalClients = Number(total);
+  }
 
   const activeProjects = projects.filter((p) => p.status === "active").length;
   const gateBlockedCount = projects.filter((p) => p.status === "gate_blocked").length;
@@ -80,7 +90,7 @@ router.get("/dashboard/activity", async (req, res): Promise<void> => {
   };
 
   // Non-global actors only see audit events tied to their org's projects.
-  const events = actor.isGlobal
+  let events = actor.isGlobal
     ? await db
         .select(eventCols)
         .from(auditEventsTable)
@@ -94,6 +104,12 @@ router.get("/dashboard/activity", async (req, res): Promise<void> => {
         .where(eq(clientsTable.organizationId, actor.organizationId!))
         .orderBy(desc(auditEventsTable.createdAt))
         .limit(20);
+
+  // Builders only see activity for projects they can reach.
+  if (actor.role === "builder") {
+    const bs = await loadBuilderScope(actor.userId);
+    events = events.filter((e) => e.projectId != null && bs.accessibleProjects.has(e.projectId));
+  }
 
   res.json(
     events.map((e) => ({

@@ -1,5 +1,6 @@
 import { Redirect } from "wouter";
 import { useAuth } from "@/lib/auth-context";
+import { isGlobalAdmin } from "@/lib/roles";
 import { Spinner } from "@/components/ui/spinner";
 import { ProductApp } from "@/components/portal/ProductApp";
 import type { Product } from "@/lib/products";
@@ -26,7 +27,7 @@ export function ProtectedProduct({ product }: { product: Product }) {
     return <Redirect to={`~/${product.key}/login`} />;
   }
 
-  if (user.role !== "admin" && user.productKey !== product.key) {
+  if (!isGlobalAdmin(user.role) && user.productKey !== product.key) {
     return <Redirect to={`~/${user.productKey}`} />;
   }
 

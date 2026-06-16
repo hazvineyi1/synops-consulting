@@ -4,6 +4,7 @@ import {
   ensureOrganizationsSeed,
   ensurePortalSeed,
   ensureDemoUsers,
+  ensureDemoAcademyCurriculum,
   ensureMeridianSeed,
 } from "./lib/seed";
 
@@ -36,6 +37,7 @@ app.listen(port, (err) => {
     const { internalOrgId } = await ensureOrganizationsSeed(logger);
     await ensurePortalSeed(logger);
     await ensureDemoUsers(logger, internalOrgId);
+    await ensureDemoAcademyCurriculum(logger);
     await ensureMeridianSeed(logger);
   })().catch((err) => {
     logger.error({ err }, "Failed to run startup seeds");

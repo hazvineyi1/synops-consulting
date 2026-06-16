@@ -5,6 +5,10 @@ import {
   usersTable,
   organizationsTable,
   clientsTable,
+  projectsTable,
+  coursesTable,
+  classesTable,
+  allocationsTable,
   engagementsTable,
   engagementMilestonesTable,
   engagementDeliverablesTable,
@@ -409,6 +413,85 @@ async function ensureCadenceDemoData(log: MinimalLogger): Promise<void> {
 
   await seedCadenceData(cadenceUser.id);
   log.info({ userId: cadenceUser.id }, "Seeded Cadence demo data");
+}
+
+/**
+ * Idempotently seed a small curriculum tree for the Demo Academy tenant plus a
+ * course-level allocation for the demo builder, so the school-admin and builder
+ * workspaces have data to review and the allocation access rule is demonstrable
+ * (the builder can build within the allocated course and its descendants, but
+ * not the parent project or the sibling course). Skipped in production and once
+ * the tenant already has a client.
+ */
+export async function ensureDemoAcademyCurriculum(log: MinimalLogger): Promise<void> {
+  if (process.env.NODE_ENV === "production") return;
+
+  const demoSchoolOrgId = await ensureDemoSchoolOrg();
+
+  const existingClient = await db
+    .select({ id: clientsTable.id })
+    .from(clientsTable)
+    .where(eq(clientsTable.organizationId, demoSchoolOrgId))
+    .limit(1);
+  if (existingClient.length > 0) return;
+
+  const [builder] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.email, `builder@${DEMO_DOMAIN}`));
+
+  const [client] = await db
+    .insert(clientsTable)
+    .values({
+      organizationId: demoSchoolOrgId,
+      name: "Demo Academy District",
+      contactName: "Demo Academy Admin",
+      contactEmail: `school-admin@${DEMO_DOMAIN}`,
+      institution: "Demo Academy",
+      notes: "Synthetic demo tenant for role-based access review.",
+    })
+    .returning();
+
+  const [project] = await db
+    .insert(projectsTable)
+    .values({
+      clientId: client.id,
+      title: "Ninth Grade Literacy Redesign",
+      stage: 2,
+      status: "active",
+      modality: "Blended",
+      description: "Standards-aligned redesign of the ninth grade literacy sequence.",
+    })
+    .returning();
+
+  const courses = await db
+    .insert(coursesTable)
+    .values([
+      { projectId: project.id, title: "English I: Foundations of Reading", creditHours: 1, termWeeks: 18, modality: "Blended" },
+      { projectId: project.id, title: "English I: Writing Workshop", creditHours: 1, termWeeks: 18, modality: "Blended" },
+    ])
+    .returning();
+
+  await db.insert(classesTable).values([
+    { courseId: courses[0].id, name: "Period 1", section: "A", term: "Fall 2026", status: "active" },
+    { courseId: courses[0].id, name: "Period 3", section: "B", term: "Fall 2026", status: "active" },
+  ]);
+
+  if (builder) {
+    await db.insert(allocationsTable).values({
+      organizationId: demoSchoolOrgId,
+      builderUserId: builder.id,
+      scopeType: "course",
+      scopeId: courses[0].id,
+      status: "active",
+      notes: "Course-level allocation for access-control demo.",
+    });
+  }
+
+  log.info(
+    { orgId: demoSchoolOrgId, courses: courses.length },
+    "Seeded Demo Academy curriculum + allocation",
+  );
 }
 
 // ── Meridian (provider operations) synthetic seed ─────────────

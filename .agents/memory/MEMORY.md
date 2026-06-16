@@ -1,3 +1,4 @@
 - [Per-product API route gating](product-route-gating.md) — scope requireProduct(key) per-route or by path prefix; a pathless router.use gate blocks every other product; cover EVERY route incl destructive ones.
 - [Self-service registration policy](self-service-registration.md) — server must not trust client productKey on register; only allow self-service products, others are admin-provisioned.
+- [Global-role UI parity](global-role-ui-parity.md) — client gates must bypass for admin AND super_admin (use isGlobalAdmin); org-scoped UI needs an explicit tenant selector for global roles (no org-directory endpoint).
 - [Compass multi-tenancy & roles](compass-multitenancy.md) — org is the tenant boundary; all Compass routes in one guarded /compass namespace, every handler org-scoped (cross-org by-id => 404); + the Express req-augmentation gotcha.

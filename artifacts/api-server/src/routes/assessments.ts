@@ -16,11 +16,12 @@ import {
   DeleteActivityParams,
 } from "@workspace/api-zod";
 import {
-  denyCrossOrg,
-  getActivityOrgId,
-  getAssessmentOrgId,
-  getCourseOrgId,
+  denyNoScope,
+  resolveActivityScope,
+  resolveAssessmentScope,
+  resolveCourseScope,
 } from "../lib/tenancy";
+import { recordActorAudit } from "../lib/audit";
 
 const router = Router();
 
@@ -42,7 +43,7 @@ router.get("/courses/:courseId/assessments", async (req, res): Promise<void> => 
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.courseId), "Course not found")) {
+  if (await denyNoScope(res, req.actor!, await resolveCourseScope(params.data.courseId), "read", "Course not found")) {
     return;
   }
 
@@ -73,7 +74,9 @@ router.post("/courses/:courseId/assessments", async (req, res): Promise<void> =>
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.courseId), "Course not found")) {
+  // Creating an assessment is a course-level write.
+  const courseScope = await resolveCourseScope(params.data.courseId);
+  if (await denyNoScope(res, req.actor!, courseScope, "write", "Course not found")) {
     return;
   }
 
@@ -90,6 +93,13 @@ router.post("/courses/:courseId/assessments", async (req, res): Promise<void> =>
       alignedObjectiveIds: JSON.stringify(parsed.data.alignedObjectiveIds ?? []),
     })
     .returning();
+
+  await recordActorAudit(req.actor!, {
+    action: "created",
+    entityType: "assessment",
+    entityTitle: assessment.title,
+    projectId: courseScope?.projectId ?? null,
+  });
 
   res.status(201).json({
     ...assessment,
@@ -110,7 +120,8 @@ router.patch("/assessments/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getAssessmentOrgId(params.data.id), "Assessment not found")) {
+  const assessmentScope = await resolveAssessmentScope(params.data.id);
+  if (await denyNoScope(res, req.actor!, assessmentScope, "write", "Assessment not found")) {
     return;
   }
 
@@ -136,6 +147,13 @@ router.patch("/assessments/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  await recordActorAudit(req.actor!, {
+    action: "updated",
+    entityType: "assessment",
+    entityTitle: assessment.title,
+    projectId: assessmentScope?.projectId ?? null,
+  });
+
   res.json({ ...assessment, alignedObjectiveIds: parseIds(assessment.alignedObjectiveIds) });
 });
 
@@ -146,7 +164,8 @@ router.delete("/assessments/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getAssessmentOrgId(params.data.id), "Assessment not found")) {
+  const assessmentScope = await resolveAssessmentScope(params.data.id);
+  if (await denyNoScope(res, req.actor!, assessmentScope, "write", "Assessment not found")) {
     return;
   }
 
@@ -160,6 +179,13 @@ router.delete("/assessments/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  await recordActorAudit(req.actor!, {
+    action: "deleted",
+    entityType: "assessment",
+    entityTitle: deleted.title,
+    projectId: assessmentScope?.projectId ?? null,
+  });
+
   res.sendStatus(204);
 });
 
@@ -171,7 +197,7 @@ router.get("/courses/:courseId/activities", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.courseId), "Course not found")) {
+  if (await denyNoScope(res, req.actor!, await resolveCourseScope(params.data.courseId), "read", "Course not found")) {
     return;
   }
 
@@ -202,7 +228,9 @@ router.post("/courses/:courseId/activities", async (req, res): Promise<void> => 
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.courseId), "Course not found")) {
+  // Creating an activity is a course-level write.
+  const courseScope = await resolveCourseScope(params.data.courseId);
+  if (await denyNoScope(res, req.actor!, courseScope, "write", "Course not found")) {
     return;
   }
 
@@ -219,6 +247,13 @@ router.post("/courses/:courseId/activities", async (req, res): Promise<void> => 
       alignedObjectiveIds: JSON.stringify(parsed.data.alignedObjectiveIds ?? []),
     })
     .returning();
+
+  await recordActorAudit(req.actor!, {
+    action: "created",
+    entityType: "activity",
+    entityTitle: activity.title,
+    projectId: courseScope?.projectId ?? null,
+  });
 
   res.status(201).json({
     ...activity,
@@ -239,7 +274,8 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getActivityOrgId(params.data.id), "Activity not found")) {
+  const activityScope = await resolveActivityScope(params.data.id);
+  if (await denyNoScope(res, req.actor!, activityScope, "write", "Activity not found")) {
     return;
   }
 
@@ -265,6 +301,13 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  await recordActorAudit(req.actor!, {
+    action: "updated",
+    entityType: "activity",
+    entityTitle: activity.title,
+    projectId: activityScope?.projectId ?? null,
+  });
+
   res.json({ ...activity, alignedObjectiveIds: parseIds(activity.alignedObjectiveIds) });
 });
 
@@ -275,7 +318,8 @@ router.delete("/activities/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getActivityOrgId(params.data.id), "Activity not found")) {
+  const activityScope = await resolveActivityScope(params.data.id);
+  if (await denyNoScope(res, req.actor!, activityScope, "write", "Activity not found")) {
     return;
   }
 
@@ -288,6 +332,13 @@ router.delete("/activities/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Activity not found" });
     return;
   }
+
+  await recordActorAudit(req.actor!, {
+    action: "deleted",
+    entityType: "activity",
+    entityTitle: deleted.title,
+    projectId: activityScope?.projectId ?? null,
+  });
 
   res.sendStatus(204);
 });

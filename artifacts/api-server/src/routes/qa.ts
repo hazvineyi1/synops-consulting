@@ -8,7 +8,7 @@ import {
   UpdateQACheckParams,
   UpdateQACheckBody,
 } from "@workspace/api-zod";
-import { denyCrossOrg, getProjectOrgId, getQaCheckOrgId } from "../lib/tenancy";
+import { denyNoScope, resolveProjectScope, resolveQaCheckScope } from "../lib/tenancy";
 
 const router = Router();
 
@@ -19,7 +19,15 @@ router.get("/projects/:projectId/qa", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "read",
+      "Project not found",
+    )
+  ) {
     return;
   }
 
@@ -45,7 +53,15 @@ router.post("/projects/:projectId/qa", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "write",
+      "Project not found",
+    )
+  ) {
     return;
   }
 
@@ -79,7 +95,7 @@ router.patch("/qa-checks/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getQaCheckOrgId(params.data.id), "QA check not found")) {
+  if (await denyNoScope(res, req.actor!, await resolveQaCheckScope(params.data.id), "write", "QA check not found")) {
     return;
   }
 

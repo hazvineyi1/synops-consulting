@@ -9,6 +9,11 @@ export const auditEventsTable = pgTable("audit_events", {
   entityType: text("entity_type").notNull(),
   entityTitle: text("entity_title").notNull(),
   projectTitle: text("project_title"),
+  // Actor attribution. Nullable because legacy/system events predate it; new
+  // curriculum mutations record who performed them so school admins can review
+  // per-builder activity. `actorName` is denormalized for cheap display.
+  actorUserId: integer("actor_user_id"),
+  actorName: text("actor_name"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

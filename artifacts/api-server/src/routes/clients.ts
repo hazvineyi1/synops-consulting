@@ -8,19 +8,29 @@ import {
   UpdateClientParams,
 } from "@workspace/api-zod";
 import {
+  builderClientIds,
   clientOrgFilter,
+  denyBuilderWrite,
   denyCrossOrg,
   getClientOrgId,
+  loadBuilderScope,
 } from "../lib/tenancy";
 
 const router = Router();
 
 router.get("/clients", async (req, res): Promise<void> => {
-  const clients = await db
+  const actor = req.actor!;
+  let clients = await db
     .select()
     .from(clientsTable)
-    .where(clientOrgFilter(req.actor!))
+    .where(clientOrgFilter(actor))
     .orderBy(clientsTable.createdAt);
+
+  // Builders only see clients that own at least one of their allocated projects.
+  if (actor.role === "builder") {
+    const allowed = await builderClientIds(await loadBuilderScope(actor.userId));
+    clients = clients.filter((c) => allowed.has(c.id));
+  }
 
   const projectCounts = await db
     .select({ clientId: projectsTable.clientId, count: count() })
@@ -43,6 +53,9 @@ router.post("/clients", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
+  // Creating a client sits above any allocation; builders cannot.
+  if (denyBuilderWrite(res, req.actor!)) return;
 
   // A client is created inside the actor's organization (the tenant boundary).
   const organizationId = req.actor!.organizationId;
@@ -85,6 +98,15 @@ router.get("/clients/:id", async (req, res): Promise<void> => {
 
   if (denyCrossOrg(res, req.actor!, client.organizationId, "Client not found")) return;
 
+  // Builders may only read a client they reach through an allocated project.
+  if (req.actor!.role === "builder") {
+    const allowed = await builderClientIds(await loadBuilderScope(req.actor!.userId));
+    if (!allowed.has(client.id)) {
+      res.status(404).json({ error: "Client not found" });
+      return;
+    }
+  }
+
   const [projectCount] = await db
     .select({ count: count() })
     .from(projectsTable)
@@ -105,6 +127,9 @@ router.patch("/clients/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
+  // Editing a client is an above-allocation write; builders cannot.
+  if (denyBuilderWrite(res, req.actor!)) return;
 
   if (denyCrossOrg(res, req.actor!, await getClientOrgId(params.data.id), "Client not found")) return;
 

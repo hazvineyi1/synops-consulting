@@ -42,13 +42,19 @@ export function requireProduct(productKey: string): RequestHandler {
     void (async () => {
       try {
         const [user] = await db
-          .select({ role: usersTable.role, productKey: usersTable.productKey })
+          .select({ role: usersTable.role, productKey: usersTable.productKey, status: usersTable.status })
           .from(usersTable)
           .where(eq(usersTable.id, userId));
 
         if (!user) {
           req.session.destroy(() => undefined);
           res.status(401).json({ error: "Authentication required" });
+          return;
+        }
+
+        if (user.status === "deactivated") {
+          req.session.destroy(() => undefined);
+          res.status(403).json({ error: "This account has been deactivated." });
           return;
         }
 
@@ -81,13 +87,19 @@ export const requireAdmin: RequestHandler = (req, res, next) => {
   void (async () => {
     try {
       const [user] = await db
-        .select({ role: usersTable.role })
+        .select({ role: usersTable.role, status: usersTable.status })
         .from(usersTable)
         .where(eq(usersTable.id, userId));
 
       if (!user) {
         req.session.destroy(() => undefined);
         res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+
+      if (user.status === "deactivated") {
+        req.session.destroy(() => undefined);
+        res.status(403).json({ error: "This account has been deactivated." });
         return;
       }
 

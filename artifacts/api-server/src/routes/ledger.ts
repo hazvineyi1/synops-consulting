@@ -7,7 +7,7 @@ import {
   CreateLedgerEntryBody,
   GetLedgerReportParams,
 } from "@workspace/api-zod";
-import { denyCrossOrg, getProjectOrgId } from "../lib/tenancy";
+import { denyNoScope, resolveProjectScope } from "../lib/tenancy";
 
 const router = Router();
 
@@ -18,7 +18,15 @@ router.get("/projects/:projectId/ledger", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "read",
+      "Project not found",
+    )
+  ) {
     return;
   }
 
@@ -44,7 +52,15 @@ router.post("/projects/:projectId/ledger", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "write",
+      "Project not found",
+    )
+  ) {
     return;
   }
 
@@ -72,7 +88,15 @@ router.get("/projects/:projectId/ledger/report", async (req, res): Promise<void>
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "read",
+      "Project not found",
+    )
+  ) {
     return;
   }
 

@@ -1,23 +1,48 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, BookOpen, Layers, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  Layers,
+  LogOut,
+  UserCog,
+  KeySquare,
+  FileBarChart,
+  Briefcase,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/lib/auth-context";
+import { canManageSchool, isBuilder, roleLabel } from "@/lib/roles";
 import { PRODUCT_MAP } from "@/lib/products";
 import React from "react";
 
-const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Clients", href: "/clients", icon: Users },
-  { name: "Projects", href: "/projects", icon: BookOpen },
-  { name: "Standards", href: "/standards", icon: Layers },
-];
+type NavItem = { name: string; href: string; icon: typeof LayoutDashboard };
+
+function navForRole(role?: string | null): NavItem[] {
+  const builder = isBuilder(role);
+  const items: NavItem[] = [{ name: "Dashboard", href: "/", icon: LayoutDashboard }];
+  if (builder) {
+    items.push({ name: "My work", href: "/my-work", icon: Briefcase });
+  } else {
+    items.push({ name: "Clients", href: "/clients", icon: Users });
+  }
+  items.push({ name: "Projects", href: "/projects", icon: BookOpen });
+  items.push({ name: "Standards", href: "/standards", icon: Layers });
+  if (canManageSchool(role)) {
+    items.push({ name: "Builders", href: "/builders", icon: UserCog });
+    items.push({ name: "Allocations", href: "/allocations", icon: KeySquare });
+    items.push({ name: "School report", href: "/school-report", icon: FileBarChart });
+  }
+  return items;
+}
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const compass = PRODUCT_MAP.compass;
   const Brand = compass.icon;
+  const navigation = navForRole(user?.role);
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -71,8 +96,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </ScrollArea>
           <div className="border-t border-sidebar-border p-4">
             {user && (
-              <div className="mb-2 truncate px-2 text-xs text-sidebar-foreground/60">
-                {user.name}
+              <div className="mb-2 px-2">
+                <div className="truncate text-xs font-medium text-sidebar-foreground/80">
+                  {user.name}
+                </div>
+                <div className="truncate text-[11px] text-sidebar-foreground/50">
+                  {roleLabel(user.role)}
+                  {user.organizationName ? ` (${user.organizationName})` : ""}
+                </div>
               </div>
             )}
             <button

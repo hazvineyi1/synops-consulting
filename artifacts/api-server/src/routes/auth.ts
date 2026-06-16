@@ -2,7 +2,7 @@ import { Router } from "express";
 import { eq } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import { z } from "zod/v4";
-import { db, usersTable, engagementsTable } from "@workspace/db";
+import { db, usersTable, engagementsTable, organizationsTable } from "@workspace/db";
 import type { UserRow } from "@workspace/db";
 import { hashPassword, verifyPassword } from "../lib/auth";
 import { PRODUCT_KEYS, isSelfServiceProductKey } from "../lib/products";
@@ -30,7 +30,23 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-function publicUser(u: UserRow) {
+async function publicUser(u: UserRow) {
+  let organizationName: string | null = null;
+  let organizationType: string | null = null;
+  let organizationSlug: string | null = null;
+  if (u.organizationId != null) {
+    const [org] = await db
+      .select({
+        name: organizationsTable.name,
+        type: organizationsTable.type,
+        slug: organizationsTable.slug,
+      })
+      .from(organizationsTable)
+      .where(eq(organizationsTable.id, u.organizationId));
+    organizationName = org?.name ?? null;
+    organizationType = org?.type ?? null;
+    organizationSlug = org?.slug ?? null;
+  }
   return {
     id: u.id,
     email: u.email,
@@ -38,6 +54,11 @@ function publicUser(u: UserRow) {
     organization: u.organization,
     role: u.role,
     productKey: u.productKey,
+    status: u.status,
+    organizationId: u.organizationId,
+    organizationName,
+    organizationType,
+    organizationSlug,
     createdAt: u.createdAt.toISOString(),
   };
 }
@@ -113,7 +134,7 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
 
   req.session.userId = user.id;
   req.session.role = user.role;
-  res.status(201).json(publicUser(user));
+  res.status(201).json(await publicUser(user));
 });
 
 router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
@@ -130,9 +151,14 @@ router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
     return;
   }
 
+  if (user.status === "deactivated") {
+    res.status(403).json({ error: "This account has been deactivated. Contact your administrator." });
+    return;
+  }
+
   req.session.userId = user.id;
   req.session.role = user.role;
-  res.json(publicUser(user));
+  res.json(await publicUser(user));
 });
 
 router.post("/auth/logout", (req, res): void => {
@@ -148,12 +174,12 @@ router.get("/auth/me", async (req, res): Promise<void> => {
     return;
   }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId));
-  if (!user) {
+  if (!user || user.status === "deactivated") {
     req.session.destroy(() => undefined);
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
-  res.json(publicUser(user));
+  res.json(await publicUser(user));
 });
 
 export default router;

@@ -9,7 +9,8 @@ import {
   UpdateObjectiveBody,
   DeleteObjectiveParams,
 } from "@workspace/api-zod";
-import { denyCrossOrg, getObjectiveOrgId, getProjectOrgId } from "../lib/tenancy";
+import { denyNoScope, resolveObjectiveScope, resolveProjectScope } from "../lib/tenancy";
+import { recordActorAudit } from "../lib/audit";
 
 const router = Router();
 
@@ -30,7 +31,15 @@ router.get("/projects/:projectId/objectives", async (req, res): Promise<void> =>
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "read",
+      "Project not found",
+    )
+  ) {
     return;
   }
 
@@ -69,7 +78,16 @@ router.post("/projects/:projectId/objectives", async (req, res): Promise<void> =
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  // An objective is a project-level entity; creating one is a project-level write.
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "write",
+      "Project not found",
+    )
+  ) {
     return;
   }
 
@@ -85,6 +103,13 @@ router.post("/projects/:projectId/objectives", async (req, res): Promise<void> =
       isFlagged: false,
     })
     .returning();
+
+  await recordActorAudit(req.actor!, {
+    action: "created",
+    entityType: "objective",
+    entityTitle: objective.text,
+    projectId: params.data.projectId,
+  });
 
   res.status(201).json({ ...objective, alignedAssessmentCount: 0, alignedActivityCount: 0 });
 });
@@ -102,7 +127,8 @@ router.patch("/objectives/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getObjectiveOrgId(params.data.id), "Objective not found")) {
+  const objectiveScope = await resolveObjectiveScope(params.data.id);
+  if (await denyNoScope(res, req.actor!, objectiveScope, "write", "Objective not found")) {
     return;
   }
 
@@ -125,6 +151,13 @@ router.patch("/objectives/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  await recordActorAudit(req.actor!, {
+    action: "updated",
+    entityType: "objective",
+    entityTitle: objective.text,
+    projectId: objectiveScope?.projectId ?? null,
+  });
+
   res.json({ ...objective, alignedAssessmentCount: 0, alignedActivityCount: 0 });
 });
 
@@ -135,7 +168,8 @@ router.delete("/objectives/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getObjectiveOrgId(params.data.id), "Objective not found")) {
+  const objectiveScope = await resolveObjectiveScope(params.data.id);
+  if (await denyNoScope(res, req.actor!, objectiveScope, "write", "Objective not found")) {
     return;
   }
 
@@ -148,6 +182,13 @@ router.delete("/objectives/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Objective not found" });
     return;
   }
+
+  await recordActorAudit(req.actor!, {
+    action: "deleted",
+    entityType: "objective",
+    entityTitle: deleted.text,
+    projectId: objectiveScope?.projectId ?? null,
+  });
 
   res.sendStatus(204);
 });

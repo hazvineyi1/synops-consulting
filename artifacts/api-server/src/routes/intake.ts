@@ -6,7 +6,7 @@ import {
   UpdateIntakeProgressParams,
   UpdateIntakeProgressBody,
 } from "@workspace/api-zod";
-import { denyCrossOrg, getProjectOrgId } from "../lib/tenancy";
+import { denyNoScope, resolveProjectScope } from "../lib/tenancy";
 
 const router = Router();
 
@@ -50,7 +50,15 @@ router.get("/projects/:projectId/intake-progress", async (req, res): Promise<voi
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "read",
+      "Project not found",
+    )
+  ) {
     return;
   }
 
@@ -84,7 +92,15 @@ router.put("/projects/:projectId/intake-progress", async (req, res): Promise<voi
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "write",
+      "Project not found",
+    )
+  ) {
     return;
   }
 

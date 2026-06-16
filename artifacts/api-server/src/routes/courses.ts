@@ -16,11 +16,13 @@ import {
   DeleteModuleParams,
 } from "@workspace/api-zod";
 import {
-  denyCrossOrg,
-  getCourseOrgId,
-  getModuleOrgId,
-  getProjectOrgId,
+  denyNoScope,
+  loadBuilderScope,
+  resolveCourseScope,
+  resolveModuleScope,
+  resolveProjectScope,
 } from "../lib/tenancy";
+import { recordActorAudit } from "../lib/audit";
 
 const router = Router();
 
@@ -32,15 +34,32 @@ router.get("/projects/:projectId/courses", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "read",
+      "Project not found",
+    )
+  ) {
     return;
   }
 
-  const courses = await db
+  let courses = await db
     .select()
     .from(coursesTable)
     .where(eq(coursesTable.projectId, params.data.projectId))
     .orderBy(coursesTable.createdAt);
+
+  // A course/class-allocated builder only sees the courses they can reach.
+  const actor = req.actor!;
+  if (actor.role === "builder") {
+    const bs = await loadBuilderScope(actor.userId);
+    if (!bs.writableProjects.has(params.data.projectId)) {
+      courses = courses.filter((c) => bs.accessibleCourses.has(c.id));
+    }
+  }
 
   res.json(courses);
 });
@@ -58,7 +77,16 @@ router.post("/projects/:projectId/courses", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  // Creating a course is a project-level write (adds a child to the project).
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "write",
+      "Project not found",
+    )
+  ) {
     return;
   }
 
@@ -77,6 +105,13 @@ router.post("/projects/:projectId/courses", async (req, res): Promise<void> => {
     })
     .returning();
 
+  await recordActorAudit(req.actor!, {
+    action: "created",
+    entityType: "course",
+    entityTitle: course.title,
+    projectId: params.data.projectId,
+  });
+
   res.status(201).json(course);
 });
 
@@ -87,7 +122,8 @@ router.get("/courses/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.id), "Course not found")) return;
+  if (await denyNoScope(res, req.actor!, await resolveCourseScope(params.data.id), "read", "Course not found"))
+    return;
 
   const [course] = await db
     .select()
@@ -115,7 +151,8 @@ router.patch("/courses/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.id), "Course not found")) return;
+  const courseScope = await resolveCourseScope(params.data.id);
+  if (await denyNoScope(res, req.actor!, courseScope, "write", "Course not found")) return;
 
   const updates: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) updates.title = parsed.data.title;
@@ -138,6 +175,13 @@ router.patch("/courses/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  await recordActorAudit(req.actor!, {
+    action: "updated",
+    entityType: "course",
+    entityTitle: course.title,
+    projectId: courseScope?.projectId ?? null,
+  });
+
   res.json(course);
 });
 
@@ -149,7 +193,7 @@ router.get("/courses/:courseId/modules", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.courseId), "Course not found")) {
+  if (await denyNoScope(res, req.actor!, await resolveCourseScope(params.data.courseId), "read", "Course not found")) {
     return;
   }
 
@@ -175,7 +219,9 @@ router.post("/courses/:courseId/modules", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getCourseOrgId(params.data.courseId), "Course not found")) {
+  // Creating a module is a course-level write.
+  const courseScope = await resolveCourseScope(params.data.courseId);
+  if (await denyNoScope(res, req.actor!, courseScope, "write", "Course not found")) {
     return;
   }
 
@@ -191,6 +237,13 @@ router.post("/courses/:courseId/modules", async (req, res): Promise<void> => {
       status: "draft",
     })
     .returning();
+
+  await recordActorAudit(req.actor!, {
+    action: "created",
+    entityType: "module",
+    entityTitle: module.title,
+    projectId: courseScope?.projectId ?? null,
+  });
 
   res.status(201).json(module);
 });
@@ -208,7 +261,8 @@ router.patch("/modules/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getModuleOrgId(params.data.id), "Module not found")) return;
+  const moduleScope = await resolveModuleScope(params.data.id);
+  if (await denyNoScope(res, req.actor!, moduleScope, "write", "Module not found")) return;
 
   const updates: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) updates.title = parsed.data.title;
@@ -229,6 +283,13 @@ router.patch("/modules/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  await recordActorAudit(req.actor!, {
+    action: "updated",
+    entityType: "module",
+    entityTitle: module.title,
+    projectId: moduleScope?.projectId ?? null,
+  });
+
   res.json(module);
 });
 
@@ -239,7 +300,8 @@ router.delete("/modules/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getModuleOrgId(params.data.id), "Module not found")) return;
+  const moduleScope = await resolveModuleScope(params.data.id);
+  if (await denyNoScope(res, req.actor!, moduleScope, "write", "Module not found")) return;
 
   const [deleted] = await db
     .delete(modulesTable)
@@ -250,6 +312,13 @@ router.delete("/modules/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Module not found" });
     return;
   }
+
+  await recordActorAudit(req.actor!, {
+    action: "deleted",
+    entityType: "module",
+    entityTitle: deleted.title,
+    projectId: moduleScope?.projectId ?? null,
+  });
 
   res.sendStatus(204);
 });

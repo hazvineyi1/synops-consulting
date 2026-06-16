@@ -22,8 +22,11 @@ import {
 import {
   clientOrgFilter,
   denyCrossOrg,
+  denyNoScope,
+  denyBuilderWrite,
   getClientOrgId,
-  getProjectOrgId,
+  loadBuilderScope,
+  resolveProjectScope,
 } from "../lib/tenancy";
 
 const router = Router();
@@ -136,7 +139,7 @@ async function computeGateStatus(project: typeof projectsTable.$inferSelect): Pr
 
 router.get("/projects", async (req, res): Promise<void> => {
   const actor = req.actor!;
-  const projects = actor.isGlobal
+  let projects = actor.isGlobal
     ? await db.select().from(projectsTable).orderBy(desc(projectsTable.updatedAt))
     : (
         await db
@@ -146,6 +149,12 @@ router.get("/projects", async (req, res): Promise<void> => {
           .where(eq(clientsTable.organizationId, actor.organizationId!))
           .orderBy(desc(projectsTable.updatedAt))
       ).map((r) => r.p);
+
+  // Builders only see projects within their active allocations.
+  if (actor.role === "builder") {
+    const bs = await loadBuilderScope(actor.userId);
+    projects = projects.filter((p) => bs.accessibleProjects.has(p.id));
+  }
 
   const clients = await db.select().from(clientsTable).where(clientOrgFilter(actor));
   const clientMap = new Map(clients.map((c) => [c.id, c.name]));
@@ -164,6 +173,9 @@ router.post("/projects", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
+  // Creating a project sits above any allocation; builders cannot.
+  if (denyBuilderWrite(res, req.actor!)) return;
 
   // The referenced client must live in the actor's organization.
   if (denyCrossOrg(res, req.actor!, await getClientOrgId(parsed.data.clientId), "Client not found")) {
@@ -193,6 +205,7 @@ router.post("/projects", async (req, res): Promise<void> => {
     entityType: "project",
     entityTitle: project.title,
     projectTitle: project.title,
+    actorUserId: req.actor!.userId,
   });
 
   const result = await projectWithClient(project);
@@ -206,7 +219,8 @@ router.get("/projects/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.id), "Project not found")) return;
+  if (await denyNoScope(res, req.actor!, await resolveProjectScope(params.data.id), "read", "Project not found"))
+    return;
 
   const [project] = await db
     .select()
@@ -235,7 +249,8 @@ router.patch("/projects/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.id), "Project not found")) return;
+  if (await denyNoScope(res, req.actor!, await resolveProjectScope(params.data.id), "write", "Project not found"))
+    return;
 
   const updates: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) updates.title = parsed.data.title;
@@ -277,7 +292,8 @@ router.post("/projects/:id/advance-stage", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.id), "Project not found")) return;
+  if (await denyNoScope(res, req.actor!, await resolveProjectScope(params.data.id), "write", "Project not found"))
+    return;
 
   const [project] = await db
     .select()
@@ -319,6 +335,7 @@ router.post("/projects/:id/advance-stage", async (req, res): Promise<void> => {
     entityType: "project",
     entityTitle: project.title,
     projectTitle: project.title,
+    actorUserId: req.actor!.userId,
   });
 
   await db.insert(auditEventsTable).values({
@@ -327,6 +344,7 @@ router.post("/projects/:id/advance-stage", async (req, res): Promise<void> => {
     entityType: "stage_note",
     entityTitle: STAGE_LABELS[newStage] ?? "Stage",
     projectTitle: project.title,
+    actorUserId: req.actor!.userId,
   });
 
   const result = await projectWithClient(updated);
@@ -340,7 +358,8 @@ router.get("/projects/:id/gate-status", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.id), "Project not found")) return;
+  if (await denyNoScope(res, req.actor!, await resolveProjectScope(params.data.id), "read", "Project not found"))
+    return;
 
   const [project] = await db
     .select()

@@ -25,14 +25,19 @@ import type {
   ActivityInput,
   ActivityUpdate,
   AdminUser,
+  Allocation,
   Assessment,
   AssessmentInput,
   AssessmentUpdate,
   AuthUser,
+  Builder,
   CadenceDeliverable,
   CadenceEngagement,
   CadenceEngagementDetail,
   CadenceMilestone,
+  Class,
+  ClassInput,
+  ClassUpdate,
   Client,
   ClientInput,
   ClientUpdate,
@@ -41,6 +46,8 @@ import type {
   Course,
   CourseInput,
   CourseUpdate,
+  CreateAllocationInput,
+  CreateBuilderInput,
   CrosswalkGapReport,
   CrosswalkLink,
   CrosswalkLinkInput,
@@ -56,12 +63,16 @@ import type {
   GateStatus,
   GetDemoBankParams,
   GetRiseBankParams,
+  GetSchoolReportMarkdownParams,
+  GetSchoolReportParams,
   HealthStatus,
   IntakeProgress,
   IntakeProgressInput,
   LedgerEntry,
   LedgerEntryInput,
   LedgerReport,
+  ListAllocationsParams,
+  ListBuildersParams,
   LoginInput,
   MilestoneUpdateInput,
   Module,
@@ -84,18 +95,21 @@ import type {
   QACheckInput,
   QACheckUpdate,
   RegisterInput,
+  ResetBuilderPasswordInput,
   RiseAnswerInput,
   RiseAnswerResult,
   RiseBank,
   RiseLevelOption,
   RiseSession,
   RiseSessionInput,
+  SchoolReport,
   StageAdvanceInput,
   StandardCompetency,
   StandardCompetencyInput,
   StandardsFramework,
   StandardsFrameworkInput,
-  SubmitResult
+  SubmitResult,
+  UpdateBuilderStatusInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -3734,6 +3748,1073 @@ export const useUpdateIntakeProgress = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getUpdateIntakeProgressMutationOptions(options));
     }
+
+export const getListBuildersUrl = (params?: ListBuildersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/compass/builders?${stringifiedParams}` : `/api/compass/builders`
+}
+
+/**
+ * @summary List builders the actor manages
+ */
+export const listBuilders = async (params?: ListBuildersParams, options?: RequestInit): Promise<Builder[]> => {
+
+  return customFetch<Builder[]>(getListBuildersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBuildersQueryKey = (params?: ListBuildersParams,) => {
+    return [
+    `/api/compass/builders`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListBuildersQueryOptions = <TData = Awaited<ReturnType<typeof listBuilders>>, TError = ErrorType<unknown>>(params?: ListBuildersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBuilders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBuildersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBuilders>>> = ({ signal }) => listBuilders(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBuilders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBuildersQueryResult = NonNullable<Awaited<ReturnType<typeof listBuilders>>>
+export type ListBuildersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List builders the actor manages
+ */
+
+export function useListBuilders<TData = Awaited<ReturnType<typeof listBuilders>>, TError = ErrorType<unknown>>(
+ params?: ListBuildersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBuilders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBuildersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateBuilderUrl = () => {
+
+
+
+
+  return `/api/compass/builders`
+}
+
+/**
+ * @summary Provision a builder
+ */
+export const createBuilder = async (createBuilderInput: CreateBuilderInput, options?: RequestInit): Promise<Builder> => {
+
+  return customFetch<Builder>(getCreateBuilderUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createBuilderInput,)
+  }
+);}
+
+
+
+
+export const getCreateBuilderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBuilder>>, TError,{data: BodyType<CreateBuilderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBuilder>>, TError,{data: BodyType<CreateBuilderInput>}, TContext> => {
+
+const mutationKey = ['createBuilder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBuilder>>, {data: BodyType<CreateBuilderInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBuilder(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBuilderMutationResult = NonNullable<Awaited<ReturnType<typeof createBuilder>>>
+    export type CreateBuilderMutationBody = BodyType<CreateBuilderInput>
+    export type CreateBuilderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Provision a builder
+ */
+export const useCreateBuilder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBuilder>>, TError,{data: BodyType<CreateBuilderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBuilder>>,
+        TError,
+        {data: BodyType<CreateBuilderInput>},
+        TContext
+      > => {
+      return useMutation(getCreateBuilderMutationOptions(options));
+    }
+
+export const getUpdateBuilderStatusUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/builders/${id}/status`
+}
+
+/**
+ * @summary Activate or deactivate a builder
+ */
+export const updateBuilderStatus = async (id: number,
+    updateBuilderStatusInput: UpdateBuilderStatusInput, options?: RequestInit): Promise<Builder> => {
+
+  return customFetch<Builder>(getUpdateBuilderStatusUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateBuilderStatusInput,)
+  }
+);}
+
+
+
+
+export const getUpdateBuilderStatusMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBuilderStatus>>, TError,{id: number;data: BodyType<UpdateBuilderStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateBuilderStatus>>, TError,{id: number;data: BodyType<UpdateBuilderStatusInput>}, TContext> => {
+
+const mutationKey = ['updateBuilderStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateBuilderStatus>>, {id: number;data: BodyType<UpdateBuilderStatusInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateBuilderStatus(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateBuilderStatusMutationResult = NonNullable<Awaited<ReturnType<typeof updateBuilderStatus>>>
+    export type UpdateBuilderStatusMutationBody = BodyType<UpdateBuilderStatusInput>
+    export type UpdateBuilderStatusMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Activate or deactivate a builder
+ */
+export const useUpdateBuilderStatus = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBuilderStatus>>, TError,{id: number;data: BodyType<UpdateBuilderStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateBuilderStatus>>,
+        TError,
+        {id: number;data: BodyType<UpdateBuilderStatusInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateBuilderStatusMutationOptions(options));
+    }
+
+export const getResetBuilderPasswordUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/builders/${id}/password`
+}
+
+/**
+ * @summary Reset a builder's password
+ */
+export const resetBuilderPassword = async (id: number,
+    resetBuilderPasswordInput: ResetBuilderPasswordInput, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getResetBuilderPasswordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      resetBuilderPasswordInput,)
+  }
+);}
+
+
+
+
+export const getResetBuilderPasswordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetBuilderPassword>>, TError,{id: number;data: BodyType<ResetBuilderPasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetBuilderPassword>>, TError,{id: number;data: BodyType<ResetBuilderPasswordInput>}, TContext> => {
+
+const mutationKey = ['resetBuilderPassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetBuilderPassword>>, {id: number;data: BodyType<ResetBuilderPasswordInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  resetBuilderPassword(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResetBuilderPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof resetBuilderPassword>>>
+    export type ResetBuilderPasswordMutationBody = BodyType<ResetBuilderPasswordInput>
+    export type ResetBuilderPasswordMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Reset a builder's password
+ */
+export const useResetBuilderPassword = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetBuilderPassword>>, TError,{id: number;data: BodyType<ResetBuilderPasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resetBuilderPassword>>,
+        TError,
+        {id: number;data: BodyType<ResetBuilderPasswordInput>},
+        TContext
+      > => {
+      return useMutation(getResetBuilderPasswordMutationOptions(options));
+    }
+
+export const getGetBuilderActivityUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/builders/${id}/activity`
+}
+
+/**
+ * @summary Per-builder activity feed
+ */
+export const getBuilderActivity = async (id: number, options?: RequestInit): Promise<ActivityFeedItem[]> => {
+
+  return customFetch<ActivityFeedItem[]>(getGetBuilderActivityUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBuilderActivityQueryKey = (id: number,) => {
+    return [
+    `/api/compass/builders/${id}/activity`
+    ] as const;
+    }
+
+
+export const getGetBuilderActivityQueryOptions = <TData = Awaited<ReturnType<typeof getBuilderActivity>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBuilderActivity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBuilderActivityQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBuilderActivity>>> = ({ signal }) => getBuilderActivity(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBuilderActivity>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBuilderActivityQueryResult = NonNullable<Awaited<ReturnType<typeof getBuilderActivity>>>
+export type GetBuilderActivityQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Per-builder activity feed
+ */
+
+export function useGetBuilderActivity<TData = Awaited<ReturnType<typeof getBuilderActivity>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBuilderActivity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBuilderActivityQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListAllocationsUrl = (params?: ListAllocationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/compass/allocations?${stringifiedParams}` : `/api/compass/allocations`
+}
+
+/**
+ * @summary List allocations the actor manages
+ */
+export const listAllocations = async (params?: ListAllocationsParams, options?: RequestInit): Promise<Allocation[]> => {
+
+  return customFetch<Allocation[]>(getListAllocationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAllocationsQueryKey = (params?: ListAllocationsParams,) => {
+    return [
+    `/api/compass/allocations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAllocationsQueryOptions = <TData = Awaited<ReturnType<typeof listAllocations>>, TError = ErrorType<unknown>>(params?: ListAllocationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAllocations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAllocationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAllocations>>> = ({ signal }) => listAllocations(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAllocations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAllocationsQueryResult = NonNullable<Awaited<ReturnType<typeof listAllocations>>>
+export type ListAllocationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List allocations the actor manages
+ */
+
+export function useListAllocations<TData = Awaited<ReturnType<typeof listAllocations>>, TError = ErrorType<unknown>>(
+ params?: ListAllocationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAllocations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAllocationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateAllocationUrl = () => {
+
+
+
+
+  return `/api/compass/allocations`
+}
+
+/**
+ * @summary Allocate a builder to a scope
+ */
+export const createAllocation = async (createAllocationInput: CreateAllocationInput, options?: RequestInit): Promise<Allocation> => {
+
+  return customFetch<Allocation>(getCreateAllocationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createAllocationInput,)
+  }
+);}
+
+
+
+
+export const getCreateAllocationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAllocation>>, TError,{data: BodyType<CreateAllocationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAllocation>>, TError,{data: BodyType<CreateAllocationInput>}, TContext> => {
+
+const mutationKey = ['createAllocation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAllocation>>, {data: BodyType<CreateAllocationInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAllocation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAllocationMutationResult = NonNullable<Awaited<ReturnType<typeof createAllocation>>>
+    export type CreateAllocationMutationBody = BodyType<CreateAllocationInput>
+    export type CreateAllocationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Allocate a builder to a scope
+ */
+export const useCreateAllocation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAllocation>>, TError,{data: BodyType<CreateAllocationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAllocation>>,
+        TError,
+        {data: BodyType<CreateAllocationInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAllocationMutationOptions(options));
+    }
+
+export const getRevokeAllocationUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/allocations/${id}/revoke`
+}
+
+/**
+ * @summary Revoke an allocation
+ */
+export const revokeAllocation = async (id: number, options?: RequestInit): Promise<Allocation> => {
+
+  return customFetch<Allocation>(getRevokeAllocationUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+export const getRevokeAllocationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeAllocation>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeAllocation>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['revokeAllocation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeAllocation>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeAllocation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeAllocationMutationResult = NonNullable<Awaited<ReturnType<typeof revokeAllocation>>>
+
+    export type RevokeAllocationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Revoke an allocation
+ */
+export const useRevokeAllocation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeAllocation>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeAllocation>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRevokeAllocationMutationOptions(options));
+    }
+
+export const getGetMyAllocationsUrl = () => {
+
+
+
+
+  return `/api/compass/my/allocations`
+}
+
+/**
+ * @summary The caller's own active allocations
+ */
+export const getMyAllocations = async ( options?: RequestInit): Promise<Allocation[]> => {
+
+  return customFetch<Allocation[]>(getGetMyAllocationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyAllocationsQueryKey = () => {
+    return [
+    `/api/compass/my/allocations`
+    ] as const;
+    }
+
+
+export const getGetMyAllocationsQueryOptions = <TData = Awaited<ReturnType<typeof getMyAllocations>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyAllocations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyAllocationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyAllocations>>> = ({ signal }) => getMyAllocations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyAllocations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyAllocationsQueryResult = NonNullable<Awaited<ReturnType<typeof getMyAllocations>>>
+export type GetMyAllocationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The caller's own active allocations
+ */
+
+export function useGetMyAllocations<TData = Awaited<ReturnType<typeof getMyAllocations>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyAllocations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyAllocationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListClassesUrl = (courseId: number,) => {
+
+
+
+
+  return `/api/compass/courses/${courseId}/classes`
+}
+
+/**
+ * @summary List classes under a course
+ */
+export const listClasses = async (courseId: number, options?: RequestInit): Promise<Class[]> => {
+
+  return customFetch<Class[]>(getListClassesUrl(courseId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListClassesQueryKey = (courseId: number,) => {
+    return [
+    `/api/compass/courses/${courseId}/classes`
+    ] as const;
+    }
+
+
+export const getListClassesQueryOptions = <TData = Awaited<ReturnType<typeof listClasses>>, TError = ErrorType<unknown>>(courseId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listClasses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListClassesQueryKey(courseId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listClasses>>> = ({ signal }) => listClasses(courseId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(courseId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listClasses>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListClassesQueryResult = NonNullable<Awaited<ReturnType<typeof listClasses>>>
+export type ListClassesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List classes under a course
+ */
+
+export function useListClasses<TData = Awaited<ReturnType<typeof listClasses>>, TError = ErrorType<unknown>>(
+ courseId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listClasses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListClassesQueryOptions(courseId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateClassUrl = (courseId: number,) => {
+
+
+
+
+  return `/api/compass/courses/${courseId}/classes`
+}
+
+/**
+ * @summary Create a class under a course
+ */
+export const createClass = async (courseId: number,
+    classInput: ClassInput, options?: RequestInit): Promise<Class> => {
+
+  return customFetch<Class>(getCreateClassUrl(courseId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      classInput,)
+  }
+);}
+
+
+
+
+export const getCreateClassMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClass>>, TError,{courseId: number;data: BodyType<ClassInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createClass>>, TError,{courseId: number;data: BodyType<ClassInput>}, TContext> => {
+
+const mutationKey = ['createClass'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createClass>>, {courseId: number;data: BodyType<ClassInput>}> = (props) => {
+          const {courseId,data} = props ?? {};
+
+          return  createClass(courseId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateClassMutationResult = NonNullable<Awaited<ReturnType<typeof createClass>>>
+    export type CreateClassMutationBody = BodyType<ClassInput>
+    export type CreateClassMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a class under a course
+ */
+export const useCreateClass = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClass>>, TError,{courseId: number;data: BodyType<ClassInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createClass>>,
+        TError,
+        {courseId: number;data: BodyType<ClassInput>},
+        TContext
+      > => {
+      return useMutation(getCreateClassMutationOptions(options));
+    }
+
+export const getUpdateClassUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/classes/${id}`
+}
+
+/**
+ * @summary Update a class
+ */
+export const updateClass = async (id: number,
+    classUpdate: ClassUpdate, options?: RequestInit): Promise<Class> => {
+
+  return customFetch<Class>(getUpdateClassUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      classUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateClassMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClass>>, TError,{id: number;data: BodyType<ClassUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateClass>>, TError,{id: number;data: BodyType<ClassUpdate>}, TContext> => {
+
+const mutationKey = ['updateClass'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateClass>>, {id: number;data: BodyType<ClassUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateClass(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateClassMutationResult = NonNullable<Awaited<ReturnType<typeof updateClass>>>
+    export type UpdateClassMutationBody = BodyType<ClassUpdate>
+    export type UpdateClassMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a class
+ */
+export const useUpdateClass = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClass>>, TError,{id: number;data: BodyType<ClassUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateClass>>,
+        TError,
+        {id: number;data: BodyType<ClassUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateClassMutationOptions(options));
+    }
+
+export const getGetSchoolReportUrl = (params?: GetSchoolReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/compass/school/report?${stringifiedParams}` : `/api/compass/school/report`
+}
+
+/**
+ * @summary Organization curriculum and builder rollup
+ */
+export const getSchoolReport = async (params?: GetSchoolReportParams, options?: RequestInit): Promise<SchoolReport> => {
+
+  return customFetch<SchoolReport>(getGetSchoolReportUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSchoolReportQueryKey = (params?: GetSchoolReportParams,) => {
+    return [
+    `/api/compass/school/report`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSchoolReportQueryOptions = <TData = Awaited<ReturnType<typeof getSchoolReport>>, TError = ErrorType<unknown>>(params?: GetSchoolReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSchoolReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSchoolReportQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSchoolReport>>> = ({ signal }) => getSchoolReport(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSchoolReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSchoolReportQueryResult = NonNullable<Awaited<ReturnType<typeof getSchoolReport>>>
+export type GetSchoolReportQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Organization curriculum and builder rollup
+ */
+
+export function useGetSchoolReport<TData = Awaited<ReturnType<typeof getSchoolReport>>, TError = ErrorType<unknown>>(
+ params?: GetSchoolReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSchoolReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSchoolReportQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetSchoolReportMarkdownUrl = (params?: GetSchoolReportMarkdownParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/compass/school/report.md?${stringifiedParams}` : `/api/compass/school/report.md`
+}
+
+/**
+ * @summary School report as downloadable markdown
+ */
+export const getSchoolReportMarkdown = async (params?: GetSchoolReportMarkdownParams, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getGetSchoolReportMarkdownUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSchoolReportMarkdownQueryKey = (params?: GetSchoolReportMarkdownParams,) => {
+    return [
+    `/api/compass/school/report.md`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSchoolReportMarkdownQueryOptions = <TData = Awaited<ReturnType<typeof getSchoolReportMarkdown>>, TError = ErrorType<unknown>>(params?: GetSchoolReportMarkdownParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSchoolReportMarkdown>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSchoolReportMarkdownQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSchoolReportMarkdown>>> = ({ signal }) => getSchoolReportMarkdown(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSchoolReportMarkdown>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSchoolReportMarkdownQueryResult = NonNullable<Awaited<ReturnType<typeof getSchoolReportMarkdown>>>
+export type GetSchoolReportMarkdownQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary School report as downloadable markdown
+ */
+
+export function useGetSchoolReportMarkdown<TData = Awaited<ReturnType<typeof getSchoolReportMarkdown>>, TError = ErrorType<unknown>>(
+ params?: GetSchoolReportMarkdownParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSchoolReportMarkdown>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSchoolReportMarkdownQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getRegisterUrl = () => {
 

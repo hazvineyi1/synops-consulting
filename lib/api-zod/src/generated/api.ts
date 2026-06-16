@@ -1062,6 +1062,326 @@ export const UpdateIntakeProgressResponse = zod.object({
 
 
 /**
+ * @summary List builders the actor manages
+ */
+export const ListBuildersQueryParams = zod.object({
+  "organizationId": zod.coerce.number().optional()
+})
+
+export const ListBuildersResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "status": zod.string(),
+  "organizationId": zod.number().nullable(),
+  "organizationName": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "activeAllocationCount": zod.number()
+})
+export const ListBuildersResponse = zod.array(ListBuildersResponseItem)
+
+
+/**
+ * @summary Provision a builder
+ */
+export const createBuilderBodyNameMax = 200;
+
+export const createBuilderBodyEmailMax = 255;
+
+export const createBuilderBodyPasswordMin = 8;
+export const createBuilderBodyPasswordMax = 200;
+
+
+
+export const CreateBuilderBody = zod.object({
+  "name": zod.string().min(1).max(createBuilderBodyNameMax),
+  "email": zod.string().email().max(createBuilderBodyEmailMax),
+  "password": zod.string().min(createBuilderBodyPasswordMin).max(createBuilderBodyPasswordMax),
+  "organizationId": zod.number().optional().describe('Required for global admins; ignored for school admins (their own org is used).')
+})
+
+
+/**
+ * @summary Activate or deactivate a builder
+ */
+export const UpdateBuilderStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateBuilderStatusBody = zod.object({
+  "status": zod.enum(['active', 'deactivated'])
+})
+
+export const UpdateBuilderStatusResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "status": zod.string(),
+  "organizationId": zod.number().nullable(),
+  "organizationName": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "activeAllocationCount": zod.number()
+})
+
+
+/**
+ * @summary Reset a builder's password
+ */
+export const ResetBuilderPasswordParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const resetBuilderPasswordBodyPasswordMin = 8;
+export const resetBuilderPasswordBodyPasswordMax = 200;
+
+
+
+export const ResetBuilderPasswordBody = zod.object({
+  "password": zod.string().min(resetBuilderPasswordBodyPasswordMin).max(resetBuilderPasswordBodyPasswordMax)
+})
+
+export const ResetBuilderPasswordResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Per-builder activity feed
+ */
+export const GetBuilderActivityParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetBuilderActivityResponseItem = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "projectTitle": zod.string(),
+  "action": zod.string(),
+  "entityType": zod.string(),
+  "entityTitle": zod.string(),
+  "timestamp": zod.coerce.date()
+})
+export const GetBuilderActivityResponse = zod.array(GetBuilderActivityResponseItem)
+
+
+/**
+ * @summary List allocations the actor manages
+ */
+export const ListAllocationsQueryParams = zod.object({
+  "organizationId": zod.coerce.number().optional(),
+  "builderUserId": zod.coerce.number().optional()
+})
+
+export const ListAllocationsResponseItem = zod.object({
+  "id": zod.number(),
+  "organizationId": zod.number(),
+  "builderUserId": zod.number(),
+  "builderName": zod.string().nullish(),
+  "scopeType": zod.enum(['project', 'course', 'class']),
+  "scopeId": zod.number(),
+  "scopeTitle": zod.string(),
+  "projectId": zod.number().nullish(),
+  "projectTitle": zod.string().nullish(),
+  "status": zod.enum(['active', 'revoked']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListAllocationsResponse = zod.array(ListAllocationsResponseItem)
+
+
+/**
+ * @summary Allocate a builder to a scope
+ */
+export const createAllocationBodyNotesMax = 1000;
+
+
+
+export const CreateAllocationBody = zod.object({
+  "builderUserId": zod.number(),
+  "scopeType": zod.enum(['project', 'course', 'class']),
+  "scopeId": zod.number(),
+  "notes": zod.string().max(createAllocationBodyNotesMax).optional()
+})
+
+
+/**
+ * @summary Revoke an allocation
+ */
+export const RevokeAllocationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RevokeAllocationResponse = zod.object({
+  "id": zod.number(),
+  "organizationId": zod.number(),
+  "builderUserId": zod.number(),
+  "builderName": zod.string().nullish(),
+  "scopeType": zod.enum(['project', 'course', 'class']),
+  "scopeId": zod.number(),
+  "scopeTitle": zod.string(),
+  "projectId": zod.number().nullish(),
+  "projectTitle": zod.string().nullish(),
+  "status": zod.enum(['active', 'revoked']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary The caller's own active allocations
+ */
+export const GetMyAllocationsResponseItem = zod.object({
+  "id": zod.number(),
+  "organizationId": zod.number(),
+  "builderUserId": zod.number(),
+  "builderName": zod.string().nullish(),
+  "scopeType": zod.enum(['project', 'course', 'class']),
+  "scopeId": zod.number(),
+  "scopeTitle": zod.string(),
+  "projectId": zod.number().nullish(),
+  "projectTitle": zod.string().nullish(),
+  "status": zod.enum(['active', 'revoked']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const GetMyAllocationsResponse = zod.array(GetMyAllocationsResponseItem)
+
+
+/**
+ * @summary List classes under a course
+ */
+export const ListClassesParams = zod.object({
+  "courseId": zod.coerce.number()
+})
+
+export const ListClassesResponseItem = zod.object({
+  "id": zod.number(),
+  "courseId": zod.number(),
+  "name": zod.string(),
+  "section": zod.string().nullish(),
+  "term": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListClassesResponse = zod.array(ListClassesResponseItem)
+
+
+/**
+ * @summary Create a class under a course
+ */
+export const CreateClassParams = zod.object({
+  "courseId": zod.coerce.number()
+})
+
+export const createClassBodyNameMax = 200;
+
+export const createClassBodySectionMax = 100;
+
+export const createClassBodyTermMax = 100;
+
+
+
+export const CreateClassBody = zod.object({
+  "name": zod.string().min(1).max(createClassBodyNameMax),
+  "section": zod.string().max(createClassBodySectionMax).nullish(),
+  "term": zod.string().max(createClassBodyTermMax).nullish(),
+  "status": zod.enum(['active', 'archived']).optional()
+})
+
+
+/**
+ * @summary Update a class
+ */
+export const UpdateClassParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateClassBodyNameMax = 200;
+
+export const updateClassBodySectionMax = 100;
+
+export const updateClassBodyTermMax = 100;
+
+
+
+export const UpdateClassBody = zod.object({
+  "name": zod.string().min(1).max(updateClassBodyNameMax).optional(),
+  "section": zod.string().max(updateClassBodySectionMax).nullish(),
+  "term": zod.string().max(updateClassBodyTermMax).nullish(),
+  "status": zod.enum(['active', 'archived']).optional()
+})
+
+export const UpdateClassResponse = zod.object({
+  "id": zod.number(),
+  "courseId": zod.number(),
+  "name": zod.string(),
+  "section": zod.string().nullish(),
+  "term": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Organization curriculum and builder rollup
+ */
+export const GetSchoolReportQueryParams = zod.object({
+  "organizationId": zod.coerce.number().optional()
+})
+
+export const GetSchoolReportResponse = zod.object({
+  "organization": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "type": zod.string()
+}),
+  "generatedAt": zod.coerce.date(),
+  "totals": zod.object({
+  "clients": zod.number(),
+  "projects": zod.number(),
+  "activeProjects": zod.number(),
+  "courses": zod.number(),
+  "classes": zod.number(),
+  "builders": zod.number(),
+  "activeAllocations": zod.number()
+}),
+  "projectsByStage": zod.array(zod.object({
+  "stage": zod.number(),
+  "label": zod.string(),
+  "count": zod.number()
+})),
+  "builders": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "status": zod.string(),
+  "activeAllocations": zod.number(),
+  "allocationsByScope": zod.object({
+  "project": zod.number(),
+  "course": zod.number(),
+  "class": zod.number()
+})
+}))
+})
+
+
+/**
+ * @summary School report as downloadable markdown
+ */
+export const GetSchoolReportMarkdownQueryParams = zod.object({
+  "organizationId": zod.coerce.number().optional()
+})
+
+
+/**
  * @summary Register a new client account
  */
 export const registerBodyPasswordMin = 8;
@@ -1092,6 +1412,11 @@ export const LoginResponse = zod.object({
   "organization": zod.string().nullish(),
   "role": zod.string(),
   "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian']).describe('The product\/portal a user belongs to.'),
+  "status": zod.string().describe('Account lifecycle status (active or deactivated).'),
+  "organizationId": zod.number().nullish(),
+  "organizationName": zod.string().nullish(),
+  "organizationType": zod.string().nullish(),
+  "organizationSlug": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1114,6 +1439,11 @@ export const GetCurrentUserResponse = zod.object({
   "organization": zod.string().nullish(),
   "role": zod.string(),
   "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian']).describe('The product\/portal a user belongs to.'),
+  "status": zod.string().describe('Account lifecycle status (active or deactivated).'),
+  "organizationId": zod.number().nullish(),
+  "organizationName": zod.string().nullish(),
+  "organizationType": zod.string().nullish(),
+  "organizationSlug": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 

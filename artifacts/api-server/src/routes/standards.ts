@@ -17,7 +17,13 @@ import {
   DeleteCrosswalkLinkParams,
   GetCrosswalkGapsParams,
 } from "@workspace/api-zod";
-import { denyCrossOrg, getCrosswalkLinkOrgId, getProjectOrgId } from "../lib/tenancy";
+import {
+  denyBuilderWrite,
+  denyNoScope,
+  resolveCrosswalkLinkScope,
+  resolveProjectScope,
+} from "../lib/tenancy";
+import { recordActorAudit } from "../lib/audit";
 
 const router = Router();
 
@@ -52,6 +58,9 @@ router.post("/standards-frameworks", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
+  // The standards catalog is global/shared; builders cannot mutate it.
+  if (denyBuilderWrite(res, req.actor!)) return;
 
   const [framework] = await db
     .insert(standardsFrameworksTable)
@@ -95,6 +104,9 @@ router.post("/standards-frameworks/:id/competencies", async (req, res): Promise<
     return;
   }
 
+  // The standards catalog is global/shared; builders cannot mutate it.
+  if (denyBuilderWrite(res, req.actor!)) return;
+
   const [competency] = await db
     .insert(standardCompetenciesTable)
     .values({
@@ -115,7 +127,15 @@ router.get("/projects/:projectId/crosswalk", async (req, res): Promise<void> => 
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "read",
+      "Project not found",
+    )
+  ) {
     return;
   }
 
@@ -153,7 +173,16 @@ router.post("/projects/:projectId/crosswalk", async (req, res): Promise<void> =>
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  // Crosswalk links are project-level; creating one is a project-level write.
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "write",
+      "Project not found",
+    )
+  ) {
     return;
   }
 
@@ -173,6 +202,13 @@ router.post("/projects/:projectId/crosswalk", async (req, res): Promise<void> =>
     .from(standardCompetenciesTable)
     .where(eq(standardCompetenciesTable.id, link.competencyId));
 
+  await recordActorAudit(req.actor!, {
+    action: "created",
+    entityType: "crosswalk_link",
+    entityTitle: competency?.code ?? "Crosswalk link",
+    projectId: params.data.projectId,
+  });
+
   res.status(201).json({
     ...link,
     competencyCode: competency?.code ?? null,
@@ -187,7 +223,8 @@ router.delete("/crosswalk-links/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getCrosswalkLinkOrgId(params.data.id), "Crosswalk link not found")) {
+  const linkScope = await resolveCrosswalkLinkScope(params.data.id);
+  if (await denyNoScope(res, req.actor!, linkScope, "write", "Crosswalk link not found")) {
     return;
   }
 
@@ -201,6 +238,13 @@ router.delete("/crosswalk-links/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  await recordActorAudit(req.actor!, {
+    action: "deleted",
+    entityType: "crosswalk_link",
+    entityTitle: "Crosswalk link",
+    projectId: linkScope?.projectId ?? null,
+  });
+
   res.sendStatus(204);
 });
 
@@ -211,7 +255,15 @@ router.get("/projects/:projectId/crosswalk/gaps", async (req, res): Promise<void
     return;
   }
 
-  if (denyCrossOrg(res, req.actor!, await getProjectOrgId(params.data.projectId), "Project not found")) {
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveProjectScope(params.data.projectId),
+      "read",
+      "Project not found",
+    )
+  ) {
     return;
   }
 

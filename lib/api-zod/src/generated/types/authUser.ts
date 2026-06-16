@@ -15,5 +15,15 @@ export interface AuthUser {
   organization?: string | null;
   role: string;
   productKey: ProductKey;
+  /** Account lifecycle status (active or deactivated). */
+  status: string;
+  /** @nullable */
+  organizationId?: number | null;
+  /** @nullable */
+  organizationName?: string | null;
+  /** @nullable */
+  organizationType?: string | null;
+  /** @nullable */
+  organizationSlug?: string | null;
   createdAt: Date;
 }
