@@ -5,8 +5,7 @@ import type { Product } from "@/lib/products";
 
 /**
  * Consistent branded chrome for a product's authenticated workspace: a top bar
- * with the product mark, an optional in-development badge, optional nav, and a
- * sign-out control.
+ * with the product mark, optional nav, and a sign-out control.
  */
 export function ProductLayout({
   product,
@@ -32,14 +31,7 @@ export function ProductLayout({
             <Icon className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="leading-tight">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              {product.name}
-              {product.status === "roadmap" && (
-                <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  In development
-                </span>
-              )}
-            </div>
+            <div className="text-sm font-semibold">{product.name}</div>
             <div className="text-xs text-muted-foreground">{product.title}</div>
           </div>
         </div>

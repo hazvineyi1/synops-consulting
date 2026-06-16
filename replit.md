@@ -48,9 +48,7 @@ use must sit behind an env fallback so the product works without it.
 ## Products
 
 The platform is a registry of products. Each has a key, brand (name, accent
-color, tagline), vertical, and status (`live` or `roadmap`).
-
-Live (built):
+color, tagline), and vertical. All five products are built and gated:
 
 - **Hub** (`hub`) - client portal: engagements, shared resources, request/message form, PHI notice. The only self-service-registration product. Admin surface reads all users and submissions.
 - **Cadence** (`cadence`) - engagement command center: projects, milestones, deliverables with a QA gate (a deliverable cannot complete until its gate passes). Feeds the Hub engagements view.
@@ -58,19 +56,15 @@ Live (built):
 - **Compass** (`compass`) - curriculum engine: clients, projects, courses, objectives, assessments, standards frameworks, crosswalk links, and a QA report (save + markdown export). This is the original engine, rebranded and gated.
 - **Meridian** (`meridian`) - provider operations portal: provider records, network-adequacy view, dispute queue (status/priority + appended notes attributed to the acting user).
 
-Roadmap (branded login + navigable "in development" placeholder, no engine yet):
-
-- **Spark**, **Aria**, **Pulse**, **Sentinel**, **Tend**. Each placeholder lists its planned capabilities. **Tend** is intake/workflow only and is explicitly **NO PHI** (it renders a data-handling notice saying so).
-
 ## Where things live
 
-- **Product registry (source of truth, two halves):** frontend `artifacts/uva-engine/src/lib/products.ts` (the `PRODUCTS` array with brand/vertical/status + `planned`/`noPhi`, plus live/roadmap helpers); backend `artifacts/api-server/src/lib/products.ts` (`PRODUCT_KEYS`, `isProductKey`, `SELF_SERVICE_PRODUCT_KEYS`, `isSelfServiceProductKey`). Keep the two key lists in sync with the OpenAPI `ProductKey` enum.
-- **DB schema (source of truth):** `lib/db/src/schema/{users,marketing,portal,cadence,learning,providers,roadmap}.ts` (re-exported from `lib/db/src/index.ts`). `users.product_key` binds a user to a product. Plus the connect-pg-simple `session` table.
+- **Product registry (source of truth, two halves):** frontend `artifacts/uva-engine/src/lib/products.ts` (the `PRODUCTS` array with brand/vertical, plus `PRODUCT_MAP`/`getProduct` helpers); backend `artifacts/api-server/src/lib/products.ts` (`PRODUCT_KEYS`, `isProductKey`, `SELF_SERVICE_PRODUCT_KEYS`, `isSelfServiceProductKey`). Keep the two key lists in sync with the OpenAPI `ProductKey` enum.
+- **DB schema (source of truth):** `lib/db/src/schema/{users,marketing,portal,cadence,learning,providers}.ts` (re-exported from `lib/db/src/index.ts`). `users.product_key` binds a user to a product. Plus the connect-pg-simple `session` table.
 - **API contract (source of truth):** the OpenAPI spec in `@workspace/api-spec`. Generated client/hooks/schemas land in `lib/api-client-react/src/generated/`; the fetch wrapper is `lib/api-client-react/src/custom-fetch.ts`.
 - **API routes:** `artifacts/api-server/src/routes/`. Auth (`auth.ts`) issues sessions and carries `productKey` on register/login/me. Per-product routers: `portal.ts` (Hub), `cadence.ts`, `rise.ts`, `meridian.ts`, plus the Compass engine routers (dashboard/clients/projects/courses/objectives/assessments/standards/qa/crosswalk). `index.ts` mounts everything and applies the Compass path-prefix gate. Auth helpers (`hash/verify`, `requireAuth`, `requireAdmin`, `requireProduct`) in `src/lib/auth.ts`. Email degrade-to-log in `src/lib/email.ts`. Startup seed in `src/lib/seed.ts`.
 - **Web routing:** `artifacts/uva-engine/src/App.tsx` - public marketing routes, a `/portals` directory, legacy `/portal*` -> `/hub` redirects, and per-product routes generated from the registry: `/{key}`, `/{key}/login`, `/{key}/register` (each `/{key}` is a `wouter` `nest`). Auth context: `src/lib/auth-context.tsx`.
-- **Per-product UI:** branded auth via `AuthShell` + `ProductLogin`/`ProductRegister`; the `ProtectedProduct` gate; `components/portal/ProductApp.tsx` maps a product key to its workspace component (Hub dashboard, `CadenceApp`, `RiseApp`, `MeridianApp`, Compass `EngineApp`/`Shell`, or `ProductPlaceholder` for roadmap). Product pages live under `src/pages/{portal,cadence,rise,meridian,...}/*`.
-- **Public marketing pages:** `artifacts/uva-engine/src/pages/public/*` (including `Portals.tsx`, the product directory grouped by vertical with status badges). Per-route SEO: `src/lib/seo.ts`.
+- **Per-product UI:** branded auth via `AuthShell` + `ProductLogin`/`ProductRegister`; the `ProtectedProduct` gate; `components/portal/ProductApp.tsx` maps a product key to its workspace component (Hub dashboard, `CadenceApp`, `RiseApp`, `MeridianApp`, Compass `EngineApp`/`Shell`). Product pages live under `src/pages/{portal,cadence,rise,meridian,...}/*`.
+- **Public marketing pages:** `artifacts/uva-engine/src/pages/public/*` (including `Portals.tsx`, the product directory grouped by vertical). Per-route SEO: `src/lib/seo.ts`.
 - **Brand tokens / theme:** `artifacts/uva-engine/src/index.css`; per-product accent comes from the registry.
 
 ## Architecture decisions
@@ -82,7 +76,6 @@ Roadmap (branded login + navigable "in development" placeholder, no engine yet):
 - **No required API keys.** Engines are rules-based; optional LLM features must degrade gracefully behind an env fallback.
 - **Contract-first.** Routes validate input/output with Zod; the web app consumes generated React Query hooks. Regenerate after spec changes.
 - **Email never blocks a form.** Submissions persist to the DB first; notification email is best-effort and logs when no transport is configured.
-- **No PHI in Tend.** Tend is intake/workflow only, uses synthetic data, shows a no-PHI notice, and accepts no sensitive uploads.
 
 ## Dev credentials (seeded)
 
@@ -119,11 +112,10 @@ Meridian synthetic data exist in dev only. Demo users:
 
 ## Not yet implemented (stubs to be aware of)
 
-- **Roadmap products are scaffolds.** Spark, Aria, Pulse, Sentinel, Tend have a branded login and an "in development" placeholder (with planned capabilities), but no engine.
 - **Admin creation is manual.** There is no bootstrap endpoint; promote a user by setting `users.role = 'admin'` directly in the DB (the seeded admin exists in dev only). Non-self-service products are likewise provisioned by setting `users.product_key`.
 - **Password reset** is not built (the login form shows a "coming soon" note).
 - **Resource file uploads** are not built; `portal_resources.url` may be a placeholder (`#`).
-- **PHI:** Hub portal messages are plain text with a notice asking clients not to submit PHI; there is no PHI-grade encryption/handling. Tend is no-PHI by design.
+- **PHI:** Hub portal messages are plain text with a notice asking clients not to submit PHI; there is no PHI-grade encryption/handling.
 
 ## Pointers
 

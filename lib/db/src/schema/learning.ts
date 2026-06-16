@@ -1,7 +1,7 @@
 import { pgTable, text, serial, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 
 // Rise (Adaptive Learning Platform) persists each completed adaptive run.
-// userId is nullable so anonymous runs can be stored too. Pulse reads from here.
+// userId is nullable so anonymous runs can be stored too.
 
 export const learningSessionsTable = pgTable("learning_sessions", {
   id: serial("id").primaryKey(),

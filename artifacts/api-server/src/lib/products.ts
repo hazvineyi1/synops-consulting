@@ -6,11 +6,6 @@ export const PRODUCT_KEYS = [
   "rise",
   "compass",
   "meridian",
-  "spark",
-  "aria",
-  "pulse",
-  "sentinel",
-  "tend",
 ] as const;
 
 export type ProductKey = (typeof PRODUCT_KEYS)[number];

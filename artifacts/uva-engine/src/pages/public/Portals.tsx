@@ -9,28 +9,18 @@ const VERTICALS: ProductVertical[] = [
   "Project Management",
 ];
 
-function StatusBadge({ product }: { product: Product }) {
-  const label = product.status === "roadmap" ? "In development" : "Available";
-  return (
-    <span className="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-      {label}
-    </span>
-  );
-}
-
 function PortalCard({ product }: { product: Product }) {
   const Icon = product.icon;
   return (
     <Card className="flex flex-col">
       <CardHeader className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center">
           <span
             className="flex h-10 w-10 items-center justify-center rounded-md text-white"
             style={{ backgroundColor: product.accent }}
           >
             <Icon className="h-5 w-5" aria-hidden="true" />
           </span>
-          <StatusBadge product={product} />
         </div>
         <div>
           <h3 className="text-lg font-semibold tracking-tight">{product.name}</h3>

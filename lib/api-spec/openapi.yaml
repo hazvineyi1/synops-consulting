@@ -1549,7 +1549,7 @@ components:
       type: string
       description: The product/portal a user belongs to.
       enum:
-        [hub, cadence, rise, compass, meridian, spark, aria, pulse, sentinel, tend]
+        [hub, cadence, rise, compass, meridian]
 
     AuthUser:
       type: object

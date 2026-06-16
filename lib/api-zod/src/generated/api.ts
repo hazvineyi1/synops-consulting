@@ -1070,7 +1070,7 @@ export const RegisterBody = zod.object({
   "password": zod.string().min(registerBodyPasswordMin),
   "name": zod.string(),
   "organization": zod.string().optional(),
-  "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian', 'spark', 'aria', 'pulse', 'sentinel', 'tend']).optional().describe('The product\/portal a user belongs to.')
+  "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian']).optional().describe('The product\/portal a user belongs to.')
 })
 
 
@@ -1088,7 +1088,7 @@ export const LoginResponse = zod.object({
   "name": zod.string(),
   "organization": zod.string().nullish(),
   "role": zod.string(),
-  "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian', 'spark', 'aria', 'pulse', 'sentinel', 'tend']).describe('The product\/portal a user belongs to.'),
+  "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian']).describe('The product\/portal a user belongs to.'),
   "createdAt": zod.coerce.date()
 })
 
@@ -1110,7 +1110,7 @@ export const GetCurrentUserResponse = zod.object({
   "name": zod.string(),
   "organization": zod.string().nullish(),
   "role": zod.string(),
-  "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian', 'spark', 'aria', 'pulse', 'sentinel', 'tend']).describe('The product\/portal a user belongs to.'),
+  "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian']).describe('The product\/portal a user belongs to.'),
   "createdAt": zod.coerce.date()
 })
 
@@ -1413,7 +1413,7 @@ export const ListAdminUsersResponseItem = zod.object({
   "name": zod.string(),
   "organization": zod.string().nullish(),
   "role": zod.string(),
-  "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian', 'spark', 'aria', 'pulse', 'sentinel', 'tend']).describe('The product\/portal a user belongs to.'),
+  "productKey": zod.enum(['hub', 'cadence', 'rise', 'compass', 'meridian']).describe('The product\/portal a user belongs to.'),
   "createdAt": zod.coerce.date()
 })
 export const ListAdminUsersResponse = zod.array(ListAdminUsersResponseItem)

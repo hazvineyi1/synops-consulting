@@ -18,9 +18,4 @@ export const ProductKey = {
   rise: 'rise',
   compass: 'compass',
   meridian: 'meridian',
-  spark: 'spark',
-  aria: 'aria',
-  pulse: 'pulse',
-  sentinel: 'sentinel',
-  tend: 'tend',
 } as const;

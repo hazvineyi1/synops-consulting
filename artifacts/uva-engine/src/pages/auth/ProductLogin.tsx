@@ -45,11 +45,6 @@ export default function ProductLogin({ product }: { product: Product }) {
       subtitle={product.title}
       eyebrow={`${product.name} \u00b7 ${product.vertical}`}
       panelLine={product.panelLine}
-      panelNote={
-        product.status === "roadmap"
-          ? "This product is in development. Sign in to preview the workspace."
-          : undefined
-      }
       accent={product.accent}
       footer={
         product.hasRegister ? (

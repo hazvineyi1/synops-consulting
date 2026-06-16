@@ -7,7 +7,6 @@ import { MeridianApp } from "@/components/portal/MeridianApp";
 import PortalDashboard from "@/pages/portal/PortalDashboard";
 import HubAdmin from "@/pages/portal/HubAdmin";
 import { ProductLayout } from "@/components/portal/ProductLayout";
-import { ProductPlaceholder } from "@/components/portal/ProductPlaceholder";
 import { useAuth } from "@/lib/auth-context";
 import { PRODUCT_MAP, type Product } from "@/lib/products";
 
@@ -71,8 +70,8 @@ function HubApp() {
 
 /**
  * Maps a product to its authenticated workspace. Routes here are relative to
- * the `/{key}` nest. Build-now products that do not yet have their engine wired
- * fall through to the branded placeholder.
+ * the `/{key}` nest. Every registered product has a workspace; an unknown key
+ * falls back to the public site.
  */
 export function ProductApp({ product }: { product: Product }) {
   switch (product.key) {
@@ -92,6 +91,6 @@ export function ProductApp({ product }: { product: Product }) {
       return <MeridianApp />;
 
     default:
-      return <ProductPlaceholder product={product} />;
+      return <Redirect to="~/" />;
   }
 }
