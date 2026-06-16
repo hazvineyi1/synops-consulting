@@ -1,0 +1,356 @@
+# Replit Build Prompt: Dual-Practice Consulting Firm Website
+
+Paste everything below the line into Replit’s AI Agent. Fill in the bracketed
+`[VARIABLES]` first (firm name, email, etc.). Edit any copy you want before
+building, the prompt is written so the Agent produces a polished, production-
+ready marketing site with a working contact/lead-capture flow.
+
+-----
+
+## 0. Configuration variables (set these before you build)
+
+- `[FIRM_NAME]` = the parent brand. Suggestions if undecided:
+  *Synops Advisory Group*, *Musoni Advisory Collective*, or *Synops & Paideia Partners*
+  (Synops = the healthcare arm; a learning-named second word covers the EdTech arm).
+- `[TAGLINE]` = e.g. “Operations, learning, and technology consulting, from strategy to build.”
+- `[CONTACT_EMAIL]` = primary inbox for lead notifications.
+- `[PHONE]` = main business line (optional on public site).
+- `[PRIMARY_LOCATIONS]` = Nationwide (United States), fully remote. Principal hubs
+  in Texas and Virginia; engagements served across all U.S. time zones. Do **not**
+  frame the firm as Virginia-only anywhere on the site.
+
+-----
+
+## 1. What to build
+
+Build a professional, fast, accessible **full-stack web application** for
+`[FIRM_NAME]`, a boutique consulting firm with **two integrated practice areas**
+under one roof and a **SaaS / digital-products** arm. The site should read as
+credible to enterprise, healthcare, higher-ed, and **government procurement**
+audiences. Prioritize trust, clarity, and conversion (book a call / request a
+proposal).
+
+Three things must be **fully functional at launch**:
+
+1. **Marketing site + working contact form** with lead capture and a newsletter
+   signup (see §5 Contact).
+1. **A real Client Portal with authentication**: registration, login, sessions,
+   and a protected dashboard (see §5 Client Portal and §2.5 Security).
+1. **An embedded, working SaaS product demo** on the Platforms page that a
+   visitor can actually interact with (see §5 Platforms & SaaS).
+
+-----
+
+## 2. Tech stack
+
+- **Full-stack app.** Use **Next.js + TypeScript** (App Router) so the marketing
+  pages, API routes, and authenticated portal live in one deployable project,
+  OR **React + Vite + an Express/Node API** if you prefer, either is fine, but
+  it must deploy cleanly on Replit and support server-side auth + a database.
+- **Tailwind CSS** for styling. No heavy UI kit; build clean custom components.
+- **Database:** use Replit’s built-in **PostgreSQL** (or SQLite for a simpler
+  start) with a typed query layer (Prisma or Drizzle). Define schemas for:
+  `users`, `contact_submissions`, `newsletter_signups`, and `demo_sessions`.
+- **Authentication (real):** email + password with **bcrypt-hashed** passwords,
+  secure **HTTP-only session cookies**, CSRF protection on mutating requests,
+  and server-side route protection for `/portal/*`. Replit Auth is acceptable if
+  it’s simpler, but the portal must genuinely gate content behind login.
+- **Contact form backend:** validate server-side, persist submissions, and email
+  a notification to `[CONTACT_EMAIL]` (gate the email provider behind an env var;
+  degrade gracefully to logging + success state if unconfigured).
+- Put all secrets in environment variables. **No secrets in the repo.**
+- Mobile-first, fully responsive, **WCAG 2.1 AA compliant** (hard req, see §7).
+
+## 2.5 Security & compliance (read before building the portal)
+
+- This portal is **launch-grade, not a system of record for regulated data.**
+  Build it to be safe for general business use, but include a clear note in the
+  README and on the portal that it must **not** store **PHI / patient data or
+  other regulated health information** until a proper **HIPAA / security review**
+  is completed. The healthcare practice deals with Medicaid/managed-care data.
+  This must never live in this app without compliant infrastructure (BAA,
+  encryption at rest, audit logging, access controls).
+- Enforce: hashed passwords (never plaintext), session expiry, rate-limiting on
+  auth endpoints, server-side input validation everywhere, and a honeypot +
+  basic rate limit on public forms.
+- Do **not** build password reset over email, payment handling, or document
+  upload of sensitive files in this pass. Stub those as “coming soon” so we add
+  them with proper review later.
+
+-----
+
+## 3. Brand & visual direction
+
+- Tone: **credible, modern, understated.** Think management-consulting meets
+  EdTech, not flashy, not corporate-stock-photo generic.
+- Suggested palette: a deep, trustworthy primary (navy / slate-teal), a warm
+  accent for CTAs, generous white space, strong typographic hierarchy. Use a
+  clean sans for body (e.g. Inter) and a slightly distinctive sans or humanist
+  serif for headings. Pick a real pairing and apply it consistently.
+- Two practice areas should be **visually distinguishable** (e.g. two accent
+  tints) without fracturing the brand. One firm, two specialties.
+- Use simple custom SVG/line iconography, not clip-art. No copyrighted logos.
+- Include a tasteful “Veteran of $1B+ provider operations” / “PhD-level AI &
+  learning science” style credibility band, real substance, not buzzwords.
+
+-----
+
+## 4. Information architecture (pages / routes)
+
+1. **Home** (`/`)
+1. **About** (`/about`): the firm + both principals
+1. **Healthcare & Operations Consulting** (`/healthcare`)
+1. **Learning, EdTech & AI Consulting** (`/learning`)
+1. **Platforms & SaaS** (`/platforms`)
+1. **Government Contracting** (`/government`)
+1. **Insights / Blog** (`/insights`): index + simple article template (seed 3 posts)
+1. **Contact** (`/contact`)
+1. **Client Portal** (`/portal`): placeholder “coming soon / sign-in” screen
+
+Global: sticky header with nav + primary CTA (“Book a consultation”), footer
+with sitemap, certifications, contact, and accessibility statement link.
+
+-----
+
+## 5. Page-by-page content
+
+### Home
+
+- Hero: `[FIRM_NAME]`, `[TAGLINE]`, two CTAs (“Book a consultation”, “See our services”).
+- Sub-hero: one sentence positioning, a single firm uniting **healthcare
+  operations leadership** and **learning/EdTech + AI**, bound by disciplined
+  **project management (PMP)** and **quality assurance**.
+- “Two practices, one standard of rigor” section, two cards linking to
+  `/healthcare` and `/learning`, each with 3 bullet service highlights.
+- Outcomes/credibility band: managed-care provider relationships up to **$1B in
+  annual spend**; **40+ courses developed and curricula built**; **98% on-time
+  delivery** across concurrent projects; **woman- and minority-owned**, serving
+  clients **nationwide** (Virginia SWaM certified and **active federal SAM.gov
+  registration**).
+- “How we work”, 4 steps: Assess → Design → Build → Sustain.
+- Logos/credentials strip: MPH • MBA • PMP • DBA(c) • M.Ed • PhD(c) Machine
+  Learning • Quality Matters • SWaM.
+- Final CTA band + contact form teaser.
+
+### About
+
+- Firm story: a complementary partnership spanning **healthcare operations** and
+  **education technology / AI**, serving organizations **across the United States**
+  and offering both **strategic advisory** and **hands-on build** capability.
+  Emphasize national reach and fully-remote delivery; do not position the firm as
+  region-bound.
+- Principal 1: **Bertha D. Musoni**, Founder & Principal Consultant (Synops LLC):
+  20+ years in managed care, Medicaid program operations, provider network
+  management, and organizational change; oversight of provider relationships up
+  to $1B in annual spend; led Joint Operation Committees and enterprise process
+  redesign at one of the nation’s largest MCOs; directed vendor/offshore teams of
+  up to 300 agents and led NCQA-aligned quality and health-risk-assessment
+  programs. Credentials: **MPH, MBA, PMP, DBA candidate (Healthcare Management &
+  Leadership)**. Works with clients nationwide.
+- Principal 2: **Belinda H. Musoni**, Principal, Learning & AI:
+  A learning scientist and instructional-design leader with **15+ years** designing
+  and quality-assuring education across **legal, higher-ed, and K-12** domains.
+  As Lead Instructional Designer & Senior QA Specialist she shipped **40+ courses and curricula**, led an **AI-integration initiative** that trained
+  10+ designers in generative-AI evaluation and prompt engineering, and **built
+  and tested custom GPT models**, evaluating thousands of generated learning
+  objectives and assessment items. She administers and migrates major LMS
+  platforms (**Canvas, Blackboard, Moodle, Brightspace/D2L**), applies **learning
+  analytics** to lift engagement (a documented ~20% gain), and holds learners to
+  **Quality Matters, Section 508 and WCAG 2.1 AA** standards. Her doctoral
+  research applies **NLP, probabilistic methods, and adaptive systems** to
+  personalized learning, supported by working **Python** (scikit-learn, pandas,
+  NumPy) and analytics (Tableau, Power BI) skill. Credentials: **M.Ed in
+  E-Learning & Instructional Design (Northeastern), PhD candidate in Machine
+  Learning (Capitol Technology University)**, Quality Matters certified. Works
+  with clients nationwide.
+- Values: rigor, accountability, accessibility, measurable outcomes.
+
+### Healthcare & Operations Consulting (`/healthcare`)
+
+Lead with Bertha’s domain. Service groups (use cards/accordions):
+
+- **Provider Relations & Network Management**: network adequacy & gap analysis;
+  enrollment, credentialing & revalidation process design; dispute resolution &
+  escalation frameworks.
+- **Managed Care Program Support**: Medicaid managed care implementation &
+  oversight; MCO performance monitoring & NCQA compliance advisory; health risk
+  assessment program design & quality improvement.
+- **Healthcare Operations**: end-to-end workflow analysis & redesign;
+  compliance & regulatory readiness; care coordination & cross-functional
+  integration.
+- **Organizational Change & Workforce**: change strategy & implementation;
+  workforce transition & performance management; leadership development & training.
+- Include a short “Why it matters” outcomes note (root-cause analysis,
+  high-dollar claim remediation, vendor/offshore team oversight up to 300 agents).
+
+### Learning, EdTech & AI Consulting (`/learning`)
+
+Lead with Belinda H. Musoni’s domain. Convey real depth and breadth across the
+full learning lifecycle. Service groups:
+
+- **Instructional Design & Curriculum Development**: course and program design,
+  storyboarding, assessment design, and standards/accreditation alignment across
+  **legal, higher-ed, and K-12** contexts; high-volume development (competency
+  modules of 10,000–15,000 words) without losing rigor.
+- **LMS Strategy & Administration**: selection, implementation, migration, and
+  day-to-day administration across **Canvas, Blackboard, Moodle, and
+  Brightspace/D2L**, plus authoring with Articulate Storyline 360, Rise 360,
+  Adobe Captivate, Camtasia, and Vyond.
+- **AI in Education & Content Evaluation**: generative-AI integration, prompt
+  engineering, **custom GPT/model development and evaluation**, structured AI
+  quality-review protocols, and AI-transparency practices (e.g. watermarking
+  AI-generated assets).
+- **Learning Analytics & Outcomes**: using interaction and performance data to
+  find content gaps and drive iterative improvement (a documented ~20% lift in
+  learner engagement), with Tableau, Power BI, and Python-based analysis.
+- **Adaptive & Intelligent Tutoring Systems**: applied machine learning, NLP,
+  and probabilistic methods for multi-modal learning recognition and dynamic
+  content adaptation (research-grounded doctoral specialization).
+- **Quality Assurance & Accessibility**: Quality Matters review and **Section 508
+  / WCAG 2.1 AA** audits, plus SME validation workflows for technical accuracy.
+- Include a short “How we work” note: independent, asynchronous delivery with a
+  **98% on-time rate** across concurrent projects and collaboration with 20+
+  subject-matter experts.
+
+### Platforms & SaaS (`/platforms`)
+
+- Framing: beyond advisory, the firm **builds**: adaptive learning platforms,
+  internal AI agents/tools, dashboards, and SaaS products.
+- Capability cards: custom web apps, AI-powered learning tools, operations
+  dashboards & reporting, secure data workflows.
+- **Embedded working demo (required, fully interactive).** Build an
+  **“Adaptive Reading & Reasoning Demo”** that a visitor can use without signing
+  in. The whole point is to show that **one engine adapts across every level**,
+  so it reads as relevant to an elementary teacher, a high-school department, and
+  a university program alike.
+  - **Step 1, pick a level:** Elementary (grades 3 to 5), Secondary (grades 6 to
+    12), or Higher Ed. The same skill, reading comprehension and evidence-based
+    reasoning, is used at all three because it is taught and assessed across the
+    full K-12 to graduate span. The chosen level sets passage complexity,
+    vocabulary, and question depth (main idea, then inference, then evaluating an
+    argument’s support).
+  - **Step 2, short adaptive set (5 to 8 items):** each item shows a brief
+    passage and a question. After each answer the engine **adapts**: answer well
+    and the next passage gets harder (longer text, deeper inference); miss one
+    and the learner gets a scaffolded hint and an easier item. Track a running
+    mastery estimate.
+  - **Step 3, results screen:** estimated mastery, the recommended “next rung”
+    (and an invitation to try a different level), and a small chart of the path
+    taken. Persist anonymous runs to `demo_sessions`.
+  - Build it **rules-based and self-contained** with a seeded item bank **per
+    level** so it works with no API keys. Add an **optional** hook (behind an env
+    var) to call an LLM for dynamic passage and hint generation; if the key is
+    absent, fall back to the built-in bank. Do not hard-require any external AI
+    service.
+  - Keep all passages original and neutral (science, civics, everyday topics) so
+    nothing is age-inappropriate at the lower band. This demo showcases the
+    EdTech/AI practice and doubles as the “Request a demo” conversion path.
+    Include a “Request a tailored build” CTA beneath it.
+- A second “Featured platform” slot (placeholder card) we can later point at a
+  specific product (e.g. an adaptive / Socratic-reasoning platform).
+
+### Government Contracting (`/government`)
+
+This is a real differentiator, make it scannable for procurement officers, and
+frame it for **federal and multi-state** work, not Virginia alone.
+
+- **Certifications & registrations (all active):** Woman- and minority-owned;
+  **Virginia SWaM** certified (Small, Women-Owned & Minority-Owned); **eVA**
+  (Virginia eProcurement) registered; **active federal SAM.gov registration**.
+  Present these as a national capability, federal-ready with Virginia as the
+  home-state anchor, not a limit.
+- **Capability statement** style summary: core competencies, differentiators,
+  past-performance themes (Medicaid operations, provider relations, large-team
+  vendor oversight, instructional design & training), and **nationwide, fully
+  remote** delivery across all U.S. time zones.
+- **NIGP codes** (display as tidy chips): 918-75 Management Consulting •
+  918-78 Medical Consulting • 918-06 Administrative Consulting •
+  918-67 Human Services Consulting • 918-83 Organizational Development •
+  918-90 Strategic Planning • 918-88 Quality Assurance • 918-58 Governmental
+  Consulting.
+- A “Download capability statement (PDF)” button (link a placeholder file).
+
+### Insights (`/insights`)
+
+- Index of articles (card grid) + a clean article template (title, author,
+  date, body, related posts). Seed **3 placeholder posts**, one per practice
+  area and one cross-cutting:
+1. “Reducing provider-dispute resolution time: a process-redesign approach.”
+1. “Designing accessible online courses that actually meet WCAG 2.1 AA.”
+1. “Where AI helps (and where it doesn’t) in adaptive learning.”
+
+### Contact (`/contact`)
+
+- Working form: name, organization, email, phone (optional), area of interest
+  (select: Healthcare/Operations, Learning/EdTech/AI, Platforms/SaaS, Government,
+  Other), message. Server-side validation, spam honeypot, success + error states.
+- On submit: store the record and email `[CONTACT_EMAIL]`; degrade gracefully if
+  email isn’t configured.
+- Also show direct contact details and a newsletter signup.
+
+### Client Portal (`/portal`): real authentication
+
+- **Public auth screens:** `/portal/register` and `/portal/login` with real
+  email + password auth (bcrypt-hashed, HTTP-only session cookie, server-side
+  validation, rate-limited). Clean accessible forms with inline errors.
+- **Protected dashboard** (`/portal/dashboard`, gated server-side):
+  - Welcome header with the logged-in user’s name/org.
+  - “Your engagements” section, for now, seed with **placeholder/sample**
+    engagement cards (status, practice area, next milestone) pulled from the DB
+    so it’s clearly real data, not hardcoded HTML.
+  - “Shared resources” list (sample documents as links/stubs, no sensitive
+    uploads in this pass).
+  - “Messages / requests”, a simple form that writes to the DB and notifies
+    `[CONTACT_EMAIL]` (reuse the contact pipeline).
+  - Logout that destroys the session.
+- **Roles:** support a basic `role` field (`client` vs `admin`). An admin view
+  can list contact submissions and registered users (read-only is fine).
+- Show the §2.5 notice in the portal: no PHI/regulated data until compliance
+  review. Stub password-reset and file-upload as “coming soon.”
+
+-----
+
+## 6. Components to include
+
+- Sticky responsive header w/ mobile menu; primary CTA always visible.
+- Reusable Service Card, Stat/Outcome band, Principal Bio card, CTA band,
+  Article card, FAQ accordion, Certification/credential chips, Footer.
+- A short FAQ section on Home or Contact (engagement model, remote work,
+  government readiness, typical timelines).
+
+## 7. Accessibility (hard requirement, WCAG 2.1 AA)
+
+- Semantic HTML landmarks; logical heading order; descriptive alt text.
+- Visible focus states; full keyboard operability; skip-to-content link.
+- Color contrast ≥ 4.5:1 for text; don’t rely on color alone to distinguish the
+  two practice areas (use labels/icons too).
+- Accessible forms: associated labels, inline error messaging, ARIA only where
+  needed. Add an “Accessibility” statement page/footer link.
+
+## 8. SEO & performance
+
+- Per-route titles + meta descriptions; Open Graph tags; sensible URL slugs.
+- Fast load (lazy-load images, minimal JS); Lighthouse-friendly.
+- A simple JSON-LD `ProfessionalService` schema on Home.
+
+## 9. Deliverables / acceptance
+
+- All routes above build and render with no console errors.
+- Contact form validates and shows success/error states; submissions persist to
+  the DB and trigger an email when configured.
+- **Auth works end-to-end:** register → login → protected dashboard → logout;
+  `/portal/*` is genuinely inaccessible when logged out; passwords are hashed.
+- **The Adaptive Learning Mini-Demo is fully interactive** and adapts based on
+  answers, with a results screen, and works with no external API keys.
+- Mobile, tablet, desktop layouts all clean; WCAG 2.1 AA respected throughout.
+- The §2.5 security/HIPAA notice appears in the README and in the portal UI.
+- Placeholder content is realistic (use the copy above), clearly marked where we
+  must swap real text/photos.
+- A short README explaining: env vars (`[CONTACT_EMAIL]`/email + optional LLM
+  key), how to run/seed the DB, how to create an admin user, how to edit copy,
+  and how to add blog posts.
+
+Build it now, then give me a checklist of what’s placeholder vs. ready, what’s
+stubbed for later (password reset, uploads, real PHI-safe storage), and what I
+need to provide (logo, photos, capability-statement PDF, email credentials,
+optional AI key).
