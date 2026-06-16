@@ -12,7 +12,7 @@ export default function About() {
         </p>
         <div className="prose prose-lg dark:prose-invert">
           <p>
-            We offer both strategic advisory and hands-on build capability. Our model is fully remote, allowing us to deploy exactly the right expertise to your challenges, regardless of geography. We don't just write reports—we implement workflows, build curricula, and architect the platforms necessary to sustain change.
+            We offer both strategic advisory and hands-on build capability. Our model is fully remote, allowing us to deploy exactly the right expertise to your challenges, regardless of geography. We don't just write reports. We implement workflows, build curricula, and architect the platforms necessary to sustain change.
           </p>
         </div>
       </div>

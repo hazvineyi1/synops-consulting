@@ -20,7 +20,7 @@ export const insightsData = [
     practice: "Learning, EdTech & AI",
     excerpt: "Moving beyond automated checkers to build truly inclusive learning experiences that support all students.",
     body: [
-      "Accessibility in online learning is often treated as an afterthought or a compliance checkbox. Organizations run an automated tool, fix the contrast issues, and declare victory. But true accessibility—meeting the spirit of WCAG 2.1 AA and Section 508—requires a more holistic approach.",
+      "Accessibility in online learning is often treated as an afterthought or a compliance checkbox. Organizations run an automated tool, fix the contrast issues, and declare victory. But true accessibility, meeting the spirit of WCAG 2.1 AA and Section 508, requires a more holistic approach.",
       "Through our work reviewing dozens of higher-ed and corporate training programs, we've found that the biggest barriers are often structural: illogical heading hierarchies, missing context in complex diagrams, and interactive elements that cannot be navigated via keyboard.",
       "To build genuinely accessible courses, teams must integrate accessibility checks early in the storyboarding phase. This means training instructional designers on semantic structure, ensuring media has robust alternatives, and conducting manual testing with screen readers. It takes more upfront effort, but it saves costly remediation later and, more importantly, ensures equitable access for all learners."
     ]
@@ -35,7 +35,7 @@ export const insightsData = [
     body: [
       "The integration of Generative AI into educational platforms is moving at breakneck speed. From automated content generation to personalized tutoring bots, the promises are vast. However, our evaluations of custom GPT models and AI integrations reveal a mixed reality.",
       "Where AI excels: At generating diverse practice items, providing scaffolded hints, and summarizing complex topics. It can significantly accelerate the authoring process for instructional designers, acting as a powerful drafting tool.",
-      "Where AI struggles: At maintaining strict alignment with pedagogical frameworks, avoiding subtle hallucinations in technical subjects, and providing empathetic, nuanced feedback for struggling learners. The key to successful implementation is not replacing the educator, but augmenting them—establishing structured quality-review protocols and maintaining transparency about when and how AI is used."
+      "Where AI struggles: At maintaining strict alignment with pedagogical frameworks, avoiding subtle hallucinations in technical subjects, and providing empathetic, nuanced feedback for struggling learners. The key to successful implementation is not replacing the educator, but augmenting them, establishing structured quality-review protocols and maintaining transparency about when and how AI is used."
     ]
   }
 ];

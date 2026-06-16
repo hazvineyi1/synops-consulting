@@ -7,26 +7,26 @@ web app (the `uva-engine` artifact) hosts both surfaces; an Express API server
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/uva-engine run dev` — run the web app (Vite).
-- `pnpm --filter @workspace/api-server run dev` — run the API server.
-- `pnpm --filter @workspace/uva-engine run typecheck` — typecheck the web app (prefer this over `build` to verify; `build` needs workflow-provided `PORT`/`BASE_PATH`).
-- `pnpm run typecheck` — full typecheck across all packages.
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks + Zod schemas from the OpenAPI spec. Do NOT change the OpenAPI `info.title` (it controls generated filenames).
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only).
+- `pnpm --filter @workspace/uva-engine run dev` - run the web app (Vite).
+- `pnpm --filter @workspace/api-server run dev` - run the API server.
+- `pnpm --filter @workspace/uva-engine run typecheck` - typecheck the web app (prefer this over `build` to verify; `build` needs workflow-provided `PORT`/`BASE_PATH`).
+- `pnpm run typecheck` - full typecheck across all packages.
+- `pnpm --filter @workspace/api-spec run codegen` - regenerate API hooks + Zod schemas from the OpenAPI spec. Do NOT change the OpenAPI `info.title` (it controls generated filenames).
+- `pnpm --filter @workspace/db run push` - push DB schema changes (dev only).
 
 These normally run as Replit workflows; do not run `pnpm dev` at the repo root.
 
 ### Required env
 
-- `DATABASE_URL` — Postgres connection string.
-- `SESSION_SECRET` — express-session signing secret.
+- `DATABASE_URL` - Postgres connection string.
+- `SESSION_SECRET` - express-session signing secret.
 
 ### Optional env
 
-- `CONTACT_EMAIL` — recipient for contact-form and demo-request notifications.
-- `SMTP_URL` / `RESEND_API_KEY` / `SENDGRID_API_KEY` — outbound email transport. If none is set, email **degrades to logging** the message instead of sending (forms still succeed and persist to the DB).
-- `REPLIT_DOMAINS` — comma-separated allowed origins for the CSRF origin check in production.
-- `LOG_LEVEL` — pino log level (default `info`).
+- `CONTACT_EMAIL` - recipient for contact-form and demo-request notifications.
+- `SMTP_URL` / `RESEND_API_KEY` / `SENDGRID_API_KEY` - outbound email transport. If none is set, email **degrades to logging** the message instead of sending (forms still succeed and persist to the DB).
+- `REPLIT_DOMAINS` - comma-separated allowed origins for the CSRF origin check in production.
+- `LOG_LEVEL` - pino log level (default `info`).
 
 ## Stack
 
@@ -58,7 +58,7 @@ These normally run as Replit workflows; do not run `pnpm dev` at the repo root.
 ## Product
 
 - Public marketing site: Home, About, Healthcare, Learning, Platforms, Government, Insights (+ article), Contact.
-- A public, rules-based **Adaptive Reading & Reasoning** demo (seeded item bank, no login) on the Platforms page.
+- A public, rules-based **Adaptive Reading & Reasoning** demo (seeded item bank, no login) on the Platforms page: one unified adaptive assessment that spans all four reading skills (main idea, inference, vocabulary in context, evaluate argument), with a live learner-model panel and a per-skill result profile. No level picker.
 - A client portal (gated): login, register, dashboard (engagements, shared resources, a message form, and a PHI security notice), and the curriculum engine.
 
 ## User preferences
@@ -71,6 +71,7 @@ These normally run as Replit workflows; do not run `pnpm dev` at the repo root.
 - **wouter nesting:** inside the `/portal` nest (ProtectedPortal, PortalDashboard, the engine Shell), links/redirects must be **absolute** (`~/portal/...`) or relative to the nest (`/dashboard`). A plain `/portal/engine` resolves to `/portal/portal/engine`. Top-level pages (Login, Register, PublicLayout) use plain `/portal/...`.
 - **Post-auth redirect is state-driven.** Login/Register redirect via `if (user) return <Redirect to="~/portal/dashboard" />`, NOT an imperative `navigate()` in the submit handler. Imperative navigation races the auth-context re-render: it mounts the portal before `user` propagates and bounces the visitor back to login.
 - **Demo difficulty is 1–5** (not 0–1). The adaptive logic targets harder/easier items on that scale, and `masteryEstimate` is sent to the API as an **integer 0–100**.
+- **Demo runs a single adaptive track.** The bank is one unified pool; next-item selection adapts difficulty AND prefers untested skills so one run spans all four areas. The `level` field on `/demo/bank` and `/demo/sessions` is kept only to satisfy the unchanged API contract (fixed internally to `secondary`) and is never shown to users.
 - **curl the API** through the shared proxy: `localhost:80/api/...` with `-H 'Origin: http://localhost'` and a cookie jar for session routes.
 
 ## Not yet implemented (stubs to be aware of)

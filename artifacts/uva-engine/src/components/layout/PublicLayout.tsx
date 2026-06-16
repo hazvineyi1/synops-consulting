@@ -141,7 +141,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           <div className="space-y-3 md:col-span-1">
             <Brandmark />
             <p className="text-sm text-muted-foreground">
-              Operations, learning, and technology consulting — from strategy to
+              Operations, learning, and technology consulting, from strategy to
               build. Woman- and minority-owned, serving clients nationwide.
             </p>
           </div>

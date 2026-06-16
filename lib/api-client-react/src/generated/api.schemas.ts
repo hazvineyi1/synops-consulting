@@ -55,13 +55,13 @@ export interface ContactInput {
   phone?: string;
   areaOfInterest: ContactInputAreaOfInterest;
   message: string;
-  /** Honeypot field — leave empty. */
+  /** Honeypot field, leave empty. */
   website?: string;
 }
 
 export interface NewsletterInput {
   email: string;
-  /** Honeypot field — leave empty. */
+  /** Honeypot field, leave empty. */
   website?: string;
 }
 

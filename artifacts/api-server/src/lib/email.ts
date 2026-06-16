@@ -38,7 +38,7 @@ export async function sendContactNotification(
         area: n.areaOfInterest,
         source: n.source,
       },
-      "Contact notification received — email provider not configured, logged only",
+      "Contact notification received, email provider not configured, logged only",
     );
     return;
   }
@@ -48,6 +48,6 @@ export async function sendContactNotification(
   // (Resend/SendGrid/SMTP) is a drop-in here.
   log.info(
     { recipient: to, from: n.email, source: n.source },
-    "Contact notification — provider configured; delivery deferred to integration",
+    "Contact notification: provider configured; delivery deferred to integration",
   );
 }

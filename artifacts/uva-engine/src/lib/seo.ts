@@ -4,11 +4,11 @@ const SITE_NAME = "Synops Advisory Group";
 
 /**
  * Sets the document title and meta description for a route. Restores nothing on
- * unmount — each page sets its own values on mount.
+ * unmount. Each page sets its own values on mount.
  */
 export function usePageMeta(title: string, description?: string): void {
   useEffect(() => {
-    document.title = title ? `${title} — ${SITE_NAME}` : SITE_NAME;
+    document.title = title ? `${title} | ${SITE_NAME}` : SITE_NAME;
 
     if (description) {
       let tag = document.querySelector('meta[name="description"]');

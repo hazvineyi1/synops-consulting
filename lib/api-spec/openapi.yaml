@@ -1373,7 +1373,7 @@ components:
           type: string
         website:
           type: string
-          description: Honeypot field — leave empty.
+          description: Honeypot field, leave empty.
 
     NewsletterInput:
       type: object
@@ -1384,7 +1384,7 @@ components:
           format: email
         website:
           type: string
-          description: Honeypot field — leave empty.
+          description: Honeypot field, leave empty.
 
     # ── Adaptive demo ─────────────────────────────────────────────
     DemoLevelOption:

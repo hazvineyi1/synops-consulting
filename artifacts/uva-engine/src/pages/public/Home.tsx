@@ -183,7 +183,7 @@ export default function Home() {
             <div className="space-y-4">
               <div className="text-5xl font-mono text-primary/20 font-bold">02</div>
               <h3 className="text-xl font-semibold">Design</h3>
-              <p className="text-muted-foreground text-sm">We structure the intervention—whether an organizational workflow, a curriculum, or a platform architecture.</p>
+              <p className="text-muted-foreground text-sm">We structure the intervention, whether an organizational workflow, a curriculum, or a platform architecture.</p>
             </div>
             <div className="space-y-4">
               <div className="text-5xl font-mono text-primary/20 font-bold">03</div>

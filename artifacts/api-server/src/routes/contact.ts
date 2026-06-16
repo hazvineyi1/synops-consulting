@@ -39,7 +39,7 @@ const newsletterSchema = z.object({
 });
 
 router.post("/contact", formLimiter, async (req, res): Promise<void> => {
-  // Honeypot — silently accept bots without persisting.
+  // Honeypot: silently accept bots without persisting.
   if (typeof req.body?.website === "string" && req.body.website.length > 0) {
     res.status(201).json({ ok: true });
     return;

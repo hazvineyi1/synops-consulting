@@ -46,7 +46,7 @@ function sampleEngagements(userId: number) {
       title: "Provider Network Adequacy Review",
       practiceArea: "Healthcare & Operations",
       status: "Active",
-      nextMilestone: "Gap-analysis readout — week 3",
+      nextMilestone: "Gap-analysis readout, week 3",
     },
     {
       userId,

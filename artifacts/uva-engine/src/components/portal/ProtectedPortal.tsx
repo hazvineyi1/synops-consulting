@@ -7,7 +7,7 @@ import PortalDashboard from "@/pages/portal/PortalDashboard";
 /**
  * Client-side gate for the curriculum portal. Mounted under a `nest`ed
  * /portal route, so locations and redirects here are relative to /portal.
- * The server independently enforces auth on every gated API route — this is
+ * The server independently enforces auth on every gated API route. This is
  * a UX gate, not the security boundary.
  */
 export function ProtectedPortal() {

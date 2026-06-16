@@ -476,7 +476,7 @@ export default function ProjectIntake() {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(projectId) });
           queryClient.invalidateQueries({ queryKey: getGetProjectGateStatusQueryKey(projectId) });
-          logLedger("approval", "Kickoff & Intake stage completed — advanced to Backward Design");
+          logLedger("approval", "Kickoff & Intake stage completed, advanced to Backward Design");
           toast({ title: "Advanced to Backward Design" });
         },
         onError: () => {
@@ -527,11 +527,11 @@ export default function ProjectIntake() {
       {/* Accessibility thread */}
       <div className="flex items-center px-8 py-2 bg-purple-50 text-purple-800 text-xs shadow-inner">
         <div className="flex items-center gap-1 font-bold tracking-tight">
-          Accessibility — continuous <Plus className="w-3 h-3" />
+          Accessibility, continuous <Plus className="w-3 h-3" />
         </div>
         <div className="h-px bg-gradient-to-r from-purple-800/40 to-transparent flex-1 mx-4"></div>
         <div className="font-medium text-purple-700">
-          Audited at intake · built in by design · verified at every gate — never bolted on at the end.
+          Audited at intake · built in by design · verified at every gate, never bolted on at the end.
         </div>
       </div>
 
@@ -704,7 +704,7 @@ export default function ProjectIntake() {
             </div>
 
             <div className="flex flex-col items-center">
-              <div className="text-xs font-bold uppercase tracking-wider text-purple-800/60 mb-3">Continuous — verified at every gate</div>
+              <div className="text-xs font-bold uppercase tracking-wider text-purple-800/60 mb-3">Continuous, verified at every gate</div>
               <div className="flex flex-wrap justify-center gap-2 text-sm font-medium">
                 <div className="px-4 py-1.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200 shadow-sm">Intake (Audit)</div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground self-center" />
@@ -763,7 +763,7 @@ export default function ProjectIntake() {
                         <UploadCloud className="w-6 h-6" />
                       </div>
                       <div className="font-semibold text-foreground">Upload syllabus / outline</div>
-                      <div className="text-sm text-muted-foreground mt-1">Drop or browse — PDF, Word, text</div>
+                      <div className="text-sm text-muted-foreground mt-1">Drop or browse: PDF, Word, text</div>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -779,7 +779,7 @@ export default function ProjectIntake() {
                     
                     <div className="border-2 border-dashed border-border bg-card rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-muted/30 transition-colors cursor-pointer mb-6">
                       <div className="font-semibold text-foreground text-sm">Upload media assets</div>
-                      <div className="text-xs text-muted-foreground mt-1">Drop or browse — PPT, MP4, images</div>
+                      <div className="text-xs text-muted-foreground mt-1">Drop or browse: PPT, MP4, images</div>
                     </div>
 
                     <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-none">
@@ -954,7 +954,7 @@ export default function ProjectIntake() {
                                   <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-none shadow-none px-1.5 py-0 mt-0.5 shrink-0">Lens</Badge>
                                   <div>
                                     <strong className="text-blue-900">{seg.lens.name}</strong>
-                                    <span className="text-blue-800/70 ml-2">— {seg.lens.desc}</span>
+                                    <span className="text-blue-800/70 ml-2">- {seg.lens.desc}</span>
                                   </div>
                                 </div>
                               )}
@@ -1243,7 +1243,7 @@ export default function ProjectIntake() {
                   )}
                 </div>
                 <div className="text-[10px] text-muted-foreground mt-3 text-center uppercase tracking-wider font-semibold">
-                  One timer runs at a time — starting a new part pauses the last.
+                  One timer runs at a time. Starting a new part pauses the last.
                 </div>
               </CardContent>
             </Card>
@@ -1280,7 +1280,7 @@ export default function ProjectIntake() {
                         value={courseForm[f.key]}
                         onChange={(e) => setCourseForm((p) => ({ ...p, [f.key]: e.target.value }))}
                         className="h-9 text-center text-lg font-bold border-0 shadow-none focus-visible:ring-1 px-0"
-                        placeholder="—"
+                        placeholder="-"
                       />
                       <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1">{f.label}</div>
                     </div>

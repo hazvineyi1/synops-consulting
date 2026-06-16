@@ -56,7 +56,7 @@ export default function Platforms() {
         <div className="text-center space-y-4">
           <h2 className="text-3xl font-bold">See It In Action</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Experience our adaptive engine. One core system dynamically adjusts difficulty based on learner performance across Elementary, Secondary, and Higher Ed contexts.
+            One adaptive assessment, every reading skill. The engine adjusts difficulty after each answer and samples across main idea, inference, vocabulary, and argument evaluation, building a live learner profile as you go.
           </p>
         </div>
         <div className="bg-background rounded-xl border border-border shadow-sm overflow-hidden">

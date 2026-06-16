@@ -1,10 +1,16 @@
 export type DemoLevel = "elementary" | "secondary" | "higher";
 
+export type DemoSkill =
+  | "Main idea"
+  | "Inference"
+  | "Vocabulary in context"
+  | "Evaluate argument";
+
 export interface DemoItem {
   id: string;
   level: DemoLevel;
   difficulty: number; // 1 (easiest) .. 5 (hardest)
-  skill: "Main idea" | "Inference" | "Vocabulary in context" | "Evaluate argument";
+  skill: DemoSkill;
   passage: string;
   question: string;
   options: string[];
@@ -20,267 +26,219 @@ export const DEMO_LEVEL_LABELS: Record<DemoLevel, string> = {
   higher: "Higher Education",
 };
 
+export const DEMO_SKILLS: DemoSkill[] = [
+  "Main idea",
+  "Inference",
+  "Vocabulary in context",
+  "Evaluate argument",
+];
+
 /**
- * A self-contained, rules-based item bank. Passages are original and
- * institution-agnostic so the adaptive demo works with no external API keys.
+ * One unified, institution-agnostic item bank for the public adaptive demo.
+ * A single assessment draws across all four reading skills and the full
+ * difficulty range (1 to 5), so one run shows the engine adapting to the
+ * learner and capturing data across every area.
+ *
+ * The level tag is kept only to satisfy the persistence contract; the demo
+ * presents a single adaptive track rather than separate level choices.
  */
+const TRACK: DemoLevel = "secondary";
+
 const BANK: DemoItem[] = [
-  // ── Elementary ─────────────────────────────────────────────
   {
-    id: "el-1",
-    level: "elementary",
+    id: "mi-1",
+    level: TRACK,
     difficulty: 1,
     skill: "Main idea",
     passage:
-      "Maya kept a small garden behind her house. Every morning she watered the tomatoes and pulled the weeds. By summer, the plants were taller than she was.",
-    question: "What is this passage mostly about?",
+      "A library started lending tools, not just books. Within a month, neighbors who had never met were sharing ladders and drills.",
+    question: "What is the passage mostly about?",
     options: [
-      "A girl taking care of her garden",
-      "How to cook tomatoes",
-      "A trip to the beach",
-      "A rainy day indoors",
+      "A library that lends tools and connects neighbors",
+      "How to repair a leaking sink",
+      "The history of printed books",
+      "A store that sells power drills",
     ],
     correctIndex: 0,
-    hint: "Look at what Maya does again and again in the passage.",
+    hint: "Focus on what the library changed and what happened next.",
   },
   {
-    id: "el-2",
-    level: "elementary",
-    difficulty: 2,
-    skill: "Main idea",
-    passage:
-      "Penguins cannot fly, but they are excellent swimmers. Their wings work like flippers, pushing them quickly through the cold water as they chase fish.",
-    question: "The passage explains that a penguin's wings are best used for —",
-    options: ["flying high", "swimming fast", "keeping warm", "building nests"],
-    correctIndex: 1,
-    hint: "Find the sentence that says what the wings do in the water.",
-  },
-  {
-    id: "el-3",
-    level: "elementary",
-    difficulty: 3,
-    skill: "Inference",
-    passage:
-      "When Sam opened the front door, he grabbed his umbrella and pulled on his boots before stepping outside. He frowned at the gray sky.",
-    question: "What can you tell about the weather?",
-    options: ["It is sunny", "It is snowing", "It is likely raining", "It is very hot"],
-    correctIndex: 2,
-    hint: "Think about why someone grabs an umbrella and boots.",
-  },
-  {
-    id: "el-4",
-    level: "elementary",
-    difficulty: 3,
+    id: "vo-1",
+    level: TRACK,
+    difficulty: 1,
     skill: "Vocabulary in context",
     passage:
-      "The old bridge was fragile, so the town put up a sign warning trucks to stay off it.",
-    question: "In this passage, the word \"fragile\" means —",
-    options: ["brand new", "easily broken", "very wide", "brightly painted"],
-    correctIndex: 1,
-    hint: "Why would trucks be warned to stay off the bridge?",
+      "The trail was steep, so the guide set a gentle pace that even young children could keep.",
+    question: 'As used here, the word "gentle" most nearly means',
+    options: ["mild and easy", "loud", "expensive", "dangerous"],
+    correctIndex: 0,
+    hint: "What kind of pace would let young children keep up on a steep trail?",
   },
   {
-    id: "el-5",
-    level: "elementary",
-    difficulty: 4,
+    id: "in-1",
+    level: TRACK,
+    difficulty: 2,
     skill: "Inference",
     passage:
-      "Leo practiced the piano for an hour every day after school. At the spring concert, the audience clapped loudly when he finished, and his teacher smiled.",
-    question: "Why did the audience most likely clap loudly?",
+      "She glanced at the sky, slipped an umbrella into her bag, and traded her sandals for boots before heading out.",
+    question: "What can you infer about the day ahead?",
     options: [
-      "Leo played well after lots of practice",
-      "The concert was over",
-      "Leo forgot the song",
-      "It was very cold in the room",
+      "Rain is likely",
+      "It will be hot and dry",
+      "She is going to the beach",
+      "It is the middle of the night",
     ],
     correctIndex: 0,
-    hint: "Connect Leo's daily practice with how people reacted.",
+    hint: "Why pack an umbrella and boots?",
   },
   {
-    id: "el-6",
-    level: "elementary",
-    difficulty: 5,
-    skill: "Evaluate argument",
-    passage:
-      "Ria says her school should add a recycling bin in every classroom. She points out that students throw away hundreds of paper sheets each week that could be reused.",
-    question: "Which detail best supports Ria's idea?",
-    options: [
-      "Recycling bins come in many colors",
-      "Hundreds of paper sheets are thrown away weekly",
-      "Ria is in the fourth grade",
-      "The school has a large playground",
-    ],
-    correctIndex: 1,
-    hint: "Find the reason that directly backs up adding recycling bins.",
-  },
-  // ── Secondary ──────────────────────────────────────────────
-  {
-    id: "se-1",
-    level: "secondary",
-    difficulty: 1,
+    id: "mi-2",
+    level: TRACK,
+    difficulty: 2,
     skill: "Main idea",
     passage:
-      "Coral reefs cover a tiny fraction of the ocean floor, yet they support roughly a quarter of all marine species. Scientists often call them the rainforests of the sea.",
-    question: "The main idea of the passage is that coral reefs —",
+      "The team shipped nothing new for a month. Instead they watched ten customers use the old product and fixed only what tripped them up.",
+    question: "The main idea is that the team focused on",
     options: [
-      "are larger than rainforests",
-      "support a remarkable amount of ocean life",
-      "are found only in cold water",
-      "are made entirely of plants",
+      "adding as many features as possible",
+      "learning from real users before building more",
+      "lowering the price",
+      "hiring a larger staff",
     ],
     correctIndex: 1,
-    hint: "Why might reefs be compared to rainforests?",
+    hint: "What did the team do instead of shipping new things?",
   },
   {
-    id: "se-2",
-    level: "secondary",
-    difficulty: 2,
+    id: "vo-2",
+    level: TRACK,
+    difficulty: 3,
     skill: "Vocabulary in context",
     passage:
-      "The committee's plan was ambitious: rather than repairing one library, they aimed to build five new branches across the city within three years.",
-    question: "As used here, \"ambitious\" most nearly means —",
-    options: ["unrealistic", "bold and far-reaching", "inexpensive", "secret"],
-    correctIndex: 1,
-    hint: "Consider the scale of what the committee aimed to do.",
+      "Funding was finite, so the lab backed the one experiment most likely to pay off rather than chasing every idea.",
+    question: 'As used here, "finite" most nearly means',
+    options: ["limited", "wasted", "secret", "growing"],
+    correctIndex: 0,
+    hint: "Why would the funding force a single choice?",
   },
   {
-    id: "se-3",
-    level: "secondary",
+    id: "in-2",
+    level: TRACK,
     difficulty: 3,
     skill: "Inference",
     passage:
-      "By the third week of the drought, the reservoir had dropped to levels not seen in a decade. The city council scheduled an emergency meeting and asked residents to limit watering their lawns.",
-    question: "Which conclusion is best supported by the passage?",
+      "By closing time the bakery shelves were bare, and the owner was already mixing a double batch for the morning.",
+    question: "What can you infer?",
     options: [
-      "The city expects heavy rain soon",
-      "Water supplies had become a serious concern",
-      "Residents were forbidden from drinking water",
-      "The reservoir was newly built",
+      "Business was slow",
+      "Demand was strong",
+      "The bakery is shutting down",
+      "The owner dislikes baking",
     ],
     correctIndex: 1,
-    hint: "Why would the council meet and ask people to conserve?",
+    hint: "Bare shelves plus a double batch points to what?",
   },
   {
-    id: "se-4",
-    level: "secondary",
+    id: "ar-1",
+    level: TRACK,
+    difficulty: 3,
+    skill: "Evaluate argument",
+    passage:
+      "A manager says remote work hurt output because sales dipped last quarter. Sales also dipped at every competitor that stayed fully in the office.",
+    question: "Which point most weakens the manager's claim?",
+    options: [
+      "Remote workers prefer flexible hours",
+      "Office-based competitors saw the same dip",
+      "The office has a pleasant view",
+      "Sales reports are long to read",
+    ],
+    correctIndex: 1,
+    hint: "If in-office rivals dipped too, was remote work really the cause?",
+  },
+  {
+    id: "mi-3",
+    level: TRACK,
     difficulty: 4,
-    skill: "Evaluate argument",
-    passage:
-      "A student argues that the school day should start later because teenagers naturally fall asleep and wake up later than adults. She cites sleep studies showing improved focus when start times are pushed back.",
-    question: "Which addition would most strengthen her argument?",
-    options: [
-      "A list of her favorite subjects",
-      "Data showing test scores rose at schools with later start times",
-      "A note that she dislikes waking up early",
-      "A description of the school building",
-    ],
-    correctIndex: 1,
-    hint: "Strong arguments add evidence about results, not personal feelings.",
-  },
-  {
-    id: "se-5",
-    level: "secondary",
-    difficulty: 5,
-    skill: "Evaluate argument",
-    passage:
-      "An editorial claims that banning phones in classrooms will instantly raise grades. It offers one school where grades rose after a ban, but does not mention that the same school also hired more tutors that year.",
-    question: "What is the main weakness in the editorial's reasoning?",
-    options: [
-      "It uses too many statistics",
-      "It ignores another change that could explain the higher grades",
-      "It defines the word 'phone' incorrectly",
-      "It quotes too many teachers",
-    ],
-    correctIndex: 1,
-    hint: "Could something besides the phone ban have raised grades?",
-  },
-  // ── Higher Education ───────────────────────────────────────
-  {
-    id: "hi-1",
-    level: "higher",
-    difficulty: 1,
     skill: "Main idea",
     passage:
-      "Open-source software is distributed with its underlying code freely available. This transparency lets a global community inspect, modify, and improve the software, which can accelerate innovation.",
-    question: "The passage primarily emphasizes that open-source software —",
+      "The report fills pages with charts, but its real message is simple: customers leave over slow support, not over price.",
+    question: "What is the main idea of the report?",
     options: [
-      "is always free of bugs",
-      "benefits from open, collaborative improvement",
-      "cannot be modified by users",
-      "is only used by large companies",
+      "Charts make a report more convincing",
+      "Slow support, not price, drives customers away",
+      "Prices should be raised",
+      "Customers almost never leave",
     ],
     correctIndex: 1,
-    hint: "What advantage does open code create, according to the passage?",
+    hint: "Look past the charts to the reason customers leave.",
   },
   {
-    id: "hi-2",
-    level: "higher",
-    difficulty: 2,
-    skill: "Vocabulary in context",
-    passage:
-      "The researcher remained skeptical of the bold claim until the experiment had been replicated by three independent labs.",
-    question: "As used in the passage, \"skeptical\" most nearly means —",
-    options: ["enthusiastic", "doubtful", "confused", "indifferent"],
-    correctIndex: 1,
-    hint: "How would a careful researcher treat an unproven claim?",
-  },
-  {
-    id: "hi-3",
-    level: "higher",
-    difficulty: 3,
+    id: "in-3",
+    level: TRACK,
+    difficulty: 4,
     skill: "Inference",
     passage:
-      "Although the new policy reduced average commute times, surveys showed that worker satisfaction barely changed. Analysts suggested that other factors, such as workload and pay, weighed more heavily on morale.",
-    question: "What can be inferred from the passage?",
+      "The candidate answered every question fluently, yet asked none of her own and never once named the role.",
+    question: "What can you reasonably infer?",
     options: [
-      "Shorter commutes guarantee happier workers",
-      "Commute time may be a minor factor in overall satisfaction",
-      "The policy increased commute times",
-      "Workers were never surveyed",
+      "She had researched the company deeply",
+      "Her interest in this specific role may be limited",
+      "She will certainly decline any offer",
+      "She was overqualified for the job",
     ],
     correctIndex: 1,
-    hint: "Satisfaction barely changed even though commutes improved — why?",
+    hint: "What does asking nothing and not naming the role suggest?",
   },
   {
-    id: "hi-4",
-    level: "higher",
+    id: "ar-2",
+    level: TRACK,
     difficulty: 4,
     skill: "Evaluate argument",
     passage:
-      "A columnist argues that a city should invest heavily in public transit, claiming it will reduce traffic. As support, the columnist notes that cities with strong transit systems tend to report lower congestion.",
-    question: "Which question most directly tests the strength of this argument?",
+      "An ad says its supplement boosts focus, pointing to users who scored higher on a test. Those users also slept eight hours for the first time that week.",
+    question: "Which fact most undermines the ad's claim?",
     options: [
-      "How long has the columnist lived in the city?",
-      "Do those cities differ in ways, besides transit, that also affect congestion?",
-      "What is the columnist's favorite mode of travel?",
-      "How many readers agreed with the column?",
+      "The test used multiple choice questions",
+      "Better sleep could explain the higher scores",
+      "The supplement tastes bitter",
+      "The users were unpaid volunteers",
     ],
     correctIndex: 1,
-    hint: "Correlation between transit and low congestion may have other causes.",
+    hint: "Could something other than the supplement explain the gains?",
   },
   {
-    id: "hi-5",
-    level: "higher",
+    id: "vo-3",
+    level: TRACK,
+    difficulty: 5,
+    skill: "Vocabulary in context",
+    passage:
+      "Her tone stayed measured even as the room grew heated, and that restraint, not her volume, won the vote.",
+    question: 'As used here, "measured" most nearly means',
+    options: ["calm and controlled", "counted with a ruler", "angry", "unsure"],
+    correctIndex: 0,
+    hint: "Contrast it with the heated room and her restraint.",
+  },
+  {
+    id: "ar-3",
+    level: TRACK,
     difficulty: 5,
     skill: "Evaluate argument",
     passage:
-      "A report concludes that a tutoring program 'caused' a rise in graduation rates. Participation was voluntary, and the students who chose to enroll already had higher attendance than their peers before the program began.",
-    question: "Which flaw most undermines the report's causal claim?",
+      "A study concludes a tutoring app raised grades. Students chose to use it freely, and the ones who did already studied more than those who skipped it.",
+    question: "Which flaw most undermines the study's causal claim?",
     options: [
-      "The sample of students was too cheerful",
-      "Self-selection means enrolled students may have differed from the start",
-      "Graduation rates are impossible to measure",
-      "The program lasted only one semester",
+      "The app offered a free trial period",
+      "Self-selected users already studied more, so the app may not be the cause",
+      "Grades are difficult to define",
+      "The study ran for a full year",
     ],
     correctIndex: 1,
-    hint: "If motivated students opted in, can the program alone get the credit?",
+    hint: "If motivated students opted in, can the app alone take the credit?",
   },
 ];
 
-export function bankForLevel(level: DemoLevel): DemoItem[] {
-  return BANK.filter((item) => item.level === level).sort(
-    (a, b) => a.difficulty - b.difficulty,
-  );
+export function bankForLevel(_level: DemoLevel): DemoItem[] {
+  // The demo runs a single unified adaptive track regardless of level.
+  return [...BANK].sort((a, b) => a.difficulty - b.difficulty);
 }
 
 export function findItem(id: string): DemoItem | undefined {

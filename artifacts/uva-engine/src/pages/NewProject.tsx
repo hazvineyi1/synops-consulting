@@ -108,7 +108,7 @@ export default function NewProject() {
                       <SelectContent>
                         {clients?.map(client => (
                           <SelectItem key={client.id} value={client.id.toString()}>
-                            {client.name}{client.institution ? ` — ${client.institution}` : ""}
+                            {client.name}{client.institution ? ` - ${client.institution}` : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -123,7 +123,7 @@ export default function NewProject() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Project Title</FormLabel>
-                    <FormControl><Input {...field} placeholder="e.g. BIOL 101: Intro to Biology — Full Redesign" /></FormControl>
+                    <FormControl><Input {...field} placeholder="e.g. BIOL 101: Intro to Biology - Full Redesign" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -194,9 +194,9 @@ export default function NewProject() {
                           <SelectTrigger><SelectValue /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="1">Tier 1 — Full Custom</SelectItem>
-                          <SelectItem value="2">Tier 2 — Template-Based</SelectItem>
-                          <SelectItem value="3">Tier 3 — Light Touch</SelectItem>
+                          <SelectItem value="1">Tier 1 - Full Custom</SelectItem>
+                          <SelectItem value="2">Tier 2 - Template-Based</SelectItem>
+                          <SelectItem value="3">Tier 3 - Light Touch</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

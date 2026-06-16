@@ -47,7 +47,7 @@ export function AuthShell({
             Client Portal
           </p>
           <p className="text-2xl font-semibold leading-snug">
-            One engine for curriculum development — built to adapt across every
+            One engine for curriculum development, built to adapt across every
             level and institution.
           </p>
           <p className="text-sm text-primary-foreground/80">

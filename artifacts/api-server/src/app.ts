@@ -9,7 +9,7 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
-// Behind the Replit reverse proxy — required for secure cookies and rate limiting.
+// Behind the Replit reverse proxy, required for secure cookies and rate limiting.
 app.set("trust proxy", 1);
 
 app.use(

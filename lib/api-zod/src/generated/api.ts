@@ -1122,7 +1122,7 @@ export const SubmitContactBody = zod.object({
   "phone": zod.string().optional(),
   "areaOfInterest": zod.enum(['Healthcare & Operations', 'Learning, EdTech & AI', 'Platforms & SaaS', 'Government & Public Sector', 'Other']),
   "message": zod.string(),
-  "website": zod.string().optional().describe('Honeypot field — leave empty.')
+  "website": zod.string().optional().describe('Honeypot field, leave empty.')
 })
 
 
@@ -1131,7 +1131,7 @@ export const SubmitContactBody = zod.object({
  */
 export const SubscribeNewsletterBody = zod.object({
   "email": zod.string().email(),
-  "website": zod.string().optional().describe('Honeypot field — leave empty.')
+  "website": zod.string().optional().describe('Honeypot field, leave empty.')
 })
 
 
