@@ -11,9 +11,9 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  ChevronRight, Plus, Check, ChevronDown, ChevronUp, Play, Square,
-  UploadCloud, PlayCircle, Pause,
-  AlertTriangle,
+  Plus, Check, ChevronDown, ChevronUp, Play, Square,
+  UploadCloud, Pause,
+  AlertTriangle, Building2,
   CheckCircle2, Trash2, ArrowRight, Loader2, Target
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
+import { PageHeader } from "@/components/engine/PageHeader";
+import { StageRail } from "@/components/engine/StageRail";
 
 // Data Definitions
 const INVENTORY = [
@@ -317,10 +321,8 @@ export default function ProjectIntake() {
   }, [agendaChecks, segStatuses, confirmedPre, notes, inventorySelections, autoRules, projectId, updateIntake.isPending]);
 
   const toggleSegment = (idx: number) => {
-    const next = new Set(openSegments);
-    if (next.has(idx)) next.delete(idx);
-    else next.add(idx);
-    setOpenSegments(next);
+    // Single-open accordion: opening a segment collapses any other.
+    setOpenSegments((prev) => (prev.has(idx) ? new Set() : new Set([idx])));
   };
 
   const logActivity = (msg: string) => {
@@ -345,7 +347,7 @@ export default function ProjectIntake() {
         setSegStatuses(nextStatuses);
       }
       if (!openSegments.has(idx)) {
-        setOpenSegments(prev => new Set([...prev, idx]));
+        setOpenSegments(new Set([idx]));
       }
     }
   };
@@ -376,7 +378,7 @@ export default function ProjectIntake() {
         if (autoRules.r3 && segIdx < SEGMENTS.length - 1) {
           setTimeout(() => {
             const nextIdx = segIdx + 1;
-            setOpenSegments(prev => new Set([...prev, nextIdx]));
+            setOpenSegments(new Set([nextIdx]));
             setActiveTimer({ segIdx: nextIdx, elapsed: 0 });
             logActivity(`Auto-started segment ${nextIdx + 1}`);
             if (autoRules.r1) {
@@ -499,481 +501,419 @@ export default function ProjectIntake() {
 
   return (
     <div className="w-full min-h-screen bg-background text-foreground font-sans">
-      {/* Stage strip */}
-      <div className="flex flex-wrap items-center gap-2 px-8 py-3 text-sm font-medium border-b bg-card">
-        <span className="text-muted-foreground mr-2 uppercase text-xs tracking-wider">Stages:</span>
-        <div className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1 rounded-full shadow-sm">
-          <span className="bg-white/20 rounded-full w-5 h-5 flex items-center justify-center text-xs">1</span>
-          Kickoff & Intake
-        </div>
-        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-        <div className="flex items-center gap-2 text-muted-foreground px-3 py-1 rounded-full">
-          <span className="bg-muted rounded-full w-5 h-5 flex items-center justify-center text-xs">2</span>
-          Backward Design
-        </div>
-        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-        <div className="flex items-center gap-2 text-muted-foreground px-3 py-1 rounded-full">
-          <span className="bg-muted rounded-full w-5 h-5 flex items-center justify-center text-xs">3</span>
-          Prototype
-        </div>
-        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-        <div className="flex items-center gap-2 text-muted-foreground px-3 py-1 rounded-full text-xs">4 Production</div>
-        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-        <div className="flex items-center gap-2 text-muted-foreground px-3 py-1 rounded-full text-xs">5 QA</div>
-        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-        <div className="flex items-center gap-2 text-muted-foreground px-3 py-1 rounded-full text-xs">6 Handoff</div>
-      </div>
-
-      {/* Accessibility thread */}
-      <div className="flex items-center px-8 py-2 bg-purple-50 text-purple-800 text-xs shadow-inner">
-        <div className="flex items-center gap-1 font-bold tracking-tight">
-          Accessibility, continuous <Plus className="w-3 h-3" />
-        </div>
-        <div className="h-px bg-gradient-to-r from-purple-800/40 to-transparent flex-1 mx-4"></div>
-        <div className="font-medium text-purple-700">
-          Audited at intake · built in by design · verified at every gate, never bolted on at the end.
-        </div>
-      </div>
-
-      <div className="p-8 max-w-[1400px] mx-auto space-y-8">
-        <div>
-          <h1 className="text-4xl font-extrabold tracking-tight">Kickoff & Intake</h1>
-          <div className="text-muted-foreground mt-2 font-medium">
-            <span className="text-foreground">{project.title}</span> <span className="opacity-50 mx-2">·</span> {project.clientName || 'Unknown Client'}
+      <div className="mx-auto max-w-6xl space-y-8 p-6 md:p-8">
+        <PageHeader
+          title="Intake"
+          subtitle="Kickoff, course goals, and an audit of existing materials."
+          crumbs={[
+            { label: "Projects", href: "/projects" },
+            { label: project.title, href: `/projects/${projectId}` },
+            { label: "Intake" },
+          ]}
+        >
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <Building2 className="h-4 w-4" aria-hidden="true" />
+              {project.clientName || "Unknown client"}
+            </span>
+            <span>
+              {completedChecks} of {totalChecks} agenda checks covered
+            </span>
           </div>
-          <p className="text-muted-foreground mt-4 max-w-[74ch] leading-relaxed">
-            A logical path through the kickoff: prepare the materials, meet and work the agenda, then wrap by planning what's next.
-          </p>
-        </div>
+        </PageHeader>
 
-        {/* Card 1: Goals */}
-        <Card className="shadow-sm border-border">
-          <CardHeader className="px-5 py-4 border-b border-border flex flex-row items-center gap-3">
-            <CardTitle className="text-lg">Goals & timeline</CardTitle>
-            <CardDescription className="m-0">~17 weeks · stage-gated</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {[
-                { title: "Kickoff completeness", due: "due today · Wk 0", desc: "100% of intake parts covered and the accessibility audit run before we close.", p: progressPct },
-                { title: "Aligned, measurable outcomes", due: "due Wk 3", desc: "100% of module objectives mapped to a course outcome and ≥1 assessment", p: 0 },
-                { title: "Accessibility conformance", due: "Wk 0→16", desc: "100% of incoming assets audited; 0 critical WCAG 2.1 AA issues at QA", p: 80 },
-                { title: "Faculty-approved prototype", due: "due Wk 4", desc: "", p: 0 },
-                { title: "Evidence-based media", due: "Wk 5→14", desc: "", p: 0 },
-                { title: "On-time delivery", due: "due Wk 17", desc: "14 of 14 modules built with 6 of 6 stage gates passed", p: 0 },
-              ].map((g, i) => (
-                <div key={i} className="flex flex-col border border-border p-4 rounded-xl bg-card/50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="font-semibold text-sm leading-tight text-foreground">{g.title}</div>
-                    <Badge variant="secondary" className="bg-blue-50 hover:bg-blue-50 text-blue-700 border-none shrink-0 ml-2 shadow-none">{g.due}</Badge>
+        <section aria-label="Pipeline">
+          <StageRail projectId={projectId} currentStage={project.stage} variant="full" />
+        </section>
+
+        <Tabs defaultValue="prepare" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:grid-cols-4">
+            <TabsTrigger value="prepare">Prepare</TabsTrigger>
+            <TabsTrigger value="meet">Meet</TabsTrigger>
+            <TabsTrigger value="wrap">Wrap</TabsTrigger>
+            <TabsTrigger value="accessibility">Accessibility</TabsTrigger>
+          </TabsList>
+
+          {/* PREPARE: gather and audit materials */}
+          <TabsContent value="prepare" className="space-y-6">
+            <p className="max-w-[70ch] text-sm text-muted-foreground">
+              Gather the source materials and audit what already exists before the kickoff meeting.
+            </p>
+
+            <Card className="border-border shadow-sm">
+              <CardHeader className="border-b border-border bg-card px-5 py-4">
+                <CardTitle className="text-lg">Materials</CardTitle>
+                <CardDescription className="m-0">
+                  Source documents and media, type-detected and accessibility-flagged on arrival.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="border-b border-border p-6">
+                  <div className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                    Source documents · parse to pre-fill the agenda
                   </div>
-                  {g.desc && <div className="text-muted-foreground text-[13px] leading-snug mb-4 flex-1">{g.desc}</div>}
-                  <div className="flex items-center gap-3 mt-auto">
-                    <Progress value={g.p} className="h-2 flex-1 [&>div]:bg-primary" />
-                    <span className="text-xs font-mono font-medium">{g.p}%</span>
-                  </div>
-                </div>
-              ))}
-            </div>
 
-            <div>
-              <div className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">Timeline & gates</div>
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-none">
-                {[
-                  { lbl: "Wk 0 · Kickoff & intake", active: true },
-                  { lbl: "Wk 1–3 · Backward design / Gate: alignment", active: false },
-                  { lbl: "Wk 4 · Prototype module / Gate: faculty sign-off", active: false },
-                  { lbl: "Wk 5–14 · Production", active: false },
-                  { lbl: "Wk 15–16 · QA & accessibility", active: false },
-                  { lbl: "Wk 17 · Handoff", active: false }
-                ].map((s, i) => (
-                  <div key={i} className={`flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${s.active ? 'border-primary bg-primary/5 text-primary' : 'bg-muted/30 text-muted-foreground border-transparent'}`}>
-                    {s.lbl}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 2: Accessibility Tracker */}
-        <Card className="border-purple-200 shadow-sm overflow-hidden">
-          <CardHeader className="px-5 py-4 border-b border-purple-100 bg-purple-50/30 flex flex-row items-center justify-between">
-            <CardTitle className="text-lg text-purple-900">Accessibility tracker</CardTitle>
-            <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100 border-none shadow-none">WCAG 2.1 AA · transparent & auditable</Badge>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-4 gap-4 mb-6">
-              <div className="p-4 border border-purple-100 rounded-xl bg-white">
-                <div className="text-3xl font-bold text-purple-900 mb-1">80<span className="text-xl">%</span></div>
-                <div className="text-xs font-medium text-purple-600/80 uppercase tracking-wider">Conformance</div>
-              </div>
-              <div className="p-4 border border-purple-100 rounded-xl bg-white">
-                <div className="text-3xl font-bold text-foreground mb-1">7</div>
-                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Sources audited</div>
-              </div>
-              <div className="p-4 border border-purple-100 rounded-xl bg-white">
-                <div className="text-3xl font-bold text-amber-600 mb-1">5</div>
-                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Open issues</div>
-              </div>
-              <div className="p-4 border border-purple-100 rounded-xl bg-white">
-                <div className="text-3xl font-bold text-green-600 mb-1">0</div>
-                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Resolved</div>
-              </div>
-            </div>
-            
-            <div className="mb-8">
-              <Progress value={80} className="h-2 bg-purple-100 [&>div]:bg-purple-600" />
-              <div className="text-sm text-muted-foreground mt-2">Currently tracking 5 open issues across 7 incoming sources. Target: 0 critical issues at QA.</div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-              <div>
-                <h4 className="font-semibold text-sm mb-4">WCAG 2.1 AA success criteria tracked</h4>
-                <div className="space-y-2">
-                  {A11Y_CRITERIA.map(c => (
-                    <div key={c.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border/50 last:border-0">
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{c.id}</span>
-                        <span className="font-medium">{c.name}</span>
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground">{c.level}</span>
+                  <div className="mb-6 space-y-3">
+                    <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+                      <Badge variant="destructive" className="rounded px-1.5 text-[10px]">PDF</Badge>
+                      <div>
+                        <div className="text-sm font-semibold">BIOL3050_Syllabus_F23.pdf</div>
+                        <div className="text-xs text-muted-foreground">Outcomes · 15-week schedule</div>
                       </div>
-                      {c.status === 'pass' && <Badge variant="outline" className="text-green-700 bg-green-50 border-green-200">Pass</Badge>}
-                      {c.status === 'warn' && <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">Partial</Badge>}
-                      {c.status === 'monitor' && <Badge variant="outline" className="text-blue-700 bg-blue-50 border-blue-200">Monitor</Badge>}
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <h4 className="font-semibold text-sm mb-4">Remediation queue</h4>
-                <div className="space-y-3">
-                  <div className="flex flex-col gap-2 p-3 border border-amber-200 bg-amber-50/30 rounded-lg text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">Lecture recordings (4)</span>
-                      <Badge variant="outline" className="bg-white border-amber-200 text-amber-800">High</Badge>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                      <span className="font-mono bg-white px-1 border rounded">1.2.2</span>
-                      <span>Missing captions & transcripts</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1 text-xs font-medium">
-                      <span>Owner: ID Team</span>
-                      <span>Target: Wk 5</span>
+                    <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+                      <Badge className="rounded border-none bg-blue-500 px-1.5 text-[10px] hover:bg-blue-600">DOC</Badge>
+                      <div>
+                        <div className="text-sm font-semibold">Course_Outline_v2.docx</div>
+                        <div className="text-xs text-muted-foreground">Topic sequence and weekly breakdown</div>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 p-3 border border-amber-200 bg-amber-50/30 rounded-lg text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">Lecture-deck.pptx</span>
-                      <Badge variant="outline" className="bg-white border-amber-200 text-amber-800">Med</Badge>
+
+                  <div className="mb-6 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-8 text-center transition-colors hover:bg-muted/30">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <UploadCloud className="h-6 w-6" aria-hidden="true" />
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                      <span className="font-mono bg-white px-1 border rounded">1.1.1</span>
-                      <span className="font-mono bg-white px-1 border rounded">1.4.3</span>
-                      <span>Missing alt text, low contrast</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1 text-xs font-medium">
-                      <span>Owner: Faculty</span>
-                      <span>Target: Wk 2</span>
-                    </div>
+                    <div className="font-semibold text-foreground">Upload syllabus / outline</div>
+                    <div className="mt-1 text-sm text-muted-foreground">Drop or browse: PDF, Word, text</div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <Button className="font-semibold shadow-sm">Parse and pre-fill</Button>
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-green-600">
+                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Parsed successfully
+                    </span>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 border-t pt-8">
-              <div>
-                <h4 className="font-semibold text-sm mb-4">How it's checked · method disclosure</h4>
-                <ul className="space-y-3 text-sm text-muted-foreground mb-6">
-                  <li><strong className="text-foreground font-medium">Automated:</strong> axe-core & IBM Equal Access (catches ~30% of issues)</li>
-                  <li><strong className="text-foreground font-medium">Manual:</strong> Keyboard navigation, screen-reader spot checks, captions QA, reading level analysis</li>
-                  <li><strong className="text-foreground font-medium">Standard:</strong> WCAG 2.1 AA (no exceptions)</li>
-                </ul>
-                <Button className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm">Generate conformance report (ACR)</Button>
-              </div>
-              <div>
-                <h4 className="font-semibold text-sm mb-4">Audit trail · Evidence Ledger</h4>
-                <div className="h-32 overflow-y-auto border rounded-lg bg-muted/20 p-4 space-y-3">
-                  <div className="text-xs">
-                    <span className="text-muted-foreground font-mono mr-2">Today 09:41</span>
-                    <span className="font-medium text-purple-700">Audit completed:</span>
-                    <span className="text-muted-foreground ml-1">7 incoming sources parsed. 5 issues flagged for remediation.</span>
+                <div className="bg-muted/10 p-6">
+                  <div className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                    All media and assets · reuse, refresh, or rebuild decisions
+                  </div>
+
+                  <div className="mb-6 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-card p-6 text-center transition-colors hover:bg-muted/30">
+                    <div className="text-sm font-semibold text-foreground">Upload media assets</div>
+                    <div className="mt-1 text-xs text-muted-foreground">Drop or browse: PPT, MP4, images</div>
+                  </div>
+
+                  <div className="mb-4 flex gap-2 overflow-x-auto pb-2">
+                    {["All", "Slides", "Video", "PDF", "Doc", "Image"].map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setFilterCat(cat.toLowerCase())}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          filterCat === cat.toLowerCase()
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-border bg-card text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="overflow-hidden rounded-xl border bg-card">
+                    <table className="w-full text-left text-sm">
+                      <thead className="border-b border-border bg-muted/50">
+                        <tr>
+                          <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Asset</th>
+                          <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Decision</th>
+                          <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rights</th>
+                          <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Accessibility</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {INVENTORY.map((item) => (
+                          <tr key={item.id} className="hover:bg-muted/20">
+                            <td className="px-4 py-3 font-medium text-foreground">{item.asset}</td>
+                            <td className="px-4 py-3">
+                              <div className="inline-flex rounded-md shadow-sm">
+                                {["Reuse", "Refresh", "Rebuild"].map((opt) => (
+                                  <button
+                                    key={opt}
+                                    onClick={() => setInventorySelections((prev) => ({ ...prev, [item.id]: opt }))}
+                                    className={`border-y border-l px-2.5 py-1 text-xs font-medium transition-colors first:rounded-l-md first:border-l last:rounded-r-md last:border-r ${
+                                      inventorySelections[item.id] === opt
+                                        ? "relative z-10 border-primary bg-primary text-primary-foreground"
+                                        : "border-border bg-card text-muted-foreground hover:bg-muted"
+                                    }`}
+                                  >
+                                    {opt}
+                                  </button>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground">{item.rights}</td>
+                            <td className="px-4 py-3">
+                              <Badge
+                                variant="outline"
+                                className={`text-xs font-normal ${
+                                  item.a11yWarn
+                                    ? "border-purple-200 bg-purple-50 text-purple-800"
+                                    : "border-green-200 bg-green-50 text-green-800"
+                                }`}
+                              >
+                                {item.a11yWarn ? (
+                                  <AlertTriangle className="mr-1 h-3 w-3" aria-hidden="true" />
+                                ) : (
+                                  <Check className="mr-1 h-3 w-3" aria-hidden="true" />
+                                )}
+                                {item.a11y}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="flex flex-col items-center">
-              <div className="text-xs font-bold uppercase tracking-wider text-purple-800/60 mb-3">Continuous, verified at every gate</div>
-              <div className="flex flex-wrap justify-center gap-2 text-sm font-medium">
-                <div className="px-4 py-1.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200 shadow-sm">Intake (Audit)</div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground self-center" />
-                <div className="px-4 py-1.5 rounded-full bg-muted text-muted-foreground">Design (Born-accessible)</div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground self-center" />
-                <div className="px-4 py-1.5 rounded-full bg-muted text-muted-foreground">Production (Remediate)</div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground self-center" />
-                <div className="px-4 py-1.5 rounded-full bg-muted text-muted-foreground">QA (Verify)</div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground self-center" />
-                <div className="px-4 py-1.5 rounded-full bg-muted text-muted-foreground">Handoff (Conformance)</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 2-column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1.55fr_1fr] gap-8 items-start">
-          
-          {/* LEFT COLUMN */}
-          <div className="space-y-10">
-            
-            {/* Phase 1 */}
-            <div>
-              <h3 className="font-extrabold text-xl text-primary mb-4 flex items-center gap-3">
-                <span className="bg-primary text-primary-foreground w-7 h-7 rounded-md flex items-center justify-center text-sm">1</span>
-                Prepare <span className="opacity-40 font-normal">· gather & audit materials</span>
-              </h3>
-              
-              <Card className="shadow-sm border-border">
-                <CardHeader className="px-5 py-4 border-b border-border bg-card">
-                  <CardTitle className="text-lg">Materials</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="p-6 border-b border-border">
-                    <div className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">Source documents · parse to pre-fill the agenda</div>
-                    
-                    <div className="space-y-3 mb-6">
-                      <div className="flex items-center gap-3 p-3 border rounded-lg bg-card">
-                        <Badge variant="destructive" className="rounded text-[10px] px-1.5">PDF</Badge>
-                        <div>
-                          <div className="font-semibold text-sm">BIOL3050_Syllabus_F23.pdf</div>
-                          <div className="text-xs text-muted-foreground">Outcomes · 15-week schedule</div>
+            {/* Progressive disclosure: project goals and delivery timeline */}
+            <Collapsible>
+              <Card className="border-border shadow-sm">
+                <CollapsibleTrigger className="group flex w-full items-center justify-between px-5 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <div>
+                    <div className="text-base font-semibold">Goals and delivery timeline</div>
+                    <div className="text-sm text-muted-foreground">Engagement targets and the gated schedule</div>
+                  </div>
+                  <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" aria-hidden="true" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="border-t border-border p-6">
+                    <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      {[
+                        { title: "Kickoff completeness", due: "due today · Wk 0", desc: "All intake parts covered and the accessibility audit run before we close.", p: progressPct },
+                        { title: "Aligned, measurable outcomes", due: "due Wk 3", desc: "Every module objective mapped to a course outcome and at least one assessment", p: 0 },
+                        { title: "Accessibility conformance", due: "Wk 0 to 16", desc: "All incoming assets audited; zero critical WCAG 2.1 AA issues at QA", p: 80 },
+                        { title: "Faculty-approved prototype", due: "due Wk 4", desc: "", p: 0 },
+                        { title: "Evidence-based media", due: "Wk 5 to 14", desc: "", p: 0 },
+                        { title: "On-time delivery", due: "due Wk 17", desc: "14 of 14 modules built with 6 of 6 stage gates passed", p: 0 },
+                      ].map((g, i) => (
+                        <div key={i} className="flex flex-col rounded-xl border border-border bg-card/50 p-4">
+                          <div className="mb-2 flex items-start justify-between">
+                            <div className="text-sm font-semibold leading-tight text-foreground">{g.title}</div>
+                            <Badge variant="secondary" className="ml-2 shrink-0 border-none bg-blue-50 text-blue-700 shadow-none hover:bg-blue-50">{g.due}</Badge>
+                          </div>
+                          {g.desc && <div className="mb-4 flex-1 text-[13px] leading-snug text-muted-foreground">{g.desc}</div>}
+                          <div className="mt-auto flex items-center gap-3">
+                            <Progress value={g.p} className="h-2 flex-1 [&>div]:bg-primary" />
+                            <span className="font-mono text-xs font-medium">{g.p}%</span>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 border rounded-lg bg-card">
-                        <Badge className="bg-blue-500 hover:bg-blue-600 rounded text-[10px] px-1.5 border-none">DOC</Badge>
-                        <div>
-                          <div className="font-semibold text-sm">Course_Outline_v2.docx</div>
-                          <div className="text-xs text-muted-foreground">Topic sequence & weekly breakdown</div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-muted/30 transition-colors cursor-pointer mb-6">
-                      <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
-                        <UploadCloud className="w-6 h-6" />
-                      </div>
-                      <div className="font-semibold text-foreground">Upload syllabus / outline</div>
-                      <div className="text-sm text-muted-foreground mt-1">Drop or browse: PDF, Word, text</div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <Button className="font-semibold shadow-sm">Parse & pre-fill</Button>
-                      <span className="text-sm text-green-600 font-medium flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4" /> Parsed successfully
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-6 bg-muted/10">
-                    <div className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">All media & assets · type-detected and accessibility-flagged on arrival</div>
-                    
-                    <div className="border-2 border-dashed border-border bg-card rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-muted/30 transition-colors cursor-pointer mb-6">
-                      <div className="font-semibold text-foreground text-sm">Upload media assets</div>
-                      <div className="text-xs text-muted-foreground mt-1">Drop or browse: PPT, MP4, images</div>
-                    </div>
-
-                    <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-none">
-                      {['All', 'Slides', 'Video', 'PDF', 'Doc', 'Image'].map(cat => (
-                        <button 
-                          key={cat}
-                          onClick={() => setFilterCat(cat.toLowerCase())}
-                          className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${filterCat === cat.toLowerCase() ? 'bg-foreground text-background border-foreground' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
-                        >
-                          {cat}
-                        </button>
                       ))}
                     </div>
 
-                    <div className="border rounded-xl overflow-hidden bg-card">
-                      <table className="w-full text-left text-sm">
-                        <thead className="bg-muted/50 border-b border-border">
-                          <tr>
-                            <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Asset</th>
-                            <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Decision</th>
-                            <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Rights</th>
-                            <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Accessibility</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                          {INVENTORY.map(item => (
-                            <tr key={item.id} className="hover:bg-muted/20">
-                              <td className="px-4 py-3 font-medium text-foreground">{item.asset}</td>
-                              <td className="px-4 py-3">
-                                <div className="inline-flex rounded-md shadow-sm">
-                                  {['Reuse', 'Refresh', 'Rebuild'].map(opt => (
-                                    <button
-                                      key={opt}
-                                      onClick={() => setInventorySelections(prev => ({...prev, [item.id]: opt}))}
-                                      className={`px-2.5 py-1 text-xs font-medium border-y border-l first:border-l last:border-r first:rounded-l-md last:rounded-r-md transition-colors
-                                        ${inventorySelections[item.id] === opt 
-                                          ? 'bg-primary text-primary-foreground border-primary z-10 relative' 
-                                          : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
-                                    >
-                                      {opt}
-                                    </button>
-                                  ))}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground text-xs">{item.rights}</td>
-                              <td className="px-4 py-3">
-                                <Badge variant="outline" className={`font-normal text-xs ${item.a11yWarn ? 'bg-purple-50 text-purple-800 border-purple-200' : 'bg-green-50 text-green-800 border-green-200'}`}>
-                                  {item.a11yWarn && <AlertTriangle className="w-3 h-3 mr-1" />}
-                                  {!item.a11yWarn && <Check className="w-3 h-3 mr-1" />}
-                                  {item.a11y}
-                                </Badge>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div>
+                      <div className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">Timeline and gates</div>
+                      <div className="flex gap-3 overflow-x-auto pb-2">
+                        {[
+                          { lbl: "Wk 0 · Kickoff and intake", active: true },
+                          { lbl: "Wk 1 to 3 · Backward design / Gate: alignment", active: false },
+                          { lbl: "Wk 4 · Prototype module / Gate: faculty sign-off", active: false },
+                          { lbl: "Wk 5 to 14 · Production", active: false },
+                          { lbl: "Wk 15 to 16 · QA and accessibility", active: false },
+                          { lbl: "Wk 17 · Handoff", active: false },
+                        ].map((s, i) => (
+                          <div
+                            key={i}
+                            className={`flex-shrink-0 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                              s.active ? "border-primary bg-primary/5 text-primary" : "border-transparent bg-muted/30 text-muted-foreground"
+                            }`}
+                          >
+                            {s.lbl}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
+                  </CardContent>
+                </CollapsibleContent>
               </Card>
-            </div>
+            </Collapsible>
 
-            {/* Phase 2 */}
-            <div>
-              <h3 className="font-extrabold text-xl text-primary mb-4 flex items-center gap-3">
-                <span className="bg-primary text-primary-foreground w-7 h-7 rounded-md flex items-center justify-center text-sm">2</span>
-                Meet <span className="opacity-40 font-normal">· run the agenda</span>
-              </h3>
+            {/* Progressive disclosure: design foundations */}
+            <Collapsible>
+              <Card className="border-border bg-muted/10 shadow-sm">
+                <CollapsibleTrigger className="group flex w-full items-center justify-between px-5 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <div>
+                    <div className="text-base font-semibold">Design foundations</div>
+                    <div className="text-sm text-muted-foreground">What the build rests on</div>
+                  </div>
+                  <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" aria-hidden="true" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="border-t border-border p-6">
+                    <ul className="space-y-3 text-sm text-muted-foreground">
+                      <li><strong className="font-semibold text-foreground">Adult learning:</strong> Andragogy (Knowles) · Experiential learning (Kolb)</li>
+                      <li><strong className="font-semibold text-foreground">Design process:</strong> Backward Design (UbD) · ADDIE / SAM</li>
+                      <li><strong className="font-semibold text-foreground">Outcomes:</strong> Bloom's taxonomy · Constructive alignment (Biggs)</li>
+                      <li><strong className="font-semibold text-foreground">Cognition:</strong> Cognitive Load (Sweller) · Multimedia learning (Mayer) · Retrieval and spaced practice</li>
+                      <li><strong className="font-semibold text-foreground">Instruction:</strong> Gagne's Nine Events · Merrill's First Principles</li>
+                      <li><strong className="font-semibold text-foreground">Access:</strong> Universal Design for Learning (CAST)</li>
+                    </ul>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          </TabsContent>
 
-              <Card className="shadow-sm border-border">
-                <CardHeader className="px-5 py-4 border-b border-border bg-card">
+          {/* MEET: run the agenda */}
+          <TabsContent value="meet" className="space-y-6">
+            <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
+              <Card className="border-border shadow-sm">
+                <CardHeader className="border-b border-border bg-card px-5 py-4">
                   <div className="flex flex-col gap-3">
-                    <div className="flex justify-between items-center">
+                    <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">Agenda</CardTitle>
                       <CardDescription className="m-0">12 segments · kickoff meeting</CardDescription>
                     </div>
                     <div>
                       <Progress value={progressPct} className="h-2 [&>div]:bg-primary" />
-                      <div className="text-xs font-semibold text-muted-foreground mt-2 text-right">{completedChecks} / {totalChecks} checks</div>
+                      <div className="mt-2 text-right text-xs font-semibold text-muted-foreground">
+                        {completedChecks} / {totalChecks} checks
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-0 divide-y divide-border">
+                <CardContent className="divide-y divide-border p-0">
                   {SEGMENTS.map((seg, idx) => {
                     const isOpen = openSegments.has(idx);
-                    const isDoing = segStatuses[idx] === 'doing';
-                    const isDone = segStatuses[idx] === 'done';
+                    const isDoing = segStatuses[idx] === "doing";
+                    const isDone = segStatuses[idx] === "done";
                     const checksDone = agendaChecks[idx].filter(Boolean).length;
                     const allChecksDone = checksDone === seg.checklist.length;
-                    
-                    return (
-                      <div key={idx} className={`transition-colors ${isOpen ? 'bg-card' : 'hover:bg-muted/20'} ${isDoing ? 'ring-1 ring-inset ring-primary/20 bg-primary/[0.02]' : ''}`}>
-                        {/* Row Header */}
-                        <div 
-                          className="px-5 py-4 flex items-center gap-4 cursor-pointer select-none"
-                          onClick={() => toggleSegment(idx)}
-                        >
-                          <div className="font-mono text-sm text-muted-foreground w-10 shrink-0">{seg.time}</div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`font-bold ${isDoing ? 'text-primary' : 'text-foreground'}`}>{seg.title}</span>
-                              {seg.a11y && <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100 border-none shadow-none text-[10px] px-1.5 py-0">Accessibility audit</Badge>}
-                              {seg.pre && !confirmedPre.has(idx) && <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-none shadow-none text-[10px] px-1.5 py-0">1 pre-filled</Badge>}
-                            </div>
-                            {seg.sub && <div className="text-sm text-muted-foreground mt-0.5">{seg.sub}</div>}
-                          </div>
 
-                          <div className="flex items-center gap-4 shrink-0">
-                            {/* Status Pill */}
-                            <Badge variant="outline" className={`
-                              font-semibold shadow-none border-none
-                              ${isDone ? 'bg-green-100 text-green-800' : isDoing ? 'bg-blue-100 text-blue-800' : 'bg-muted text-muted-foreground'}
-                            `}>
-                              {isDone ? 'Done' : isDoing ? 'In progress' : 'To do'}
+                    return (
+                      <div
+                        key={idx}
+                        className={`transition-colors ${isOpen ? "bg-card" : "hover:bg-muted/20"} ${
+                          isDoing ? "bg-primary/[0.02] ring-1 ring-inset ring-primary/20" : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-4 px-5 py-2 pr-5">
+                          <button
+                            type="button"
+                            aria-expanded={isOpen}
+                            aria-controls={`seg-panel-${idx}`}
+                            className="flex min-w-0 flex-1 select-none items-center gap-4 rounded-md py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                            onClick={() => toggleSegment(idx)}
+                          >
+                            <span className="w-10 shrink-0 font-mono text-sm text-muted-foreground">{seg.time}</span>
+
+                            <span className="min-w-0 flex-1">
+                              <span className="flex flex-wrap items-center gap-2">
+                                <span className={`font-bold ${isDoing ? "text-primary" : "text-foreground"}`}>{seg.title}</span>
+                                {seg.a11y && (
+                                  <Badge className="border-none bg-purple-100 px-1.5 py-0 text-[10px] text-purple-800 shadow-none hover:bg-purple-100">
+                                    Accessibility audit
+                                  </Badge>
+                                )}
+                                {seg.pre && !confirmedPre.has(idx) && (
+                                  <Badge className="border-none bg-amber-100 px-1.5 py-0 text-[10px] text-amber-800 shadow-none hover:bg-amber-100">
+                                    1 pre-filled
+                                  </Badge>
+                                )}
+                              </span>
+                              {seg.sub && <span className="mt-0.5 block text-sm text-muted-foreground">{seg.sub}</span>}
+                            </span>
+
+                            <Badge
+                              variant="outline"
+                              className={`border-none font-semibold shadow-none ${
+                                isDone ? "bg-green-100 text-green-800" : isDoing ? "bg-blue-100 text-blue-800" : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {isDone ? "Done" : isDoing ? "In progress" : "To do"}
                             </Badge>
 
-                            {/* Timer Button */}
-                            <Button 
-                              variant={activeTimer?.segIdx === idx ? "default" : "outline"} 
-                              size="sm" 
-                              className={`h-8 w-20 px-0 flex justify-center shadow-sm ${activeTimer?.segIdx === idx ? 'bg-red-600 hover:bg-red-700 text-white border-red-600' : ''}`}
-                              onClick={(e) => { e.stopPropagation(); handleTimerToggle(idx); }}
-                            >
-                              {activeTimer?.segIdx === idx ? (
-                                <><Square className="w-3.5 h-3.5 mr-1 fill-current" /> {formatTime(activeTimer.elapsed)}</>
-                              ) : (
-                                <><Play className="w-3.5 h-3.5 mr-1 fill-current" /> Timer</>
-                              )}
-                            </Button>
-
-                            {/* Check count */}
-                            <div className="text-xs font-mono text-muted-foreground w-8 text-right">
+                            <span className="w-8 text-right font-mono text-xs text-muted-foreground">
                               {checksDone}/{seg.checklist.length}
-                            </div>
+                            </span>
 
-                            {/* Done circle */}
-                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors
-                              ${isDone || allChecksDone ? 'bg-green-500 border-green-500 text-white' : 'border-border text-transparent'}
-                            `}>
-                              <Check className="w-4 h-4" />
-                            </div>
+                            <span
+                              className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
+                                isDone || allChecksDone ? "border-green-500 bg-green-500 text-white" : "border-border text-transparent"
+                              }`}
+                            >
+                              <Check className="h-4 w-4" aria-hidden="true" />
+                            </span>
 
-                            {isOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
-                          </div>
+                            {isOpen ? (
+                              <ChevronUp className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                            ) : (
+                              <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                            )}
+                          </button>
+
+                          <Button
+                            variant={activeTimer?.segIdx === idx ? "default" : "outline"}
+                            size="sm"
+                            aria-label={activeTimer?.segIdx === idx ? `Stop timer for ${seg.title}` : `Start timer for ${seg.title}`}
+                            className={`flex h-8 w-20 shrink-0 justify-center px-0 shadow-sm ${
+                              activeTimer?.segIdx === idx ? "border-red-600 bg-red-600 text-white hover:bg-red-700" : ""
+                            }`}
+                            onClick={() => handleTimerToggle(idx)}
+                          >
+                            {activeTimer?.segIdx === idx ? (
+                              <><Square className="mr-1 h-3.5 w-3.5 fill-current" aria-hidden="true" /> {formatTime(activeTimer.elapsed)}</>
+                            ) : (
+                              <><Play className="mr-1 h-3.5 w-3.5 fill-current" aria-hidden="true" /> Timer</>
+                            )}
+                          </Button>
                         </div>
 
-                        {/* Expanded Content */}
                         {isOpen && (
-                          <div className="px-5 pb-6 pt-2 border-t border-border/50 bg-card">
-                            <div className="pl-14 space-y-6">
-                              
+                          <div id={`seg-panel-${idx}`} className="border-t border-border/50 bg-card px-5 pb-6 pt-2">
+                            <div className="space-y-6 pl-14">
                               {seg.pre && (
-                                <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-200">
+                                <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-3">
                                   <div className="text-sm">
                                     <strong className="text-amber-900">Pre-filled from syllabus:</strong>
-                                    <span className="text-amber-800 ml-2">{seg.pre}</span>
+                                    <span className="ml-2 text-amber-800">{seg.pre}</span>
                                   </div>
-                                  <Button 
-                                    size="sm" 
+                                  <Button
+                                    size="sm"
                                     variant={confirmedPre.has(idx) ? "outline" : "default"}
-                                    className={confirmedPre.has(idx) ? "border-green-600 text-green-700 bg-green-50 hover:bg-green-100" : "bg-amber-600 hover:bg-amber-700 text-white"}
+                                    className={confirmedPre.has(idx) ? "border-green-600 bg-green-50 text-green-700 hover:bg-green-100" : "bg-amber-600 text-white hover:bg-amber-700"}
                                     onClick={() => handleConfirmPre(idx)}
                                   >
-                                    {confirmedPre.has(idx) ? <><Check className="w-4 h-4 mr-1" /> Confirmed</> : 'Confirm'}
+                                    {confirmedPre.has(idx) ? (
+                                      <><Check className="mr-1 h-4 w-4" aria-hidden="true" /> Confirmed</>
+                                    ) : (
+                                      "Confirm"
+                                    )}
                                   </Button>
                                 </div>
                               )}
 
                               {seg.lens && (
-                                <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50/50 border border-blue-100 text-sm">
-                                  <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-none shadow-none px-1.5 py-0 mt-0.5 shrink-0">Lens</Badge>
+                                <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-sm">
+                                  <Badge className="mt-0.5 shrink-0 border-none bg-blue-100 px-1.5 py-0 text-blue-800 shadow-none hover:bg-blue-100">Lens</Badge>
                                   <div>
                                     <strong className="text-blue-900">{seg.lens.name}</strong>
-                                    <span className="text-blue-800/70 ml-2">- {seg.lens.desc}</span>
+                                    <span className="ml-2 text-blue-800/70">{seg.lens.desc}</span>
                                   </div>
                                 </div>
                               )}
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                                 <div>
-                                  <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Discussion checklist · tick as you cover</div>
+                                  <div className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Discussion checklist · tick as you cover</div>
                                   <div className="space-y-3">
                                     {seg.checklist.map((item, cIdx) => (
-                                      <div key={cIdx} className="flex items-start gap-3 group">
-                                        <Checkbox 
-                                          id={`seg-${idx}-c-${cIdx}`} 
-                                          checked={agendaChecks[idx][cIdx]} 
+                                      <div key={cIdx} className="group flex items-start gap-3">
+                                        <Checkbox
+                                          id={`seg-${idx}-c-${cIdx}`}
+                                          checked={agendaChecks[idx][cIdx]}
                                           onCheckedChange={() => handleCheck(idx, cIdx)}
-                                          className="mt-1 border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                          className="mt-1 border-muted-foreground/30 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
                                         />
-                                        <label 
+                                        <label
                                           htmlFor={`seg-${idx}-c-${cIdx}`}
-                                          className={`text-sm leading-snug cursor-pointer transition-all ${agendaChecks[idx][cIdx] ? 'line-through text-muted-foreground opacity-70' : 'text-foreground font-medium group-hover:text-primary'}`}
+                                          className={`cursor-pointer text-sm leading-snug transition-all ${
+                                            agendaChecks[idx][cIdx] ? "text-muted-foreground line-through opacity-70" : "font-medium text-foreground group-hover:text-primary"
+                                          }`}
                                         >
                                           {item}
                                         </label>
@@ -981,9 +921,9 @@ export default function ProjectIntake() {
                                     ))}
                                   </div>
 
-                                  <div className="mt-4 pt-4 border-t border-border/50">
-                                    <button 
-                                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                  <div className="mt-4 border-t border-border/50 pt-4">
+                                    <button
+                                      className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800"
                                       onClick={() => {
                                         const next = new Set(deepProbes);
                                         if (next.has(idx)) next.delete(idx);
@@ -991,14 +931,14 @@ export default function ProjectIntake() {
                                         setDeepProbes(next);
                                       }}
                                     >
-                                      {deepProbes.has(idx) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                      {deepProbes.has(idx) ? <ChevronUp className="h-3 w-3" aria-hidden="true" /> : <ChevronDown className="h-3 w-3" aria-hidden="true" />}
                                       Dig deeper · Socratic probes
                                     </button>
-                                    
+
                                     {deepProbes.has(idx) && (
-                                      <ul className="mt-3 space-y-2 text-xs text-muted-foreground pl-4 list-disc marker:text-border">
+                                      <ul className="mt-3 list-disc space-y-2 pl-4 text-xs text-muted-foreground marker:text-border">
                                         <li>If a student gets stuck here, how do they currently unblock themselves?</li>
-                                        <li>What's the most common misconception about this topic?</li>
+                                        <li>What is the most common misconception about this topic?</li>
                                         <li>If you had half the time, what would you cut first?</li>
                                       </ul>
                                     )}
@@ -1006,23 +946,22 @@ export default function ProjectIntake() {
                                 </div>
 
                                 <div>
-                                  <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Capture notes</div>
-                                  <Textarea 
-                                    placeholder="Type meeting notes here..." 
-                                    className="min-h-[120px] resize-y mb-3 bg-muted/20 focus-visible:bg-background border-muted-foreground/20 shadow-inner text-sm"
-                                    value={notes[idx] || ''}
-                                    onChange={e => setNotes(prev => ({...prev, [idx]: e.target.value}))}
+                                  <div className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Capture notes</div>
+                                  <Textarea
+                                    placeholder="Type meeting notes here..."
+                                    className="mb-3 min-h-[120px] resize-y border-muted-foreground/20 bg-muted/20 text-sm shadow-inner focus-visible:bg-background"
+                                    value={notes[idx] || ""}
+                                    onChange={(e) => setNotes((prev) => ({ ...prev, [idx]: e.target.value }))}
                                   />
                                   <div className="flex flex-wrap gap-2">
                                     {seg.captures.map((cap, cIdx) => (
-                                      <Badge key={cIdx} variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 shadow-none font-medium text-xs py-1">
+                                      <Badge key={cIdx} variant="secondary" className="border-primary/20 bg-primary/10 py-1 text-xs font-medium text-primary shadow-none hover:bg-primary/20">
                                         {cap}
                                       </Badge>
                                     ))}
                                   </div>
                                 </div>
                               </div>
-
                             </div>
                           </div>
                         )}
@@ -1031,241 +970,215 @@ export default function ProjectIntake() {
                   })}
                 </CardContent>
               </Card>
-            </div>
 
-            {/* Phase 3 */}
-            <div>
-              <h3 className="font-extrabold text-xl text-primary mb-4 flex items-center gap-3">
-                <span className="bg-primary text-primary-foreground w-7 h-7 rounded-md flex items-center justify-center text-sm">3</span>
-                Wrap <span className="opacity-40 font-normal">· commit outcomes & advance</span>
-              </h3>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Course outcomes editor */}
-                <Card className="shadow-sm border-border">
-                  <CardHeader className="px-5 py-4 border-b border-border bg-card flex flex-row items-center gap-2">
-                    <Target className="w-5 h-5 text-primary" />
-                    <div>
-                      <CardTitle className="text-lg">Course outcomes</CardTitle>
-                      <CardDescription className="m-0">Measurable learning objectives carried into Backward Design</CardDescription>
-                    </div>
+              {/* Meeting status and automation rail */}
+              <div className="space-y-6 lg:sticky lg:top-8">
+                <Card className="border-border shadow-sm">
+                  <CardHeader className="border-b border-border bg-card px-5 py-4">
+                    <CardTitle className="text-lg">Status</CardTitle>
                   </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="flex gap-2 mb-4">
-                      <Input
-                        value={newObjective}
-                        placeholder="e.g. Explain how cellular respiration produces ATP"
-                        onChange={(e) => setNewObjective(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleAddObjective(); }}
-                        className="h-10"
-                      />
-                      <Button
-                        onClick={handleAddObjective}
-                        disabled={!newObjective.trim() || createObjective.isPending}
-                        className="shrink-0 shadow-sm"
-                      >
-                        <Plus className="w-4 h-4 mr-1" /> Add
-                      </Button>
+                  <CardContent className="space-y-6 p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="relative flex h-16 w-16 items-center justify-center">
+                        <svg className="h-full w-full -rotate-90 transform">
+                          <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="none" className="text-muted/50" />
+                          <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="none" className="text-primary transition-all duration-500 ease-in-out" strokeDasharray={`${Math.max(progressPct * 1.75, 0)} 200`} />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-sm font-bold">{progressPct}%</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-foreground">Kickoff progress</div>
+                        <div className="text-sm text-muted-foreground">{completedChecks} of {totalChecks} checklist items covered</div>
+                      </div>
                     </div>
 
-                    {courseObjectives.length === 0 ? (
-                      <div className="text-sm text-muted-foreground italic border border-dashed rounded-lg p-6 text-center">
-                        No course outcomes yet. Add at least one to pass the alignment gate.
+                    <div className="space-y-3 pt-2">
+                      {[
+                        { label: "Prepare", status: "done" },
+                        { label: "Meet", status: "doing" },
+                        { label: "Wrap", status: "todo" },
+                      ].map((phase, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-foreground">{phase.label}</span>
+                          <Badge
+                            variant="outline"
+                            className={`h-5 border-none px-2 py-0 text-[10px] font-semibold uppercase tracking-wider shadow-none ${
+                              phase.status === "done" ? "bg-green-100 text-green-800" : phase.status === "doing" ? "bg-blue-100 text-blue-800" : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {phase.status === "done" ? "Done" : phase.status === "doing" ? "In progress" : "To do"}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+
+                    {activeTimer && (
+                      <div className="flex items-center gap-3 rounded-lg border border-red-100 bg-red-50/50 p-3 text-sm font-medium text-red-600">
+                        <span className="h-2 w-2 animate-pulse rounded-full bg-red-600" aria-hidden="true"></span>
+                        Running: Segment {activeTimer.segIdx + 1}
+                        <span className="ml-auto rounded border border-red-100 bg-white px-2 py-0.5 font-mono shadow-sm">{formatTime(activeTimer.elapsed)}</span>
                       </div>
-                    ) : (
-                      <ul className="space-y-2">
-                        {courseObjectives.map((obj, i) => (
-                          <li key={obj.id} className="flex items-start gap-3 p-3 border border-border rounded-lg bg-card group">
-                            <span className="font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded mt-0.5 shrink-0">LO{i + 1}</span>
-                            <span className="text-sm flex-1 leading-snug">{obj.text}</span>
-                            <button
-                              onClick={() => handleDeleteObjective(obj.id)}
-                              className="text-muted-foreground/40 hover:text-red-600 transition-colors shrink-0"
-                              aria-label="Remove outcome"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* Gate readiness */}
-                <Card className="shadow-sm border-border">
-                  <CardHeader className="px-5 py-4 border-b border-border bg-card">
-                    <CardTitle className="text-lg">Gate readiness</CardTitle>
-                    <CardDescription className="m-0">Requirements to advance to Backward Design</CardDescription>
+                <Card className="border-border shadow-sm">
+                  <CardHeader className="border-b border-border bg-card px-5 py-4">
+                    <CardTitle className="text-lg">Automation and time</CardTitle>
                   </CardHeader>
-                  <CardContent className="p-6 space-y-4">
-                    <div className="space-y-3">
-                      {stage0Requirements.length === 0 ? (
-                        <div className="text-sm text-muted-foreground italic">
-                          {gateStatus && gateStatus.stage > 0
-                            ? "This project has already advanced past Kickoff & Intake."
-                            : "Loading gate status…"}
+                  <CardContent className="p-6">
+                    <div className="mb-6 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <Checkbox id="a1" checked={autoRules.r1} onCheckedChange={(c) => setAutoRules((p) => ({ ...p, r1: !!c }))} className="mt-0.5" />
+                        <label htmlFor="a1" className="cursor-pointer text-sm leading-snug text-muted-foreground">When a timer starts, mark the part In progress.</label>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Checkbox id="a2" checked={autoRules.r2} onCheckedChange={(c) => setAutoRules((p) => ({ ...p, r2: !!c }))} className="mt-0.5" />
+                        <label htmlFor="a2" className="cursor-pointer text-sm leading-snug text-muted-foreground">When a part's checklist is fully covered, mark Done, stop timer, log time.</label>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Checkbox id="a3" checked={autoRules.r3} onCheckedChange={(c) => setAutoRules((p) => ({ ...p, r3: !!c }))} className="mt-0.5" />
+                        <label htmlFor="a3" className="cursor-pointer text-sm leading-snug text-muted-foreground">When a part is Done, open the next part and start its timer.</label>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Checkbox id="a4" checked={autoRules.r4} onCheckedChange={(c) => setAutoRules((p) => ({ ...p, r4: !!c }))} className="mt-0.5" />
+                        <label htmlFor="a4" className="cursor-pointer text-sm leading-snug text-muted-foreground">When action items are captured, draft a note to faculty.</label>
+                      </div>
+                    </div>
+
+                    <div className="h-40 space-y-3 overflow-y-auto rounded-lg border border-border bg-muted/20 p-4 font-mono text-[11px] leading-tight">
+                      {activityFeed.length === 0 ? (
+                        <div className="flex h-full items-center justify-center text-center font-sans italic text-muted-foreground/60">
+                          Start a timer or finish a part to see automations fire.
                         </div>
                       ) : (
-                        stage0Requirements.map((r, i) => (
-                          <div key={i} className="flex items-start gap-3 text-sm">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${r.met ? 'bg-green-500 text-white' : 'bg-muted text-muted-foreground border border-border'}`}>
-                              {r.met ? <Check className="w-3.5 h-3.5" /> : <Square className="w-3 h-3" />}
-                            </div>
-                            <div>
-                              <div className={`font-medium ${r.met ? 'text-foreground' : 'text-foreground'}`}>{r.label}</div>
-                              {!r.met && r.detail && <div className="text-xs text-amber-700 mt-0.5">{r.detail}</div>}
-                            </div>
+                        activityFeed.map((item, i) => (
+                          <div key={i} className="flex gap-3 text-muted-foreground">
+                            <span className="shrink-0 text-foreground/40">{item.time}</span>
+                            <span className="text-foreground/80">{item.msg}</span>
                           </div>
                         ))
                       )}
                     </div>
-
-                    {gateStatus && gateStatus.stage === 0 && (
-                      <Button
-                        className="w-full font-semibold shadow-sm"
-                        onClick={handleAdvance}
-                        disabled={!canAdvance || advanceStage.isPending}
-                      >
-                        {advanceStage.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        Advance to Backward Design
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    )}
-
-                    {gateStatus && gateStatus.stage > 0 && (
-                      <Button asChild variant="outline" className="w-full font-semibold">
-                        <Link href={`/projects/${projectId}/design`}>
-                          Go to Backward Design
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Link>
-                      </Button>
-                    )}
+                    <div className="mt-3 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      One timer runs at a time. Starting a new part pauses the last.
+                    </div>
                   </CardContent>
                 </Card>
               </div>
             </div>
-          </div>
+          </TabsContent>
 
-          {/* RIGHT COLUMN */}
-          <div className="space-y-6 sticky top-8">
-            <Card className="shadow-sm border-border">
-              <CardHeader className="px-5 py-4 border-b border-border bg-card">
-                <CardTitle className="text-lg">Status</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                
-                <div className="flex items-center gap-4">
-                  <div className="relative w-16 h-16 flex items-center justify-center">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="none" className="text-muted/50" />
-                      <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="none" className="text-primary transition-all duration-500 ease-in-out" strokeDasharray={`${Math.max(progressPct * 1.75, 0)} 200`} />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center flex-col">
-                      <span className="text-sm font-bold">{progressPct}%</span>
-                    </div>
-                  </div>
+          {/* WRAP: commit outcomes and advance */}
+          <TabsContent value="wrap" className="space-y-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <Card className="border-border shadow-sm">
+                <CardHeader className="flex flex-row items-center gap-2 border-b border-border bg-card px-5 py-4">
+                  <Target className="h-5 w-5 text-primary" aria-hidden="true" />
                   <div>
-                    <div className="font-semibold text-foreground">Kickoff Progress</div>
-                    <div className="text-sm text-muted-foreground">{completedChecks} of {totalChecks} checklist items covered</div>
+                    <CardTitle className="text-lg">Course outcomes</CardTitle>
+                    <CardDescription className="m-0">Measurable learning objectives carried into Backward Design</CardDescription>
                   </div>
-                </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="mb-4 flex gap-2">
+                    <Input
+                      value={newObjective}
+                      placeholder="e.g. Explain how cellular respiration produces ATP"
+                      onChange={(e) => setNewObjective(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleAddObjective();
+                      }}
+                      className="h-10"
+                    />
+                    <Button onClick={handleAddObjective} disabled={!newObjective.trim() || createObjective.isPending} className="shrink-0 shadow-sm">
+                      <Plus className="mr-1 h-4 w-4" aria-hidden="true" /> Add
+                    </Button>
+                  </div>
 
-                <div className="space-y-3 pt-2">
-                  {[
-                    { label: "Prepare", status: "done" },
-                    { label: "Meet", status: "doing" },
-                    { label: "Wrap", status: "todo" },
-                  ].map((phase, i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-foreground">{phase.label}</span>
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className={`
-                          font-semibold shadow-none border-none text-[10px] uppercase tracking-wider px-2 py-0 h-5
-                          ${phase.status === 'done' ? 'bg-green-100 text-green-800' : phase.status === 'doing' ? 'bg-blue-100 text-blue-800' : 'bg-muted text-muted-foreground'}
-                        `}>
-                          {phase.status === 'done' ? 'Done' : phase.status === 'doing' ? 'In progress' : 'To do'}
-                        </Badge>
-                        <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-foreground">
-                          {phase.status === 'doing' ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {activeTimer && (
-                  <div className="pt-4 border-t border-border flex items-center gap-3 text-sm font-medium text-red-600 bg-red-50/50 p-3 rounded-lg border-red-100">
-                    <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
-                    Running: Segment {activeTimer.segIdx + 1}
-                    <span className="font-mono ml-auto bg-white px-2 py-0.5 rounded shadow-sm border border-red-100">{formatTime(activeTimer.elapsed)}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            <Card className="shadow-sm border-border">
-              <CardHeader className="px-5 py-4 border-b border-border bg-card">
-                <CardTitle className="text-lg">Automation & time</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-start gap-3">
-                    <Checkbox id="a1" checked={autoRules.r1} onCheckedChange={(c) => setAutoRules(p => ({...p, r1: !!c}))} className="mt-0.5" />
-                    <label htmlFor="a1" className="text-sm text-muted-foreground leading-snug cursor-pointer">When a timer starts &rarr; mark the part In progress.</label>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Checkbox id="a2" checked={autoRules.r2} onCheckedChange={(c) => setAutoRules(p => ({...p, r2: !!c}))} className="mt-0.5" />
-                    <label htmlFor="a2" className="text-sm text-muted-foreground leading-snug cursor-pointer">When a part's checklist is fully covered &rarr; mark Done, stop timer, log time.</label>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Checkbox id="a3" checked={autoRules.r3} onCheckedChange={(c) => setAutoRules(p => ({...p, r3: !!c}))} className="mt-0.5" />
-                    <label htmlFor="a3" className="text-sm text-muted-foreground leading-snug cursor-pointer">When a part is Done &rarr; open the next part and start its timer.</label>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Checkbox id="a4" checked={autoRules.r4} onCheckedChange={(c) => setAutoRules(p => ({...p, r4: !!c}))} className="mt-0.5" />
-                    <label htmlFor="a4" className="text-sm text-muted-foreground leading-snug cursor-pointer">When action items are captured &rarr; draft a note to faculty.</label>
-                  </div>
-                </div>
-
-                <div className="h-40 overflow-y-auto border border-border rounded-lg bg-muted/20 p-4 space-y-3 font-mono text-[11px] leading-tight">
-                  {activityFeed.length === 0 ? (
-                    <div className="text-muted-foreground/60 h-full flex items-center justify-center italic text-center font-sans">
-                      Start a timer or finish a part to see automations fire.
+                  {courseObjectives.length === 0 ? (
+                    <div className="rounded-lg border border-dashed p-6 text-center text-sm italic text-muted-foreground">
+                      No course outcomes yet. Add at least one to pass the alignment gate.
                     </div>
                   ) : (
-                    activityFeed.map((item, i) => (
-                      <div key={i} className="flex gap-3 text-muted-foreground">
-                        <span className="text-foreground/40 shrink-0">{item.time}</span>
-                        <span className="text-foreground/80">{item.msg}</span>
-                      </div>
-                    ))
+                    <ul className="space-y-2">
+                      {courseObjectives.map((obj, i) => (
+                        <li key={obj.id} className="group flex items-start gap-3 rounded-lg border border-border bg-card p-3">
+                          <span className="mt-0.5 shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">LO{i + 1}</span>
+                          <span className="flex-1 text-sm leading-snug">{obj.text}</span>
+                          <button onClick={() => handleDeleteObjective(obj.id)} className="shrink-0 text-muted-foreground/40 transition-colors hover:text-red-600" aria-label="Remove outcome">
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                </div>
-                <div className="text-[10px] text-muted-foreground mt-3 text-center uppercase tracking-wider font-semibold">
-                  One timer runs at a time. Starting a new part pauses the last.
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card className="shadow-sm border-border">
-              <CardHeader className="px-5 py-4 border-b border-border bg-card flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Course structure & pacing</CardTitle>
+              <Card className="border-border shadow-sm">
+                <CardHeader className="border-b border-border bg-card px-5 py-4">
+                  <CardTitle className="text-lg">Gate readiness</CardTitle>
+                  <CardDescription className="m-0">Requirements to advance to Backward Design</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 p-6">
+                  <div className="space-y-3">
+                    {stage0Requirements.length === 0 ? (
+                      <div className="text-sm italic text-muted-foreground">
+                        {gateStatus && gateStatus.stage > 0
+                          ? "This project has already advanced past Kickoff and Intake."
+                          : "Loading gate status..."}
+                      </div>
+                    ) : (
+                      stage0Requirements.map((r, i) => (
+                        <div key={i} className="flex items-start gap-3 text-sm">
+                          <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${r.met ? "bg-green-500 text-white" : "border border-border bg-muted text-muted-foreground"}`}>
+                            {r.met ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Square className="h-3 w-3" aria-hidden="true" />}
+                          </div>
+                          <div>
+                            <div className="font-medium text-foreground">{r.label}</div>
+                            {!r.met && r.detail && <div className="mt-0.5 text-xs text-amber-700">{r.detail}</div>}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {gateStatus && gateStatus.stage === 0 && (
+                    <Button className="w-full font-semibold shadow-sm" onClick={handleAdvance} disabled={!canAdvance || advanceStage.isPending}>
+                      {advanceStage.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                      Advance to Backward Design
+                      <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  )}
+
+                  {gateStatus && gateStatus.stage > 0 && (
+                    <Button asChild variant="outline" className="w-full font-semibold">
+                      <Link href={`/projects/${projectId}/design`}>
+                        Go to Backward Design
+                        <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="border-border shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between border-b border-border bg-card px-5 py-4">
+                <CardTitle className="text-lg">Course structure and pacing</CardTitle>
                 {course ? (
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px]">Saved</Badge>
+                  <Badge variant="outline" className="border-green-200 bg-green-50 text-[10px] text-green-700">Saved</Badge>
                 ) : (
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">Not initialized</Badge>
+                  <Badge variant="outline" className="border-amber-200 bg-amber-50 text-[10px] text-amber-700">Not initialized</Badge>
                 )}
               </CardHeader>
-              <CardContent className="p-6 space-y-4">
+              <CardContent className="space-y-4 p-6">
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Course title</label>
-                  <Input
-                    value={courseForm.title}
-                    placeholder={project.title}
-                    onChange={(e) => setCourseForm((p) => ({ ...p, title: e.target.value }))}
-                    className="mt-1 h-9"
-                  />
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Course title</label>
+                  <Input value={courseForm.title} placeholder={project.title} onChange={(e) => setCourseForm((p) => ({ ...p, title: e.target.value }))} className="mt-1 h-9" />
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   {([
@@ -1273,16 +1186,16 @@ export default function ProjectIntake() {
                     { key: "termWeeks", label: "Weeks" },
                     { key: "moduleCount", label: "Modules" },
                   ] as const).map((f) => (
-                    <div key={f.key} className="p-3 border border-border rounded-lg text-center bg-card shadow-sm">
+                    <div key={f.key} className="rounded-lg border border-border bg-card p-3 text-center shadow-sm">
                       <Input
                         type="number"
                         min={0}
                         value={courseForm[f.key]}
                         onChange={(e) => setCourseForm((p) => ({ ...p, [f.key]: e.target.value }))}
-                        className="h-9 text-center text-lg font-bold border-0 shadow-none focus-visible:ring-1 px-0"
+                        className="h-9 border-0 px-0 text-center text-lg font-bold shadow-none focus-visible:ring-1"
                         placeholder="-"
                       />
-                      <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1">{f.label}</div>
+                      <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{f.label}</div>
                     </div>
                   ))}
                 </div>
@@ -1292,44 +1205,137 @@ export default function ProjectIntake() {
                     {Array.from({ length: Math.min(toNum(courseForm.termWeeks) || 0, 30) }).map((_, i) => {
                       const wk = i + 1;
                       return (
-                        <div key={i} className="flex flex-col items-center justify-center p-2 border rounded-md shadow-sm text-xs bg-card border-border">
-                          <div className="font-semibold text-[10px] uppercase tracking-wider opacity-60">Wk {wk}</div>
+                        <div key={i} className="flex flex-col items-center justify-center rounded-md border border-border bg-card p-2 text-xs shadow-sm">
+                          <div className="text-[10px] font-semibold uppercase tracking-wider opacity-60">Wk {wk}</div>
                         </div>
                       );
                     })}
                   </div>
                 ) : null}
 
-                <Button
-                  className="w-full font-semibold shadow-sm"
-                  onClick={handleSaveCourse}
-                  disabled={createCourse.isPending || updateCourse.isPending}
-                >
-                  {(createCourse.isPending || updateCourse.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                <Button className="w-full font-semibold shadow-sm" onClick={handleSaveCourse} disabled={createCourse.isPending || updateCourse.isPending}>
+                  {(createCourse.isPending || updateCourse.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
                   {course ? "Save course record" : "Initialize course record"}
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
 
-            <Card className="shadow-sm border-border bg-muted/10">
-              <CardHeader className="px-5 py-4 border-b border-border">
-                <CardTitle className="text-lg">Design foundations</CardTitle>
-                <CardDescription className="m-0">What the build rests on</CardDescription>
+          {/* ACCESSIBILITY: continuous audit */}
+          <TabsContent value="accessibility" className="space-y-6">
+            <Card className="overflow-hidden border-purple-200 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between border-b border-purple-100 bg-purple-50/30 px-5 py-4">
+                <CardTitle className="text-lg text-purple-900">Accessibility tracker</CardTitle>
+                <Badge className="border-none bg-purple-100 text-purple-800 shadow-none hover:bg-purple-100">WCAG 2.1 AA · transparent and auditable</Badge>
               </CardHeader>
               <CardContent className="p-6">
-                <ul className="space-y-3 text-sm text-muted-foreground">
-                  <li><strong className="text-foreground font-semibold">Adult learning:</strong> Andragogy (Knowles) · Experiential learning (Kolb)</li>
-                  <li><strong className="text-foreground font-semibold">Design process:</strong> Backward Design (UbD) · ADDIE / SAM</li>
-                  <li><strong className="text-foreground font-semibold">Outcomes:</strong> Bloom's taxonomy · Constructive alignment (Biggs)</li>
-                  <li><strong className="text-foreground font-semibold">Cognition:</strong> Cognitive Load (Sweller) · Multimedia learning (Mayer) · Retrieval & spaced practice</li>
-                  <li><strong className="text-foreground font-semibold">Instruction:</strong> Gagné's Nine Events · Merrill's First Principles</li>
-                  <li><strong className="text-foreground font-semibold">Access:</strong> Universal Design for Learning (CAST)</li>
-                </ul>
+                <p className="mb-6 max-w-[70ch] text-sm text-muted-foreground">
+                  Accessibility is audited at intake, built in by design, and verified at every gate, never bolted on at the end.
+                </p>
+
+                <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+                  <div className="rounded-xl border border-purple-100 bg-white p-4">
+                    <div className="mb-1 text-3xl font-bold text-purple-900">80<span className="text-xl">%</span></div>
+                    <div className="text-xs font-medium uppercase tracking-wider text-purple-600/80">Conformance</div>
+                  </div>
+                  <div className="rounded-xl border border-purple-100 bg-white p-4">
+                    <div className="mb-1 text-3xl font-bold text-foreground">7</div>
+                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Sources audited</div>
+                  </div>
+                  <div className="rounded-xl border border-purple-100 bg-white p-4">
+                    <div className="mb-1 text-3xl font-bold text-amber-600">5</div>
+                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Open issues</div>
+                  </div>
+                  <div className="rounded-xl border border-purple-100 bg-white p-4">
+                    <div className="mb-1 text-3xl font-bold text-green-600">0</div>
+                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Resolved</div>
+                  </div>
+                </div>
+
+                <div className="mb-8">
+                  <Progress value={80} className="h-2 bg-purple-100 [&>div]:bg-purple-600" />
+                  <div className="mt-2 text-sm text-muted-foreground">Currently tracking 5 open issues across 7 incoming sources. Target: 0 critical issues at QA.</div>
+                </div>
+
+                <div className="mb-8 grid grid-cols-1 gap-8 md:grid-cols-2">
+                  <div>
+                    <h4 className="mb-4 text-sm font-semibold">WCAG 2.1 AA success criteria tracked</h4>
+                    <div className="space-y-2">
+                      {A11Y_CRITERIA.map((c) => (
+                        <div key={c.id} className="flex items-center justify-between border-b border-border/50 py-1.5 text-sm last:border-0">
+                          <div className="flex items-center gap-3">
+                            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">{c.id}</span>
+                            <span className="font-medium">{c.name}</span>
+                            <span className="text-[10px] font-bold uppercase text-muted-foreground">{c.level}</span>
+                          </div>
+                          {c.status === "pass" && <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700">Pass</Badge>}
+                          {c.status === "warn" && <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Partial</Badge>}
+                          {c.status === "monitor" && <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">Monitor</Badge>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="mb-4 text-sm font-semibold">Remediation queue</h4>
+                    <div className="space-y-3">
+                      <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50/30 p-3 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold">Lecture recordings (4)</span>
+                          <Badge variant="outline" className="border-amber-200 bg-white text-amber-800">High</Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="rounded border bg-white px-1 font-mono">1.2.2</span>
+                          <span>Missing captions and transcripts</span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between text-xs font-medium">
+                          <span>Owner: ID Team</span>
+                          <span>Target: Wk 5</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50/30 p-3 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold">Lecture-deck.pptx</span>
+                          <Badge variant="outline" className="border-amber-200 bg-white text-amber-800">Med</Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="rounded border bg-white px-1 font-mono">1.1.1</span>
+                          <span className="rounded border bg-white px-1 font-mono">1.4.3</span>
+                          <span>Missing alt text, low contrast</span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between text-xs font-medium">
+                          <span>Owner: Faculty</span>
+                          <span>Target: Wk 2</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-8 border-t pt-8 md:grid-cols-2">
+                  <div>
+                    <h4 className="mb-4 text-sm font-semibold">How it is checked · method disclosure</h4>
+                    <ul className="mb-6 space-y-3 text-sm text-muted-foreground">
+                      <li><strong className="font-medium text-foreground">Automated:</strong> axe-core and IBM Equal Access (catches about 30% of issues)</li>
+                      <li><strong className="font-medium text-foreground">Manual:</strong> Keyboard navigation, screen-reader spot checks, captions QA, reading level analysis</li>
+                      <li><strong className="font-medium text-foreground">Standard:</strong> WCAG 2.1 AA (no exceptions)</li>
+                    </ul>
+                    <Button className="bg-purple-600 text-white shadow-sm hover:bg-purple-700">Generate conformance report (ACR)</Button>
+                  </div>
+                  <div>
+                    <h4 className="mb-4 text-sm font-semibold">Audit trail · Evidence Ledger</h4>
+                    <div className="h-32 space-y-3 overflow-y-auto rounded-lg border bg-muted/20 p-4">
+                      <div className="text-xs">
+                        <span className="mr-2 font-mono text-muted-foreground">Today 09:41</span>
+                        <span className="font-medium text-purple-700">Audit completed:</span>
+                        <span className="ml-1 text-muted-foreground">7 incoming sources parsed. 5 issues flagged for remediation.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          </div>
-        </div>
-
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
