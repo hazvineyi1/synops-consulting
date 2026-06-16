@@ -13,8 +13,8 @@ export default function ProjectQA() {
     query: { enabled: !!projectId, queryKey: getGetProjectQueryKey(projectId) }
   });
 
-  const { data: checks } = useListQAChecks({
-    query: { queryKey: getListQAChecksQueryKey() }
+  const { data: checks } = useListQAChecks(projectId, {
+    query: { enabled: !!projectId, queryKey: getListQAChecksQueryKey(projectId) }
   });
 
   if (!project) return <div className="p-8">Loading...</div>;

@@ -39,6 +39,8 @@ import type {
   DashboardSummary,
   GateStatus,
   HealthStatus,
+  IntakeProgress,
+  IntakeProgressInput,
   LedgerEntry,
   LedgerEntryInput,
   LedgerReport,
@@ -3548,4 +3550,153 @@ export function useGetCrosswalkGaps<TData = Awaited<ReturnType<typeof getCrosswa
 
 
 
+
+export const getGetIntakeProgressUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/projects/${projectId}/intake-progress`
+}
+
+/**
+ * @summary Get saved kickoff/intake progress for a project
+ */
+export const getIntakeProgress = async (projectId: number, options?: RequestInit): Promise<IntakeProgress> => {
+
+  return customFetch<IntakeProgress>(getGetIntakeProgressUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetIntakeProgressQueryKey = (projectId: number,) => {
+    return [
+    `/api/projects/${projectId}/intake-progress`
+    ] as const;
+    }
+
+
+export const getGetIntakeProgressQueryOptions = <TData = Awaited<ReturnType<typeof getIntakeProgress>>, TError = ErrorType<unknown>>(projectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIntakeProgress>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetIntakeProgressQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getIntakeProgress>>> = ({ signal }) => getIntakeProgress(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(projectId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getIntakeProgress>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetIntakeProgressQueryResult = NonNullable<Awaited<ReturnType<typeof getIntakeProgress>>>
+export type GetIntakeProgressQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get saved kickoff/intake progress for a project
+ */
+
+export function useGetIntakeProgress<TData = Awaited<ReturnType<typeof getIntakeProgress>>, TError = ErrorType<unknown>>(
+ projectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIntakeProgress>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetIntakeProgressQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateIntakeProgressUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/projects/${projectId}/intake-progress`
+}
+
+/**
+ * @summary Save kickoff/intake progress for a project
+ */
+export const updateIntakeProgress = async (projectId: number,
+    intakeProgressInput: IntakeProgressInput, options?: RequestInit): Promise<IntakeProgress> => {
+
+  return customFetch<IntakeProgress>(getUpdateIntakeProgressUrl(projectId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      intakeProgressInput,)
+  }
+);}
+
+
+
+
+export const getUpdateIntakeProgressMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIntakeProgress>>, TError,{projectId: number;data: BodyType<IntakeProgressInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateIntakeProgress>>, TError,{projectId: number;data: BodyType<IntakeProgressInput>}, TContext> => {
+
+const mutationKey = ['updateIntakeProgress'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateIntakeProgress>>, {projectId: number;data: BodyType<IntakeProgressInput>}> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  updateIntakeProgress(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateIntakeProgressMutationResult = NonNullable<Awaited<ReturnType<typeof updateIntakeProgress>>>
+    export type UpdateIntakeProgressMutationBody = BodyType<IntakeProgressInput>
+    export type UpdateIntakeProgressMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Save kickoff/intake progress for a project
+ */
+export const useUpdateIntakeProgress = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIntakeProgress>>, TError,{projectId: number;data: BodyType<IntakeProgressInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateIntakeProgress>>,
+        TError,
+        {projectId: number;data: BodyType<IntakeProgressInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateIntakeProgressMutationOptions(options));
+    }
 

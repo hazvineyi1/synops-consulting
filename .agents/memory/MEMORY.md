@@ -1,0 +1,1 @@
+- [Gated pipeline enforcement](gated-pipeline-enforcement.md) — stage advancement must enforce gate requirements server-side, not just disable a client button.

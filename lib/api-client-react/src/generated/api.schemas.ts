@@ -5,6 +5,39 @@
  * UVA Production Engine API
  * OpenAPI spec version: 0.1.0
  */
+export type IntakeProgressInputNotes = {[key: string]: string};
+
+export type IntakeProgressInputInventorySelections = {[key: string]: string};
+
+export type IntakeProgressInputAutoRules = {[key: string]: boolean};
+
+export interface IntakeProgressInput {
+  agendaChecks?: boolean[][];
+  segStatuses?: string[];
+  confirmedPre?: number[];
+  notes?: IntakeProgressInputNotes;
+  inventorySelections?: IntakeProgressInputInventorySelections;
+  autoRules?: IntakeProgressInputAutoRules;
+}
+
+export type IntakeProgressNotes = {[key: string]: string};
+
+export type IntakeProgressInventorySelections = {[key: string]: string};
+
+export type IntakeProgressAutoRules = {[key: string]: boolean};
+
+export interface IntakeProgress {
+  projectId: number;
+  agendaChecks: boolean[][];
+  segStatuses: string[];
+  confirmedPre: number[];
+  notes: IntakeProgressNotes;
+  inventorySelections: IntakeProgressInventorySelections;
+  autoRules: IntakeProgressAutoRules;
+  /** @nullable */
+  updatedAt?: string | null;
+}
+
 export interface HealthStatus {
   status: string;
 }

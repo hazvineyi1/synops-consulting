@@ -980,9 +980,118 @@ paths:
               schema:
                 $ref: "#/components/schemas/CrosswalkGapReport"
 
+  # ── Intake progress ───────────────────────────────────────────
+  /projects/{projectId}/intake-progress:
+    get:
+      operationId: getIntakeProgress
+      tags: [intake]
+      summary: Get saved kickoff/intake progress for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Intake progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntakeProgress"
+    put:
+      operationId: updateIntakeProgress
+      tags: [intake]
+      summary: Save kickoff/intake progress for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntakeProgressInput"
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntakeProgress"
+
 # ── Component Schemas ───────────────────────────────────────────────
 components:
   schemas:
+    IntakeProgressInput:
+      type: object
+      properties:
+        agendaChecks:
+          type: array
+          items:
+            type: array
+            items:
+              type: boolean
+        segStatuses:
+          type: array
+          items:
+            type: string
+        confirmedPre:
+          type: array
+          items:
+            type: integer
+        notes:
+          type: object
+          additionalProperties:
+            type: string
+        inventorySelections:
+          type: object
+          additionalProperties:
+            type: string
+        autoRules:
+          type: object
+          additionalProperties:
+            type: boolean
+
+    IntakeProgress:
+      type: object
+      required: [projectId, agendaChecks, segStatuses, confirmedPre, notes, inventorySelections, autoRules]
+      properties:
+        projectId:
+          type: integer
+        agendaChecks:
+          type: array
+          items:
+            type: array
+            items:
+              type: boolean
+        segStatuses:
+          type: array
+          items:
+            type: string
+        confirmedPre:
+          type: array
+          items:
+            type: integer
+        notes:
+          type: object
+          additionalProperties:
+            type: string
+        inventorySelections:
+          type: object
+          additionalProperties:
+            type: string
+        autoRules:
+          type: object
+          additionalProperties:
+            type: boolean
+        updatedAt:
+          type: ["string", "null"]
+          format: date-time
+
     HealthStatus:
       type: object
       required: [status]

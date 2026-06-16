@@ -9,6 +9,7 @@ import ledgerRouter from "./ledger";
 import qaRouter from "./qa";
 import standardsRouter from "./standards";
 import dashboardRouter from "./dashboard";
+import intakeRouter from "./intake";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(assessmentsRouter);
 router.use(ledgerRouter);
 router.use(qaRouter);
 router.use(standardsRouter);
+router.use(intakeRouter);
 
 export default router;

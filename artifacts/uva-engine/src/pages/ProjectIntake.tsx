@@ -1,18 +1,29 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "wouter";
-import { useGetProject, getGetProjectQueryKey } from "@workspace/api-client-react";
+import { useParams, Link } from "wouter";
+import {
+  useGetProject, getGetProjectQueryKey,
+  useGetProjectGateStatus, getGetProjectGateStatusQueryKey,
+  useAdvanceProjectStage,
+  useListCourses, getListCoursesQueryKey, useCreateCourse, useUpdateCourse,
+  useListObjectives, getListObjectivesQueryKey, useCreateObjective, useDeleteObjective,
+  useGetIntakeProgress, getGetIntakeProgressQueryKey, useUpdateIntakeProgress,
+  useCreateLedgerEntry,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronRight, Plus, Check, ChevronDown, ChevronUp, Play, Square,
   UploadCloud, PlayCircle, Pause,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2, Trash2, ArrowRight, Loader2, Target
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
 
 // Data Definitions
 const INVENTORY = [
@@ -112,9 +123,50 @@ export default function ProjectIntake() {
   const params = useParams();
   const projectId = parseInt(params.id || "0", 10);
 
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const { data: project } = useGetProject(projectId, {
     query: { enabled: !!projectId, queryKey: getGetProjectQueryKey(projectId) }
   });
+
+  const { data: gateStatus } = useGetProjectGateStatus(projectId, {
+    query: { enabled: !!projectId, queryKey: getGetProjectGateStatusQueryKey(projectId) }
+  });
+
+  const { data: courses } = useListCourses(projectId, {
+    query: { enabled: !!projectId, queryKey: getListCoursesQueryKey(projectId) }
+  });
+
+  const { data: objectives } = useListObjectives(projectId, {
+    query: { enabled: !!projectId, queryKey: getListObjectivesQueryKey(projectId) }
+  });
+
+  const { data: intakeProgress } = useGetIntakeProgress(projectId, {
+    query: { enabled: !!projectId, queryKey: getGetIntakeProgressQueryKey(projectId) }
+  });
+
+  const createCourse = useCreateCourse();
+  const updateCourse = useUpdateCourse();
+  const createObjective = useCreateObjective();
+  const deleteObjective = useDeleteObjective();
+  const updateIntake = useUpdateIntakeProgress();
+  const createLedger = useCreateLedgerEntry();
+  const advanceStage = useAdvanceProjectStage();
+
+  const course = courses?.[0] ?? null;
+  const courseObjectives = (objectives ?? []).filter((o) => o.level === "course");
+
+  const logLedger = (entryType: string, content: string) => {
+    createLedger.mutate(
+      { projectId, data: { entryType, content, authorName: "Intake" } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/projects", projectId, "ledger"] });
+        },
+      }
+    );
+  };
 
   // State
   const [agendaChecks, setAgendaChecks] = useState<boolean[][]>(SEGMENTS.map(s => s.checklist.map(() => false)));
@@ -130,7 +182,79 @@ export default function ProjectIntake() {
   const [autoRules, setAutoRules] = useState({ r1: true, r2: true, r3: true, r4: false });
   const [deepProbes, setDeepProbes] = useState<Set<number>>(new Set());
   const [notes, setNotes] = useState<Record<number, string>>({});
-  
+
+  // Course record form
+  const [courseForm, setCourseForm] = useState({ title: "", creditHours: "", termWeeks: "", moduleCount: "" });
+  const [courseFormReady, setCourseFormReady] = useState(false);
+  const [newObjective, setNewObjective] = useState("");
+
+  // Persistence
+  const hydratedRef = useRef(false);
+  const lastSavedRef = useRef<string>("");
+
+  // Reset hydration state when navigating between projects (component may be reused)
+  const prevProjectIdRef = useRef(projectId);
+  useEffect(() => {
+    if (prevProjectIdRef.current !== projectId) {
+      prevProjectIdRef.current = projectId;
+      hydratedRef.current = false;
+      lastSavedRef.current = "";
+      setCourseFormReady(false);
+    }
+  }, [projectId]);
+
+  // Hydrate course form once the course record loads
+  useEffect(() => {
+    if (course && !courseFormReady) {
+      setCourseForm({
+        title: course.title ?? "",
+        creditHours: course.creditHours != null ? String(course.creditHours) : "",
+        termWeeks: course.termWeeks != null ? String(course.termWeeks) : "",
+        moduleCount: course.moduleCount != null ? String(course.moduleCount) : "",
+      });
+      setCourseFormReady(true);
+    }
+  }, [course, courseFormReady]);
+
+  // Hydrate intake progress once
+  useEffect(() => {
+    if (!intakeProgress || hydratedRef.current) return;
+    hydratedRef.current = true;
+
+    if (Array.isArray(intakeProgress.agendaChecks) && intakeProgress.agendaChecks.length === SEGMENTS.length) {
+      setAgendaChecks(intakeProgress.agendaChecks);
+    }
+    if (Array.isArray(intakeProgress.segStatuses) && intakeProgress.segStatuses.length === SEGMENTS.length) {
+      setSegStatuses(intakeProgress.segStatuses as ('todo' | 'doing' | 'done')[]);
+    }
+    if (Array.isArray(intakeProgress.confirmedPre)) {
+      setConfirmedPre(new Set(intakeProgress.confirmedPre));
+    }
+    if (intakeProgress.notes && typeof intakeProgress.notes === "object") {
+      const parsedNotes: Record<number, string> = {};
+      for (const [k, v] of Object.entries(intakeProgress.notes)) parsedNotes[Number(k)] = v;
+      setNotes(parsedNotes);
+    }
+    if (intakeProgress.inventorySelections && typeof intakeProgress.inventorySelections === "object") {
+      const parsedInv: Record<number, string> = {};
+      for (const [k, v] of Object.entries(intakeProgress.inventorySelections)) parsedInv[Number(k)] = v;
+      if (Object.keys(parsedInv).length > 0) setInventorySelections(parsedInv);
+    }
+    if (intakeProgress.autoRules && typeof intakeProgress.autoRules === "object" && Object.keys(intakeProgress.autoRules).length > 0) {
+      setAutoRules((prev) => ({ ...prev, ...(intakeProgress.autoRules as Record<string, boolean>) }));
+    }
+
+    // Seed last-saved so the first autosave doesn't redundantly re-write loaded state
+    lastSavedRef.current = JSON.stringify({
+      agendaChecks: intakeProgress.agendaChecks,
+      segStatuses: intakeProgress.segStatuses,
+      confirmedPre: intakeProgress.confirmedPre,
+      notes: intakeProgress.notes,
+      inventorySelections: intakeProgress.inventorySelections,
+      autoRules: intakeProgress.autoRules,
+    });
+  }, [intakeProgress]);
+
   // Timer effect
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -141,6 +265,56 @@ export default function ProjectIntake() {
     }
     return () => clearInterval(interval);
   }, [activeTimer]);
+
+  // Debounced autosave of intake progress
+  useEffect(() => {
+    if (!hydratedRef.current || !projectId) return;
+
+    const notesPayload: Record<string, string> = {};
+    for (const [k, v] of Object.entries(notes)) if (v) notesPayload[k] = v;
+    const invPayload: Record<string, string> = {};
+    for (const [k, v] of Object.entries(inventorySelections)) invPayload[String(k)] = v;
+
+    const snapshot = JSON.stringify({
+      agendaChecks,
+      segStatuses,
+      confirmedPre: Array.from(confirmedPre),
+      notes: notesPayload,
+      inventorySelections: invPayload,
+      autoRules,
+    });
+    if (snapshot === lastSavedRef.current) return;
+    // Avoid overlapping in-flight saves; this effect re-runs when isPending settles.
+    if (updateIntake.isPending) return;
+
+    const handle = setTimeout(() => {
+      updateIntake.mutate(
+        {
+          projectId,
+          data: {
+            agendaChecks,
+            segStatuses,
+            confirmedPre: Array.from(confirmedPre),
+            notes: notesPayload,
+            inventorySelections: invPayload,
+            autoRules,
+          },
+        },
+        {
+          // Only mark as saved once the server confirms; on failure we leave
+          // lastSavedRef stale so the next change (or settle) retries.
+          onSuccess: () => {
+            lastSavedRef.current = snapshot;
+          },
+          onError: () => {
+            toast({ title: "Couldn't save intake progress", description: "Your changes will retry automatically.", variant: "destructive" });
+          },
+        }
+      );
+    }, 800);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agendaChecks, segStatuses, confirmedPre, notes, inventorySelections, autoRules, projectId, updateIntake.isPending]);
 
   const toggleSegment = (idx: number) => {
     const next = new Set(openSegments);
@@ -189,6 +363,10 @@ export default function ProjectIntake() {
         nextStatuses[segIdx] = 'done';
         setSegStatuses(nextStatuses);
         logActivity(`Segment ${segIdx + 1} marked Done`);
+        logLedger(
+          SEGMENTS[segIdx].a11y ? "accessibility_finding" : "design_decision",
+          `Kickoff segment completed: "${SEGMENTS[segIdx].title}"`
+        );
         
         if (activeTimer?.segIdx === segIdx) {
           setActiveTimer(null);
@@ -219,7 +397,101 @@ export default function ProjectIntake() {
     logActivity(`Confirmed pre-filled data for segment ${segIdx + 1}`);
   };
 
-  if (!project) return <div className="p-8 font-sans">Loading...</div>;
+  const toNum = (v: string) => {
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : undefined;
+  };
+
+  const handleSaveCourse = () => {
+    const title = courseForm.title.trim() || project?.title || "Untitled course";
+    const data = {
+      title,
+      creditHours: toNum(courseForm.creditHours),
+      termWeeks: toNum(courseForm.termWeeks),
+      moduleCount: toNum(courseForm.moduleCount),
+    };
+    if (course) {
+      updateCourse.mutate(
+        { id: course.id, data },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: getListCoursesQueryKey(projectId) });
+            queryClient.invalidateQueries({ queryKey: getGetProjectGateStatusQueryKey(projectId) });
+            toast({ title: "Course record updated" });
+          },
+          onError: () => toast({ title: "Failed to update course", variant: "destructive" }),
+        }
+      );
+    } else {
+      createCourse.mutate(
+        { projectId, data },
+        {
+          onSuccess: () => {
+            setCourseFormReady(true);
+            queryClient.invalidateQueries({ queryKey: getListCoursesQueryKey(projectId) });
+            queryClient.invalidateQueries({ queryKey: getGetProjectGateStatusQueryKey(projectId) });
+            toast({ title: "Course record initialized" });
+            logLedger("design_decision", `Course record initialized: ${title}`);
+          },
+          onError: () => toast({ title: "Failed to create course", variant: "destructive" }),
+        }
+      );
+    }
+  };
+
+  const handleAddObjective = () => {
+    const text = newObjective.trim();
+    if (!text) return;
+    createObjective.mutate(
+      { projectId, data: { level: "course", text } },
+      {
+        onSuccess: () => {
+          setNewObjective("");
+          queryClient.invalidateQueries({ queryKey: getListObjectivesQueryKey(projectId) });
+          queryClient.invalidateQueries({ queryKey: getGetProjectGateStatusQueryKey(projectId) });
+          logLedger("design_decision", `Course outcome added: ${text}`);
+        },
+        onError: () => toast({ title: "Failed to add outcome", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleDeleteObjective = (id: number) => {
+    deleteObjective.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListObjectivesQueryKey(projectId) });
+          queryClient.invalidateQueries({ queryKey: getGetProjectGateStatusQueryKey(projectId) });
+        },
+        onError: () => toast({ title: "Failed to remove outcome", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleAdvance = () => {
+    advanceStage.mutate(
+      { id: projectId, data: { notes: "Kickoff & Intake completed" } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(projectId) });
+          queryClient.invalidateQueries({ queryKey: getGetProjectGateStatusQueryKey(projectId) });
+          logLedger("approval", "Kickoff & Intake stage completed — advanced to Backward Design");
+          toast({ title: "Advanced to Backward Design" });
+        },
+        onError: () => {
+          // Server enforces the gate too; refresh so the panel reflects reality.
+          queryClient.invalidateQueries({ queryKey: getGetProjectGateStatusQueryKey(projectId) });
+          toast({ title: "Cannot advance yet", description: "Resolve the gate requirements first.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  if (!project || intakeProgress === undefined) return <div className="p-8 font-sans">Loading...</div>;
+
+  const stage0Requirements = gateStatus?.stage === 0 ? gateStatus.requirements : [];
+  const canAdvance = gateStatus?.stage === 0 && gateStatus.canAdvance;
 
   const totalChecks = agendaChecks.flat().length;
   const completedChecks = agendaChecks.flat().filter(Boolean).length;
@@ -763,10 +1035,115 @@ export default function ProjectIntake() {
 
             {/* Phase 3 */}
             <div>
-              <h3 className="font-extrabold text-xl text-primary flex items-center gap-3">
+              <h3 className="font-extrabold text-xl text-primary mb-4 flex items-center gap-3">
                 <span className="bg-primary text-primary-foreground w-7 h-7 rounded-md flex items-center justify-center text-sm">3</span>
-                Wrap <span className="opacity-40 font-normal">· plan what's next</span>
+                Wrap <span className="opacity-40 font-normal">· commit outcomes & advance</span>
               </h3>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Course outcomes editor */}
+                <Card className="shadow-sm border-border">
+                  <CardHeader className="px-5 py-4 border-b border-border bg-card flex flex-row items-center gap-2">
+                    <Target className="w-5 h-5 text-primary" />
+                    <div>
+                      <CardTitle className="text-lg">Course outcomes</CardTitle>
+                      <CardDescription className="m-0">Measurable learning objectives carried into Backward Design</CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="flex gap-2 mb-4">
+                      <Input
+                        value={newObjective}
+                        placeholder="e.g. Explain how cellular respiration produces ATP"
+                        onChange={(e) => setNewObjective(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleAddObjective(); }}
+                        className="h-10"
+                      />
+                      <Button
+                        onClick={handleAddObjective}
+                        disabled={!newObjective.trim() || createObjective.isPending}
+                        className="shrink-0 shadow-sm"
+                      >
+                        <Plus className="w-4 h-4 mr-1" /> Add
+                      </Button>
+                    </div>
+
+                    {courseObjectives.length === 0 ? (
+                      <div className="text-sm text-muted-foreground italic border border-dashed rounded-lg p-6 text-center">
+                        No course outcomes yet. Add at least one to pass the alignment gate.
+                      </div>
+                    ) : (
+                      <ul className="space-y-2">
+                        {courseObjectives.map((obj, i) => (
+                          <li key={obj.id} className="flex items-start gap-3 p-3 border border-border rounded-lg bg-card group">
+                            <span className="font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded mt-0.5 shrink-0">LO{i + 1}</span>
+                            <span className="text-sm flex-1 leading-snug">{obj.text}</span>
+                            <button
+                              onClick={() => handleDeleteObjective(obj.id)}
+                              className="text-muted-foreground/40 hover:text-red-600 transition-colors shrink-0"
+                              aria-label="Remove outcome"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Gate readiness */}
+                <Card className="shadow-sm border-border">
+                  <CardHeader className="px-5 py-4 border-b border-border bg-card">
+                    <CardTitle className="text-lg">Gate readiness</CardTitle>
+                    <CardDescription className="m-0">Requirements to advance to Backward Design</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-4">
+                    <div className="space-y-3">
+                      {stage0Requirements.length === 0 ? (
+                        <div className="text-sm text-muted-foreground italic">
+                          {gateStatus && gateStatus.stage > 0
+                            ? "This project has already advanced past Kickoff & Intake."
+                            : "Loading gate status…"}
+                        </div>
+                      ) : (
+                        stage0Requirements.map((r, i) => (
+                          <div key={i} className="flex items-start gap-3 text-sm">
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${r.met ? 'bg-green-500 text-white' : 'bg-muted text-muted-foreground border border-border'}`}>
+                              {r.met ? <Check className="w-3.5 h-3.5" /> : <Square className="w-3 h-3" />}
+                            </div>
+                            <div>
+                              <div className={`font-medium ${r.met ? 'text-foreground' : 'text-foreground'}`}>{r.label}</div>
+                              {!r.met && r.detail && <div className="text-xs text-amber-700 mt-0.5">{r.detail}</div>}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {gateStatus && gateStatus.stage === 0 && (
+                      <Button
+                        className="w-full font-semibold shadow-sm"
+                        onClick={handleAdvance}
+                        disabled={!canAdvance || advanceStage.isPending}
+                      >
+                        {advanceStage.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Advance to Backward Design
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    )}
+
+                    {gateStatus && gateStatus.stage > 0 && (
+                      <Button asChild variant="outline" className="w-full font-semibold">
+                        <Link href={`/projects/${projectId}/design`}>
+                          Go to Backward Design
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Link>
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
 
@@ -872,41 +1249,65 @@ export default function ProjectIntake() {
             </Card>
 
             <Card className="shadow-sm border-border">
-              <CardHeader className="px-5 py-4 border-b border-border bg-card">
+              <CardHeader className="px-5 py-4 border-b border-border bg-card flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">Course structure & pacing</CardTitle>
+                {course ? (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px]">Saved</Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">Not initialized</Badge>
+                )}
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                  <div className="p-3 border border-border rounded-lg text-center bg-card shadow-sm">
-                    <div className="text-2xl font-bold text-foreground">3</div>
-                    <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1">Credits</div>
-                  </div>
-                  <div className="p-3 border border-border rounded-lg text-center bg-card shadow-sm">
-                    <div className="text-2xl font-bold text-foreground">15</div>
-                    <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1">Weeks</div>
-                  </div>
-                  <div className="p-3 border border-border rounded-lg text-center bg-card shadow-sm">
-                    <div className="text-2xl font-bold text-foreground">14</div>
-                    <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1">Modules</div>
-                  </div>
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Course title</label>
+                  <Input
+                    value={courseForm.title}
+                    placeholder={project.title}
+                    onChange={(e) => setCourseForm((p) => ({ ...p, title: e.target.value }))}
+                    className="mt-1 h-9"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {([
+                    { key: "creditHours", label: "Credits" },
+                    { key: "termWeeks", label: "Weeks" },
+                    { key: "moduleCount", label: "Modules" },
+                  ] as const).map((f) => (
+                    <div key={f.key} className="p-3 border border-border rounded-lg text-center bg-card shadow-sm">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={courseForm[f.key]}
+                        onChange={(e) => setCourseForm((p) => ({ ...p, [f.key]: e.target.value }))}
+                        className="h-9 text-center text-lg font-bold border-0 shadow-none focus-visible:ring-1 px-0"
+                        placeholder="—"
+                      />
+                      <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1">{f.label}</div>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="grid grid-cols-5 gap-2">
-                  {Array.from({ length: 15 }).map((_, i) => {
-                    const wk = i + 1;
-                    const isMid = wk === 8;
-                    const isFin = wk === 15;
-                    const modLabel = isMid ? 'Review' : isFin ? 'Final' : `M${wk > 8 ? wk - 1 : wk}`;
-                    return (
-                      <div key={i} className={`flex flex-col items-center justify-center p-2 border rounded-md shadow-sm transition-colors text-xs
-                        ${isMid ? 'bg-amber-50 border-amber-200 text-amber-900' : isFin ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-card border-border'}
-                      `}>
-                        <div className="font-semibold text-[10px] uppercase tracking-wider opacity-60">Wk {wk}</div>
-                        <div className="font-bold mt-0.5">{modLabel}</div>
-                      </div>
-                    );
-                  })}
-                </div>
+                {toNum(courseForm.termWeeks) ? (
+                  <div className="grid grid-cols-5 gap-2">
+                    {Array.from({ length: Math.min(toNum(courseForm.termWeeks) || 0, 30) }).map((_, i) => {
+                      const wk = i + 1;
+                      return (
+                        <div key={i} className="flex flex-col items-center justify-center p-2 border rounded-md shadow-sm text-xs bg-card border-border">
+                          <div className="font-semibold text-[10px] uppercase tracking-wider opacity-60">Wk {wk}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+
+                <Button
+                  className="w-full font-semibold shadow-sm"
+                  onClick={handleSaveCourse}
+                  disabled={createCourse.isPending || updateCourse.isPending}
+                >
+                  {(createCourse.isPending || updateCourse.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {course ? "Save course record" : "Initialize course record"}
+                </Button>
               </CardContent>
             </Card>
 

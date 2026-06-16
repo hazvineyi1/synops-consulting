@@ -1011,3 +1011,50 @@ export const GetCrosswalkGapsResponse = zod.object({
 })
 
 
+/**
+ * @summary Get saved kickoff/intake progress for a project
+ */
+export const GetIntakeProgressParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const GetIntakeProgressResponse = zod.object({
+  "projectId": zod.number(),
+  "agendaChecks": zod.array(zod.array(zod.boolean())),
+  "segStatuses": zod.array(zod.string()),
+  "confirmedPre": zod.array(zod.number()),
+  "notes": zod.record(zod.string(), zod.string()),
+  "inventorySelections": zod.record(zod.string(), zod.string()),
+  "autoRules": zod.record(zod.string(), zod.boolean()),
+  "updatedAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Save kickoff/intake progress for a project
+ */
+export const UpdateIntakeProgressParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const UpdateIntakeProgressBody = zod.object({
+  "agendaChecks": zod.array(zod.array(zod.boolean())).optional(),
+  "segStatuses": zod.array(zod.string()).optional(),
+  "confirmedPre": zod.array(zod.number()).optional(),
+  "notes": zod.record(zod.string(), zod.string()).optional(),
+  "inventorySelections": zod.record(zod.string(), zod.string()).optional(),
+  "autoRules": zod.record(zod.string(), zod.boolean()).optional()
+})
+
+export const UpdateIntakeProgressResponse = zod.object({
+  "projectId": zod.number(),
+  "agendaChecks": zod.array(zod.array(zod.boolean())),
+  "segStatuses": zod.array(zod.string()),
+  "confirmedPre": zod.array(zod.number()),
+  "notes": zod.record(zod.string(), zod.string()),
+  "inventorySelections": zod.record(zod.string(), zod.string()),
+  "autoRules": zod.record(zod.string(), zod.boolean()),
+  "updatedAt": zod.coerce.date().nullish()
+})
+
+
