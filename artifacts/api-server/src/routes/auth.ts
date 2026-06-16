@@ -1,0 +1,140 @@
+import { Router } from "express";
+import { eq } from "drizzle-orm";
+import rateLimit from "express-rate-limit";
+import { z } from "zod/v4";
+import { db, usersTable, engagementsTable } from "@workspace/db";
+import type { UserRow } from "@workspace/db";
+import { hashPassword, verifyPassword } from "../lib/auth";
+
+const router = Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many attempts. Please try again in a few minutes." },
+});
+
+const registerSchema = z.object({
+  email: z.string().email().max(255),
+  password: z.string().min(8, "Password must be at least 8 characters").max(200),
+  name: z.string().min(1).max(200),
+  organization: z.string().max(200).optional(),
+});
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+function publicUser(u: UserRow) {
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    organization: u.organization,
+    role: u.role,
+    createdAt: u.createdAt.toISOString(),
+  };
+}
+
+function sampleEngagements(userId: number) {
+  return [
+    {
+      userId,
+      title: "Provider Network Adequacy Review",
+      practiceArea: "Healthcare & Operations",
+      status: "Active",
+      nextMilestone: "Gap-analysis readout — week 3",
+    },
+    {
+      userId,
+      title: "Online Course Accessibility Audit",
+      practiceArea: "Learning & EdTech",
+      status: "In QA",
+      nextMilestone: "WCAG 2.1 AA remediation sign-off",
+    },
+    {
+      userId,
+      title: "Adaptive Learning Pilot",
+      practiceArea: "Platforms & SaaS",
+      status: "Discovery",
+      nextMilestone: "Scope & success-metrics workshop",
+    },
+  ];
+}
+
+router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
+  const parsed = registerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+    return;
+  }
+  const email = parsed.data.email.toLowerCase().trim();
+
+  const existing = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  if (existing.length > 0) {
+    res.status(409).json({ error: "An account with this email already exists." });
+    return;
+  }
+
+  const passwordHash = await hashPassword(parsed.data.password);
+  const [user] = await db
+    .insert(usersTable)
+    .values({
+      email,
+      passwordHash,
+      name: parsed.data.name.trim(),
+      organization: parsed.data.organization?.trim() || null,
+    })
+    .returning();
+
+  await db.insert(engagementsTable).values(sampleEngagements(user.id));
+
+  req.session.userId = user.id;
+  req.session.role = user.role;
+  res.status(201).json(publicUser(user));
+});
+
+router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
+  const parsed = loginSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid input" });
+    return;
+  }
+  const email = parsed.data.email.toLowerCase().trim();
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  if (!user || !(await verifyPassword(parsed.data.password, user.passwordHash))) {
+    res.status(401).json({ error: "Invalid email or password." });
+    return;
+  }
+
+  req.session.userId = user.id;
+  req.session.role = user.role;
+  res.json(publicUser(user));
+});
+
+router.post("/auth/logout", (req, res): void => {
+  req.session.destroy(() => {
+    res.clearCookie("sid");
+    res.json({ ok: true });
+  });
+});
+
+router.get("/auth/me", async (req, res): Promise<void> => {
+  if (!req.session?.userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId));
+  if (!user) {
+    req.session.destroy(() => undefined);
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  res.json(publicUser(user));
+});
+
+export default router;

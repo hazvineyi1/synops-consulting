@@ -50,6 +50,9 @@
   --color-sidebar-accent-border: var(--sidebar-accent-border);
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
+  --color-practice-health: hsl(var(--practice-health));
+  --color-practice-learning: hsl(var(--practice-learning));
+
   --font-sans: var(--app-font-sans);
   --font-serif: var(--app-font-serif);
   --font-mono: var(--app-font-mono);
@@ -61,44 +64,50 @@
 }
 
 :root {
-  --background: 220 14% 96%;
-  --foreground: 217 28% 15%;
+  --background: 210 20% 98%;
+  --foreground: 220 30% 15%;
 
   --card: 0 0% 100%;
-  --card-foreground: 217 28% 15%;
-  --card-border: 218 20% 91%;
+  --card-foreground: 220 30% 15%;
+  --card-border: 210 15% 90%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 217 28% 15%;
-  --popover-border: 218 20% 91%;
+  --popover-foreground: 220 30% 15%;
+  --popover-border: 210 15% 90%;
 
-  --primary: 173 71% 24%;
+  /* Deep slate-teal */
+  --primary: 190 40% 25%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 210 24% 95%;
-  --secondary-foreground: 217 28% 15%;
+  --secondary: 190 10% 90%;
+  --secondary-foreground: 190 40% 25%;
 
-  --muted: 210 24% 95%;
-  --muted-foreground: 217 11% 40%;
+  --muted: 210 10% 92%;
+  --muted-foreground: 210 10% 45%;
 
-  --accent: 171 34% 91%;
-  --accent-foreground: 217 28% 15%;
+  /* Warm CTA accent (Terracotta) */
+  --accent: 25 80% 50%;
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 353 51% 46%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 218 20% 91%;
-  --input: 218 20% 91%;
-  --ring: 173 71% 24%;
+  --border: 210 15% 90%;
+  --input: 210 15% 90%;
+  --ring: 190 40% 25%;
 
-  --sidebar: 222 47% 11%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-border: 217.2 32.6% 17.5%;
-  --sidebar-primary: 160 69% 24%;
-  --sidebar-primary-foreground: 210 40% 98%;
-  --sidebar-accent: 217.2 32.6% 17.5%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-ring: 160 69% 24%;
+  --sidebar: 190 40% 15%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-border: 190 30% 25%;
+  --sidebar-primary: 25 80% 50%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 190 30% 25%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-ring: 25 80% 50%;
+
+  /* Two practice areas */
+  --practice-health: 195 45% 35%; /* Mid Slate-Teal */
+  --practice-learning: 260 30% 40%; /* Deep Purple/Indigo */
 
   --radius: 0.5rem;
   --app-font-sans: 'Hanken Grotesk', system-ui, sans-serif;

@@ -2,22 +2,23 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
 
-import { Shell } from "@/components/layout/Shell";
-import Dashboard from "@/pages/Dashboard";
-import Clients from "@/pages/Clients";
-import ClientDetail from "@/pages/ClientDetail";
-import Projects from "@/pages/Projects";
-import NewProject from "@/pages/NewProject";
-import ProjectDetail from "@/pages/ProjectDetail";
-import ProjectIntake from "@/pages/ProjectIntake";
-import ProjectDesign from "@/pages/ProjectDesign";
-import ProjectPrototype from "@/pages/ProjectPrototype";
-import ProjectProduction from "@/pages/ProjectProduction";
-import ProjectQA from "@/pages/ProjectQA";
-import ProjectHandoff from "@/pages/ProjectHandoff";
-import Standards from "@/pages/Standards";
+import { AuthProvider } from "@/lib/auth-context";
+import { PublicLayout } from "@/components/layout/PublicLayout";
+import { ProtectedPortal } from "@/components/portal/ProtectedPortal";
+
+import Home from "@/pages/public/Home";
+import About from "@/pages/public/About";
+import Healthcare from "@/pages/public/Healthcare";
+import Learning from "@/pages/public/Learning";
+import Platforms from "@/pages/public/Platforms";
+import Government from "@/pages/public/Government";
+import Insights from "@/pages/public/Insights";
+import InsightArticle from "@/pages/public/InsightArticle";
+import Contact from "@/pages/public/Contact";
+import Login from "@/pages/portal/Login";
+import Register from "@/pages/portal/Register";
+import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,38 +29,49 @@ const queryClient = new QueryClient({
   },
 });
 
-function Router() {
+function PublicSite() {
   return (
-    <Shell>
+    <PublicLayout>
       <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/clients" component={Clients} />
-        <Route path="/clients/:id" component={ClientDetail} />
-        <Route path="/projects" component={Projects} />
-        <Route path="/projects/new" component={NewProject} />
-        <Route path="/projects/:id" component={ProjectDetail} />
-        <Route path="/projects/:id/intake" component={ProjectIntake} />
-        <Route path="/projects/:id/design" component={ProjectDesign} />
-        <Route path="/projects/:id/prototype" component={ProjectPrototype} />
-        <Route path="/projects/:id/production" component={ProjectProduction} />
-        <Route path="/projects/:id/qa" component={ProjectQA} />
-        <Route path="/projects/:id/handoff" component={ProjectHandoff} />
-        <Route path="/standards" component={Standards} />
+        <Route path="/" component={Home} />
+        <Route path="/about" component={About} />
+        <Route path="/healthcare" component={Healthcare} />
+        <Route path="/learning" component={Learning} />
+        <Route path="/platforms" component={Platforms} />
+        <Route path="/government" component={Government} />
+        <Route path="/insights" component={Insights} />
+        <Route path="/insights/:slug" component={InsightArticle} />
+        <Route path="/contact" component={Contact} />
         <Route component={NotFound} />
       </Switch>
-    </Shell>
+    </PublicLayout>
+  );
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/portal/login" component={Login} />
+      <Route path="/portal/register" component={Register} />
+      <Route path="/portal" nest>
+        <ProtectedPortal />
+      </Route>
+      <Route component={PublicSite} />
+    </Switch>
   );
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Router />
+            <Toaster />
+          </TooltipProvider>
+        </AuthProvider>
+      </WouterRouter>
     </QueryClientProvider>
   );
 }

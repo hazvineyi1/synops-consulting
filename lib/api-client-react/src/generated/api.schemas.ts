@@ -5,6 +5,172 @@
  * UVA Production Engine API
  * OpenAPI spec version: 0.1.0
  */
+export interface AuthUser {
+  id: number;
+  email: string;
+  name: string;
+  /** @nullable */
+  organization?: string | null;
+  role: string;
+  createdAt: string;
+}
+
+export interface RegisterInput {
+  email: string;
+  /** @minLength 8 */
+  password: string;
+  name: string;
+  organization?: string;
+}
+
+export interface LoginInput {
+  email: string;
+  password: string;
+}
+
+export interface OkResponse {
+  ok: boolean;
+}
+
+export interface SubmitResult {
+  ok: boolean;
+  id?: number;
+}
+
+export type ContactInputAreaOfInterest = typeof ContactInputAreaOfInterest[keyof typeof ContactInputAreaOfInterest];
+
+
+export const ContactInputAreaOfInterest = {
+  'Healthcare_&_Operations': 'Healthcare & Operations',
+  'Learning,_EdTech_&_AI': 'Learning, EdTech & AI',
+  'Platforms_&_SaaS': 'Platforms & SaaS',
+  'Government_&_Public_Sector': 'Government & Public Sector',
+  Other: 'Other',
+} as const;
+
+export interface ContactInput {
+  name: string;
+  organization?: string;
+  email: string;
+  phone?: string;
+  areaOfInterest: ContactInputAreaOfInterest;
+  message: string;
+  /** Honeypot field — leave empty. */
+  website?: string;
+}
+
+export interface NewsletterInput {
+  email: string;
+  /** Honeypot field — leave empty. */
+  website?: string;
+}
+
+export interface DemoLevelOption {
+  value: string;
+  label: string;
+}
+
+export interface DemoBankItem {
+  id: string;
+  difficulty: number;
+  skill: string;
+  passage: string;
+  question: string;
+  options: string[];
+}
+
+export interface DemoBank {
+  level: string;
+  items: DemoBankItem[];
+}
+
+export interface DemoAnswerInput {
+  itemId: string;
+  optionIndex: number;
+}
+
+export interface DemoAnswerResult {
+  correct: boolean;
+  correctIndex: number;
+  /** @nullable */
+  hint?: string | null;
+}
+
+export interface DemoPathStep {
+  itemId: string;
+  difficulty: number;
+  correct: boolean;
+}
+
+export type DemoSessionInputLevel = typeof DemoSessionInputLevel[keyof typeof DemoSessionInputLevel];
+
+
+export const DemoSessionInputLevel = {
+  elementary: 'elementary',
+  secondary: 'secondary',
+  higher: 'higher',
+} as const;
+
+export interface DemoSessionInput {
+  level: DemoSessionInputLevel;
+  itemsAttempted: number;
+  correctCount: number;
+  masteryEstimate: number;
+  finalRung?: string;
+  path: DemoPathStep[];
+}
+
+export interface Engagement {
+  id: number;
+  userId: number;
+  title: string;
+  practiceArea: string;
+  status: string;
+  /** @nullable */
+  nextMilestone?: string | null;
+  createdAt: string;
+}
+
+export interface PortalResource {
+  id: number;
+  title: string;
+  category: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  url?: string | null;
+  createdAt: string;
+}
+
+export interface PortalMessageInput {
+  subject: string;
+  message: string;
+}
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  name: string;
+  /** @nullable */
+  organization?: string | null;
+  role: string;
+  createdAt: string;
+}
+
+export interface ContactSubmission {
+  id: number;
+  name: string;
+  /** @nullable */
+  organization?: string | null;
+  email: string;
+  /** @nullable */
+  phone?: string | null;
+  areaOfInterest: string;
+  message: string;
+  source: string;
+  createdAt: string;
+}
+
 export type IntakeProgressInputNotes = {[key: string]: string};
 
 export type IntakeProgressInputInventorySelections = {[key: string]: string};
@@ -511,4 +677,17 @@ export interface CrosswalkGapReport {
   deliveryBlocked?: boolean;
   gaps: StandardCompetency[];
 }
+
+export type GetDemoBankParams = {
+level: GetDemoBankLevel;
+};
+
+export type GetDemoBankLevel = typeof GetDemoBankLevel[keyof typeof GetDemoBankLevel];
+
+
+export const GetDemoBankLevel = {
+  elementary: 'elementary',
+  secondary: 'secondary',
+  higher: 'higher',
+} as const;
 

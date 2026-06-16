@@ -1058,3 +1058,211 @@ export const UpdateIntakeProgressResponse = zod.object({
 })
 
 
+/**
+ * @summary Register a new client account
+ */
+export const registerBodyPasswordMin = 8;
+
+
+
+export const RegisterBody = zod.object({
+  "email": zod.string().email(),
+  "password": zod.string().min(registerBodyPasswordMin),
+  "name": zod.string(),
+  "organization": zod.string().optional()
+})
+
+
+/**
+ * @summary Log in
+ */
+export const LoginBody = zod.object({
+  "email": zod.string().email(),
+  "password": zod.string()
+})
+
+export const LoginResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "organization": zod.string().nullish(),
+  "role": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Log out
+ */
+export const LogoutResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Get the currently authenticated user
+ */
+export const GetCurrentUserResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "organization": zod.string().nullish(),
+  "role": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Submit a contact inquiry
+ */
+export const SubmitContactBody = zod.object({
+  "name": zod.string(),
+  "organization": zod.string().optional(),
+  "email": zod.string().email(),
+  "phone": zod.string().optional(),
+  "areaOfInterest": zod.enum(['Healthcare & Operations', 'Learning, EdTech & AI', 'Platforms & SaaS', 'Government & Public Sector', 'Other']),
+  "message": zod.string(),
+  "website": zod.string().optional().describe('Honeypot field — leave empty.')
+})
+
+
+/**
+ * @summary Subscribe to the newsletter
+ */
+export const SubscribeNewsletterBody = zod.object({
+  "email": zod.string().email(),
+  "website": zod.string().optional().describe('Honeypot field — leave empty.')
+})
+
+
+/**
+ * @summary List available reading levels
+ */
+export const GetDemoLevelsResponseItem = zod.object({
+  "value": zod.string(),
+  "label": zod.string()
+})
+export const GetDemoLevelsResponse = zod.array(GetDemoLevelsResponseItem)
+
+
+/**
+ * @summary Get the item bank for a level (no answer keys)
+ */
+export const GetDemoBankQueryParams = zod.object({
+  "level": zod.enum(['elementary', 'secondary', 'higher'])
+})
+
+export const GetDemoBankResponse = zod.object({
+  "level": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "difficulty": zod.number(),
+  "skill": zod.string(),
+  "passage": zod.string(),
+  "question": zod.string(),
+  "options": zod.array(zod.string())
+}))
+})
+
+
+/**
+ * @summary Grade a single demo answer
+ */
+export const AnswerDemoItemBody = zod.object({
+  "itemId": zod.string(),
+  "optionIndex": zod.number()
+})
+
+export const AnswerDemoItemResponse = zod.object({
+  "correct": zod.boolean(),
+  "correctIndex": zod.number(),
+  "hint": zod.string().nullish()
+})
+
+
+/**
+ * @summary Persist an anonymous completed demo run
+ */
+export const SaveDemoSessionBody = zod.object({
+  "level": zod.enum(['elementary', 'secondary', 'higher']),
+  "itemsAttempted": zod.number(),
+  "correctCount": zod.number(),
+  "masteryEstimate": zod.number(),
+  "finalRung": zod.string().optional(),
+  "path": zod.array(zod.object({
+  "itemId": zod.string(),
+  "difficulty": zod.number(),
+  "correct": zod.boolean()
+}))
+})
+
+
+/**
+ * @summary List engagements for the current user
+ */
+export const GetPortalEngagementsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "title": zod.string(),
+  "practiceArea": zod.string(),
+  "status": zod.string(),
+  "nextMilestone": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const GetPortalEngagementsResponse = zod.array(GetPortalEngagementsResponseItem)
+
+
+/**
+ * @summary List portal resources
+ */
+export const GetPortalResourcesResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "description": zod.string().nullish(),
+  "url": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const GetPortalResourcesResponse = zod.array(GetPortalResourcesResponseItem)
+
+
+/**
+ * @summary Send a message to the engagement team
+ */
+export const SendPortalMessageBody = zod.object({
+  "subject": zod.string(),
+  "message": zod.string()
+})
+
+
+/**
+ * @summary List all users (admin only)
+ */
+export const ListAdminUsersResponseItem = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "organization": zod.string().nullish(),
+  "role": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAdminUsersResponse = zod.array(ListAdminUsersResponseItem)
+
+
+/**
+ * @summary List all contact submissions (admin only)
+ */
+export const ListAdminSubmissionsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "organization": zod.string().nullish(),
+  "email": zod.string(),
+  "phone": zod.string().nullish(),
+  "areaOfInterest": zod.string(),
+  "message": zod.string(),
+  "source": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAdminSubmissionsResponse = zod.array(ListAdminSubmissionsResponseItem)
+
+

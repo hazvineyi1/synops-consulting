@@ -10,3 +10,7 @@ export * from "./qa";
 export * from "./standards";
 export * from "./audit";
 export * from "./intake";
+export * from "./users";
+export * from "./marketing";
+export * from "./portal";
+export * from "./sessions";

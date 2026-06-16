@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { ensurePortalSeed } from "./lib/seed";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,8 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  ensurePortalSeed(logger).catch((err) => {
+    logger.error({ err }, "Failed to seed portal resources");
+  });
 });
