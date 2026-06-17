@@ -33,6 +33,10 @@ import { useToast } from "@/hooks/use-toast";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 import { DeliveryTimeline } from "@/components/engine/DeliveryTimeline";
 import { DesignApproachCard } from "@/components/engine/DesignApproachCard";
+import { ProjectStartTab } from "@/components/engine/ProjectStartTab";
+import { KickoffInterview } from "@/components/engine/KickoffInterview";
+import { getMethod, type MethodKey } from "@/lib/instructional-methods";
+import type { KickoffState } from "@workspace/api-client-react";
 
 // Data Definitions
 const INVENTORY = [
@@ -199,6 +203,8 @@ export default function ProjectIntake() {
   const [autoRules, setAutoRules] = useState({ r1: true, r2: true, r3: true, r4: false });
   const [deepProbes, setDeepProbes] = useState<Set<number>>(new Set());
   const [notes, setNotes] = useState<Record<number, string>>({});
+  const [kickoff, setKickoff] = useState<KickoffState>({});
+  const [tab, setTab] = useState("start");
 
   // Course record form
   const [courseForm, setCourseForm] = useState({ title: "", creditHours: "", termWeeks: "", moduleCount: "" });
@@ -272,6 +278,9 @@ export default function ProjectIntake() {
     if (intakeProgress.autoRules && typeof intakeProgress.autoRules === "object" && Object.keys(intakeProgress.autoRules).length > 0) {
       setAutoRules((prev) => ({ ...prev, ...(intakeProgress.autoRules as Record<string, boolean>) }));
     }
+    if (intakeProgress.kickoffAnswers && typeof intakeProgress.kickoffAnswers === "object") {
+      setKickoff(intakeProgress.kickoffAnswers);
+    }
 
     // Seed last-saved so the first autosave doesn't redundantly re-write loaded state
     lastSavedRef.current = JSON.stringify({
@@ -281,6 +290,7 @@ export default function ProjectIntake() {
       notes: intakeProgress.notes,
       inventorySelections: intakeProgress.inventorySelections,
       autoRules: intakeProgress.autoRules,
+      kickoffAnswers: intakeProgress.kickoffAnswers,
     });
   }, [intakeProgress]);
 
@@ -342,6 +352,7 @@ export default function ProjectIntake() {
       notes: notesPayload,
       inventorySelections: invPayload,
       autoRules,
+      kickoffAnswers: kickoff,
     });
     if (snapshot === lastSavedRef.current) return;
     // Avoid overlapping in-flight saves; this effect re-runs when isPending settles.
@@ -358,6 +369,7 @@ export default function ProjectIntake() {
             notes: notesPayload,
             inventorySelections: invPayload,
             autoRules,
+            kickoffAnswers: kickoff,
           },
         },
         {
@@ -374,7 +386,7 @@ export default function ProjectIntake() {
     }, 800);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agendaChecks, segStatuses, confirmedPre, notes, inventorySelections, autoRules, projectId, updateIntake.isPending]);
+  }, [agendaChecks, segStatuses, confirmedPre, notes, inventorySelections, autoRules, kickoff, projectId, updateIntake.isPending]);
 
   const toggleSegment = (idx: number) => {
     // Single-open accordion: opening a segment collapses any other.
@@ -714,13 +726,26 @@ export default function ProjectIntake() {
       )}
     >
       {() => (
-        <Tabs defaultValue="prepare" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:grid-cols-4">
+        <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:grid-cols-5">
+            <TabsTrigger value="start">Start</TabsTrigger>
             <TabsTrigger value="prepare">Prepare</TabsTrigger>
             <TabsTrigger value="meet">Meet</TabsTrigger>
             <TabsTrigger value="wrap">Wrap</TabsTrigger>
             <TabsTrigger value="accessibility">Accessibility</TabsTrigger>
           </TabsList>
+
+          {/* START: project-start essentials */}
+          <TabsContent value="start" className="space-y-6">
+            <ProjectStartTab
+              projectId={projectId}
+              course={course}
+              objectives={objectives ?? []}
+              kickoffSummary={kickoff.summary ?? []}
+              kickoffCompleted={kickoff.completed ?? false}
+              onGoToKickoff={() => setTab("meet")}
+            />
+          </TabsContent>
 
           {/* PREPARE: gather and audit materials */}
           <TabsContent value="prepare" className="space-y-6">
@@ -902,6 +927,16 @@ export default function ProjectIntake() {
 
           {/* MEET: run the agenda */}
           <TabsContent value="meet" className="space-y-6">
+            <KickoffInterview
+              designMethod={
+                project.designMethod && getMethod(project.designMethod)
+                  ? (project.designMethod as MethodKey)
+                  : null
+              }
+              value={kickoff}
+              onChange={setKickoff}
+            />
+
             <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
               {/* Meeting recordings: in-browser capture or external link */}
               <Card className="border-border shadow-sm">

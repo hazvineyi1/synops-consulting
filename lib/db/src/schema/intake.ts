@@ -9,6 +9,10 @@ export const intakeProgressTable = pgTable("intake_progress", {
   notes: text("notes").notNull().default("{}"),
   inventorySelections: text("inventory_selections").notNull().default("{}"),
   autoRules: text("auto_rules").notNull().default("{}"),
+  // Interactive Socratic kickoff answers (rules-based, no AI). Stored separately
+  // from the fixed-length SEGMENTS arrays above so it can never clobber the
+  // kickoff checklist autosave (and vice versa). Shape: KickoffState JSON.
+  kickoffAnswers: text("kickoff_answers").notNull().default("{}"),
   // Rules-based agenda generated from the project/course/objectives. Stored
   // separately from the fixed-length SEGMENTS arrays above so generating it can
   // never clobber the kickoff checklist autosave (and vice versa).

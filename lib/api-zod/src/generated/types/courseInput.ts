@@ -16,4 +16,7 @@ export interface CourseInput {
   accreditors?: string;
   seatTimeHours?: number;
   courseDescription?: string;
+  instructorName?: string;
+  instructorEmail?: string;
+  instructorTitle?: string;
 }

@@ -102,6 +102,9 @@ router.post("/projects/:projectId/courses", async (req, res): Promise<void> => {
       accreditors: parsed.data.accreditors ?? null,
       seatTimeHours: parsed.data.seatTimeHours ?? null,
       courseDescription: parsed.data.courseDescription ?? null,
+      instructorName: parsed.data.instructorName ?? null,
+      instructorEmail: parsed.data.instructorEmail ?? null,
+      instructorTitle: parsed.data.instructorTitle ?? null,
     })
     .returning();
 
@@ -163,6 +166,9 @@ router.patch("/courses/:id", async (req, res): Promise<void> => {
   if (parsed.data.accreditors !== undefined) updates.accreditors = parsed.data.accreditors;
   if (parsed.data.seatTimeHours !== undefined) updates.seatTimeHours = parsed.data.seatTimeHours;
   if (parsed.data.courseDescription !== undefined) updates.courseDescription = parsed.data.courseDescription;
+  if (parsed.data.instructorName !== undefined) updates.instructorName = parsed.data.instructorName;
+  if (parsed.data.instructorEmail !== undefined) updates.instructorEmail = parsed.data.instructorEmail;
+  if (parsed.data.instructorTitle !== undefined) updates.instructorTitle = parsed.data.instructorTitle;
 
   const [course] = await db
     .update(coursesTable)

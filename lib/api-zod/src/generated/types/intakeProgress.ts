@@ -9,6 +9,7 @@ import type { GeneratedAgenda } from './generatedAgenda';
 import type { IntakeProgressAutoRules } from './intakeProgressAutoRules';
 import type { IntakeProgressInventorySelections } from './intakeProgressInventorySelections';
 import type { IntakeProgressNotes } from './intakeProgressNotes';
+import type { KickoffState } from './kickoffState';
 
 export interface IntakeProgress {
   projectId: number;
@@ -18,6 +19,7 @@ export interface IntakeProgress {
   notes: IntakeProgressNotes;
   inventorySelections: IntakeProgressInventorySelections;
   autoRules: IntakeProgressAutoRules;
+  kickoffAnswers?: KickoffState;
   generatedAgenda?: GeneratedAgenda | null;
   /** @nullable */
   updatedAt?: Date | null;

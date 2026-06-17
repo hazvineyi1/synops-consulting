@@ -25,6 +25,7 @@ const EMPTY = {
   notes: {} as Record<string, string>,
   inventorySelections: {} as Record<string, string>,
   autoRules: {} as Record<string, boolean>,
+  kickoffAnswers: {} as Record<string, unknown>,
 };
 
 interface AgendaItem {
@@ -159,6 +160,7 @@ function serialize(row: typeof intakeProgressTable.$inferSelect) {
       EMPTY.inventorySelections,
     ),
     autoRules: parse<Record<string, boolean>>(row.autoRules, EMPTY.autoRules),
+    kickoffAnswers: parse<Record<string, unknown>>(row.kickoffAnswers, EMPTY.kickoffAnswers),
     generatedAgenda: parseAgenda(row.generatedAgenda),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -226,31 +228,41 @@ router.put("/projects/:projectId/intake-progress", async (req, res): Promise<voi
     return;
   }
 
-  const values = {
+  const body = parsed.data;
+
+  // INSERT path (no row yet) must supply defaults for every omitted column.
+  const insertValues = {
     projectId: params.data.projectId,
-    agendaChecks: JSON.stringify(parsed.data.agendaChecks ?? EMPTY.agendaChecks),
-    segStatuses: JSON.stringify(parsed.data.segStatuses ?? EMPTY.segStatuses),
-    confirmedPre: JSON.stringify(parsed.data.confirmedPre ?? EMPTY.confirmedPre),
-    notes: JSON.stringify(parsed.data.notes ?? EMPTY.notes),
-    inventorySelections: JSON.stringify(
-      parsed.data.inventorySelections ?? EMPTY.inventorySelections,
-    ),
-    autoRules: JSON.stringify(parsed.data.autoRules ?? EMPTY.autoRules),
+    agendaChecks: JSON.stringify(body.agendaChecks ?? EMPTY.agendaChecks),
+    segStatuses: JSON.stringify(body.segStatuses ?? EMPTY.segStatuses),
+    confirmedPre: JSON.stringify(body.confirmedPre ?? EMPTY.confirmedPre),
+    notes: JSON.stringify(body.notes ?? EMPTY.notes),
+    inventorySelections: JSON.stringify(body.inventorySelections ?? EMPTY.inventorySelections),
+    autoRules: JSON.stringify(body.autoRules ?? EMPTY.autoRules),
+    kickoffAnswers: JSON.stringify(body.kickoffAnswers ?? EMPTY.kickoffAnswers),
   };
+
+  // UPDATE path only touches columns actually present in the request. Because
+  // every field in IntakeProgressInput is optional, a partial update (for
+  // example a kickoff-only autosave) must NOT reset the SEGMENTS-indexed
+  // columns (agendaChecks, segStatuses, notes, ...) and vice versa. updatedAt is
+  // always set so the conflict-update set is never empty.
+  const set: Partial<typeof intakeProgressTable.$inferInsert> = { updatedAt: new Date() };
+  if (body.agendaChecks !== undefined) set.agendaChecks = insertValues.agendaChecks;
+  if (body.segStatuses !== undefined) set.segStatuses = insertValues.segStatuses;
+  if (body.confirmedPre !== undefined) set.confirmedPre = insertValues.confirmedPre;
+  if (body.notes !== undefined) set.notes = insertValues.notes;
+  if (body.inventorySelections !== undefined)
+    set.inventorySelections = insertValues.inventorySelections;
+  if (body.autoRules !== undefined) set.autoRules = insertValues.autoRules;
+  if (body.kickoffAnswers !== undefined) set.kickoffAnswers = insertValues.kickoffAnswers;
 
   const [row] = await db
     .insert(intakeProgressTable)
-    .values(values)
+    .values(insertValues)
     .onConflictDoUpdate({
       target: intakeProgressTable.projectId,
-      set: {
-        agendaChecks: values.agendaChecks,
-        segStatuses: values.segStatuses,
-        confirmedPre: values.confirmedPre,
-        notes: values.notes,
-        inventorySelections: values.inventorySelections,
-        autoRules: values.autoRules,
-      },
+      set,
     })
     .returning();
 

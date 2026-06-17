@@ -297,6 +297,9 @@ export const ListCoursesResponseItem = zod.object({
   "accreditors": zod.string().nullish().describe('Comma-separated accreditor names\/acronyms'),
   "seatTimeHours": zod.number().nullish(),
   "courseDescription": zod.string().nullish(),
+  "instructorName": zod.string().nullish(),
+  "instructorEmail": zod.string().nullish(),
+  "instructorTitle": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListCoursesResponse = zod.array(ListCoursesResponseItem)
@@ -320,7 +323,10 @@ export const CreateCourseBody = zod.object({
   "modality": zod.string().optional(),
   "accreditors": zod.string().optional(),
   "seatTimeHours": zod.number().optional(),
-  "courseDescription": zod.string().optional()
+  "courseDescription": zod.string().optional(),
+  "instructorName": zod.string().optional(),
+  "instructorEmail": zod.string().optional(),
+  "instructorTitle": zod.string().optional()
 })
 
 
@@ -342,6 +348,9 @@ export const GetCourseResponse = zod.object({
   "accreditors": zod.string().nullish().describe('Comma-separated accreditor names\/acronyms'),
   "seatTimeHours": zod.number().nullish(),
   "courseDescription": zod.string().nullish(),
+  "instructorName": zod.string().nullish(),
+  "instructorEmail": zod.string().nullish(),
+  "instructorTitle": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -361,7 +370,10 @@ export const UpdateCourseBody = zod.object({
   "modality": zod.string().optional(),
   "accreditors": zod.string().optional(),
   "seatTimeHours": zod.number().optional(),
-  "courseDescription": zod.string().optional()
+  "courseDescription": zod.string().optional(),
+  "instructorName": zod.string().optional(),
+  "instructorEmail": zod.string().optional(),
+  "instructorTitle": zod.string().optional()
 })
 
 export const UpdateCourseResponse = zod.object({
@@ -375,6 +387,9 @@ export const UpdateCourseResponse = zod.object({
   "accreditors": zod.string().nullish().describe('Comma-separated accreditor names\/acronyms'),
   "seatTimeHours": zod.number().nullish(),
   "courseDescription": zod.string().nullish(),
+  "instructorName": zod.string().nullish(),
+  "instructorEmail": zod.string().nullish(),
+  "instructorTitle": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1034,6 +1049,19 @@ export const GetIntakeProgressResponse = zod.object({
   "notes": zod.record(zod.string(), zod.string()),
   "inventorySelections": zod.record(zod.string(), zod.string()),
   "autoRules": zod.record(zod.string(), zod.boolean()),
+  "kickoffAnswers": zod.object({
+  "version": zod.number().optional(),
+  "designMethod": zod.string().nullish(),
+  "currentNodeId": zod.string().nullish(),
+  "completed": zod.boolean().optional(),
+  "answers": zod.array(zod.object({
+  "nodeId": zod.string(),
+  "prompt": zod.string(),
+  "value": zod.string(),
+  "label": zod.string()
+})).optional(),
+  "summary": zod.array(zod.string()).optional()
+}).optional().describe('Interactive Socratic kickoff answers (rules-based). An empty object means not started.'),
   "generatedAgenda": zod.union([zod.object({
   "generatedAt": zod.coerce.date(),
   "projectTitle": zod.string(),
@@ -1063,7 +1091,20 @@ export const UpdateIntakeProgressBody = zod.object({
   "confirmedPre": zod.array(zod.number()).optional(),
   "notes": zod.record(zod.string(), zod.string()).optional(),
   "inventorySelections": zod.record(zod.string(), zod.string()).optional(),
-  "autoRules": zod.record(zod.string(), zod.boolean()).optional()
+  "autoRules": zod.record(zod.string(), zod.boolean()).optional(),
+  "kickoffAnswers": zod.object({
+  "version": zod.number().optional(),
+  "designMethod": zod.string().nullish(),
+  "currentNodeId": zod.string().nullish(),
+  "completed": zod.boolean().optional(),
+  "answers": zod.array(zod.object({
+  "nodeId": zod.string(),
+  "prompt": zod.string(),
+  "value": zod.string(),
+  "label": zod.string()
+})).optional(),
+  "summary": zod.array(zod.string()).optional()
+}).optional().describe('Interactive Socratic kickoff answers (rules-based). An empty object means not started.')
 })
 
 export const UpdateIntakeProgressResponse = zod.object({
@@ -1074,6 +1115,19 @@ export const UpdateIntakeProgressResponse = zod.object({
   "notes": zod.record(zod.string(), zod.string()),
   "inventorySelections": zod.record(zod.string(), zod.string()),
   "autoRules": zod.record(zod.string(), zod.boolean()),
+  "kickoffAnswers": zod.object({
+  "version": zod.number().optional(),
+  "designMethod": zod.string().nullish(),
+  "currentNodeId": zod.string().nullish(),
+  "completed": zod.boolean().optional(),
+  "answers": zod.array(zod.object({
+  "nodeId": zod.string(),
+  "prompt": zod.string(),
+  "value": zod.string(),
+  "label": zod.string()
+})).optional(),
+  "summary": zod.array(zod.string()).optional()
+}).optional().describe('Interactive Socratic kickoff answers (rules-based). An empty object means not started.'),
   "generatedAgenda": zod.union([zod.object({
   "generatedAt": zod.coerce.date(),
   "projectTitle": zod.string(),

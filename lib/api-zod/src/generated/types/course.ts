@@ -27,5 +27,11 @@ export interface Course {
   seatTimeHours?: number | null;
   /** @nullable */
   courseDescription?: string | null;
+  /** @nullable */
+  instructorName?: string | null;
+  /** @nullable */
+  instructorEmail?: string | null;
+  /** @nullable */
+  instructorTitle?: string | null;
   createdAt: Date;
 }

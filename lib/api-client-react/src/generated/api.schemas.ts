@@ -156,6 +156,27 @@ export type IntakeProgressInputInventorySelections = {[key: string]: string};
 
 export type IntakeProgressInputAutoRules = {[key: string]: boolean};
 
+export interface KickoffAnswer {
+  nodeId: string;
+  prompt: string;
+  value: string;
+  label: string;
+}
+
+/**
+ * Interactive Socratic kickoff answers (rules-based). An empty object means not started.
+ */
+export interface KickoffState {
+  version?: number;
+  /** @nullable */
+  designMethod?: string | null;
+  /** @nullable */
+  currentNodeId?: string | null;
+  completed?: boolean;
+  answers?: KickoffAnswer[];
+  summary?: string[];
+}
+
 export interface IntakeProgressInput {
   agendaChecks?: boolean[][];
   segStatuses?: string[];
@@ -163,6 +184,7 @@ export interface IntakeProgressInput {
   notes?: IntakeProgressInputNotes;
   inventorySelections?: IntakeProgressInputInventorySelections;
   autoRules?: IntakeProgressInputAutoRules;
+  kickoffAnswers?: KickoffState;
 }
 
 export type IntakeProgressNotes = {[key: string]: string};
@@ -195,6 +217,7 @@ export interface IntakeProgress {
   notes: IntakeProgressNotes;
   inventorySelections: IntakeProgressInventorySelections;
   autoRules: IntakeProgressAutoRules;
+  kickoffAnswers?: KickoffState;
   generatedAgenda?: GeneratedAgenda | null;
   /** @nullable */
   updatedAt?: string | null;
@@ -443,6 +466,12 @@ export interface Course {
   seatTimeHours?: number | null;
   /** @nullable */
   courseDescription?: string | null;
+  /** @nullable */
+  instructorName?: string | null;
+  /** @nullable */
+  instructorEmail?: string | null;
+  /** @nullable */
+  instructorTitle?: string | null;
   createdAt: string;
 }
 
@@ -456,6 +485,9 @@ export interface CourseInput {
   accreditors?: string;
   seatTimeHours?: number;
   courseDescription?: string;
+  instructorName?: string;
+  instructorEmail?: string;
+  instructorTitle?: string;
 }
 
 export interface CourseUpdate {
@@ -467,6 +499,9 @@ export interface CourseUpdate {
   accreditors?: string;
   seatTimeHours?: number;
   courseDescription?: string;
+  instructorName?: string;
+  instructorEmail?: string;
+  instructorTitle?: string;
 }
 
 export interface Module {

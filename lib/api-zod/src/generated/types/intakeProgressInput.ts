@@ -8,6 +8,7 @@
 import type { IntakeProgressInputAutoRules } from './intakeProgressInputAutoRules';
 import type { IntakeProgressInputInventorySelections } from './intakeProgressInputInventorySelections';
 import type { IntakeProgressInputNotes } from './intakeProgressInputNotes';
+import type { KickoffState } from './kickoffState';
 
 export interface IntakeProgressInput {
   agendaChecks?: boolean[][];
@@ -16,4 +17,5 @@ export interface IntakeProgressInput {
   notes?: IntakeProgressInputNotes;
   inventorySelections?: IntakeProgressInputInventorySelections;
   autoRules?: IntakeProgressInputAutoRules;
+  kickoffAnswers?: KickoffState;
 }

@@ -13,6 +13,9 @@ export const coursesTable = pgTable("courses", {
   accreditors: text("accreditors"),
   seatTimeHours: real("seat_time_hours"),
   courseDescription: text("course_description"),
+  instructorName: text("instructor_name"),
+  instructorEmail: text("instructor_email"),
+  instructorTitle: text("instructor_title"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

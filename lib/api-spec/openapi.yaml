@@ -2019,6 +2019,8 @@ components:
           type: object
           additionalProperties:
             type: boolean
+        kickoffAnswers:
+          $ref: "#/components/schemas/KickoffState"
 
     IntakeProgress:
       type: object
@@ -2052,6 +2054,8 @@ components:
           type: object
           additionalProperties:
             type: boolean
+        kickoffAnswers:
+          $ref: "#/components/schemas/KickoffState"
         generatedAgenda:
           oneOf:
             - $ref: "#/components/schemas/GeneratedAgenda"
@@ -2059,6 +2063,40 @@ components:
         updatedAt:
           type: ["string", "null"]
           format: date-time
+
+    KickoffAnswer:
+      type: object
+      required: [nodeId, prompt, value, label]
+      properties:
+        nodeId:
+          type: string
+        prompt:
+          type: string
+        value:
+          type: string
+        label:
+          type: string
+
+    KickoffState:
+      type: object
+      description: "Interactive Socratic kickoff answers (rules-based). An empty object means not started."
+      properties:
+        version:
+          type: integer
+        designMethod:
+          type: ["string", "null"]
+        currentNodeId:
+          type: ["string", "null"]
+        completed:
+          type: boolean
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/KickoffAnswer"
+        summary:
+          type: array
+          items:
+            type: string
 
     GeneratedAgendaItem:
       type: object
@@ -2427,6 +2465,12 @@ components:
           type: ["number", "null"]
         courseDescription:
           type: ["string", "null"]
+        instructorName:
+          type: ["string", "null"]
+        instructorEmail:
+          type: ["string", "null"]
+        instructorTitle:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -2452,6 +2496,12 @@ components:
           type: number
         courseDescription:
           type: string
+        instructorName:
+          type: string
+        instructorEmail:
+          type: string
+        instructorTitle:
+          type: string
 
     CourseUpdate:
       type: object
@@ -2471,6 +2521,12 @@ components:
         seatTimeHours:
           type: number
         courseDescription:
+          type: string
+        instructorName:
+          type: string
+        instructorEmail:
+          type: string
+        instructorTitle:
           type: string
 
     # ── Module ────────────────────────────────────────────────────
