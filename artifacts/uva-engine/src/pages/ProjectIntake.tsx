@@ -18,7 +18,7 @@ import {
   UploadCloud,
   AlertTriangle, Building2,
   CheckCircle2, Trash2, ArrowRight, Loader2, Target,
-  Mic, Link2, Sparkles, Clock
+  Mic, Link2, Sparkles, Clock, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
@@ -766,37 +766,64 @@ export default function ProjectIntake() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="border-b border-border p-6">
-                  <div className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                    Source documents · parse to pre-fill the agenda
-                  </div>
-
-                  <div className="mb-6 space-y-3">
-                    <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
-                      <Badge variant="destructive" className="rounded px-1.5 text-[10px]">PDF</Badge>
+                <div className="space-y-5 border-b border-border p-5 sm:p-6">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <FileText className="h-5 w-5" aria-hidden="true" />
+                      </div>
                       <div>
-                        <div className="text-sm font-semibold">BIOL3050_Syllabus_F23.pdf</div>
-                        <div className="text-xs text-muted-foreground">Outcomes · 15-week schedule</div>
+                        <h3 className="text-sm font-semibold text-foreground">Source documents</h3>
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                          Parse these to pre-fill the kickoff agenda.
+                        </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
-                      <Badge className="rounded border-none bg-blue-500 px-1.5 text-[10px] hover:bg-blue-600">DOC</Badge>
-                      <div>
-                        <div className="text-sm font-semibold">Course_Outline_v2.docx</div>
-                        <div className="text-xs text-muted-foreground">Topic sequence and weekly breakdown</div>
+                    <Badge
+                      variant="secondary"
+                      className="shrink-0 border-primary/20 bg-primary/10 text-primary shadow-none hover:bg-primary/10"
+                    >
+                      2 detected
+                    </Badge>
+                  </div>
+
+                  <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+                    <li className="flex items-center gap-3 p-3">
+                      <Badge variant="destructive" className="shrink-0 rounded px-1.5 text-[10px]">PDF</Badge>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-foreground">BIOL3050_Syllabus_F23.pdf</div>
+                        <div className="truncate text-xs text-muted-foreground">Outcomes · 15-week schedule</div>
                       </div>
-                    </div>
-                  </div>
+                      <span className="hidden shrink-0 items-center gap-1 text-xs font-medium text-green-600 sm:flex">
+                        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Ready
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-3 p-3">
+                      <Badge className="shrink-0 rounded border-none bg-blue-500 px-1.5 text-[10px] hover:bg-blue-600">DOC</Badge>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-foreground">Course_Outline_v2.docx</div>
+                        <div className="truncate text-xs text-muted-foreground">Topic sequence and weekly breakdown</div>
+                      </div>
+                      <span className="hidden shrink-0 items-center gap-1 text-xs font-medium text-green-600 sm:flex">
+                        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Ready
+                      </span>
+                    </li>
+                  </ul>
 
-                  <div className="mb-6 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-8 text-center transition-colors hover:bg-muted/30">
-                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <UploadCloud className="h-6 w-6" aria-hidden="true" />
-                    </div>
-                    <div className="font-semibold text-foreground">Upload syllabus / outline</div>
-                    <div className="mt-1 text-sm text-muted-foreground">Drop or browse: PDF, Word, text</div>
-                  </div>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-lg border border-dashed border-border bg-muted/20 px-4 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <UploadCloud className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-foreground">Upload syllabus or outline</span>
+                      <span className="block text-xs text-muted-foreground">Drop or browse: PDF, Word, text</span>
+                    </span>
+                  </button>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4">
                     <Button className="font-semibold shadow-sm">Parse and pre-fill</Button>
                     <span className="flex items-center gap-1.5 text-sm font-medium text-green-600">
                       <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Parsed successfully
