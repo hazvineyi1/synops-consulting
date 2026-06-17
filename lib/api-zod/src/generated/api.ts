@@ -1222,6 +1222,111 @@ export const DeleteMeetingRecordingParams = zod.object({
 
 
 /**
+ * @summary List time entries for a project (newest first)
+ */
+export const ListTimeEntriesParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const ListTimeEntriesResponseItem = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "userId": zod.number(),
+  "userName": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "source": zod.enum(['timer', 'manual']),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullish(),
+  "durationSeconds": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListTimeEntriesResponse = zod.array(ListTimeEntriesResponseItem)
+
+
+/**
+ * @summary Start a timer or log a manual time entry for a project
+ */
+export const CreateTimeEntryParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const createTimeEntryBodyDescriptionMax = 500;
+
+export const createTimeEntryBodyMinutesMax = 1440;
+
+
+
+export const CreateTimeEntryBody = zod.object({
+  "kind": zod.enum(['timer', 'manual']).describe('timer starts a running stopwatch now; manual logs a completed entry and requires minutes.'),
+  "description": zod.string().max(createTimeEntryBodyDescriptionMax).optional(),
+  "minutes": zod.number().min(1).max(createTimeEntryBodyMinutesMax).optional().describe('Required when kind is manual; total minutes worked.'),
+  "spentOn": zod.coerce.date().optional().describe('Optional when kind is manual; the date the work happened (defaults to today).')
+})
+
+
+/**
+ * @summary Stop a running timer
+ */
+export const StopTimeEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const StopTimeEntryResponse = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "userId": zod.number(),
+  "userName": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "source": zod.enum(['timer', 'manual']),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullish(),
+  "durationSeconds": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Edit a time entry (note, duration, or date)
+ */
+export const UpdateTimeEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateTimeEntryBodyDescriptionMax = 500;
+
+export const updateTimeEntryBodyMinutesMax = 1440;
+
+
+
+export const UpdateTimeEntryBody = zod.object({
+  "description": zod.string().max(updateTimeEntryBodyDescriptionMax).nullish(),
+  "minutes": zod.number().min(1).max(updateTimeEntryBodyMinutesMax).optional(),
+  "spentOn": zod.coerce.date().optional()
+})
+
+export const UpdateTimeEntryResponse = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "userId": zod.number(),
+  "userName": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "source": zod.enum(['timer', 'manual']),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullish(),
+  "durationSeconds": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a time entry
+ */
+export const DeleteTimeEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List meetings for a project (newest first)
  */
 export const ListProjectMeetingsParams = zod.object({

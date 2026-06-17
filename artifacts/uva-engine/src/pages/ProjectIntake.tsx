@@ -29,6 +29,8 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 import { DeliveryTimeline } from "@/components/engine/DeliveryTimeline";
@@ -194,6 +196,7 @@ export default function ProjectIntake() {
   const [openSegments, setOpenSegments] = useState<Set<number>>(new Set([0]));
   const [confirmedPre, setConfirmedPre] = useState<Set<number>>(new Set());
   const [activeTimer, setActiveTimer] = useState<{ segIdx: number, elapsed: number } | null>(null);
+  const [timersEnabled, setTimersEnabled] = useState(false);
   const [segStatuses, setSegStatuses] = useState<('todo' | 'doing' | 'done')[]>(SEGMENTS.map(() => 'todo'));
   const [filterCat, setFilterCat] = useState('all');
   const [inventorySelections, setInventorySelections] = useState<Record<number, string>>(
@@ -586,8 +589,10 @@ export default function ProjectIntake() {
           setTimeout(() => {
             const nextIdx = segIdx + 1;
             setOpenSegments(new Set([nextIdx]));
-            setActiveTimer({ segIdx: nextIdx, elapsed: 0 });
-            logActivity(`Auto-started segment ${nextIdx + 1}`);
+            if (timersEnabled) {
+              setActiveTimer({ segIdx: nextIdx, elapsed: 0 });
+              logActivity(`Auto-started segment ${nextIdx + 1}`);
+            }
             if (autoRules.r1) {
                 setSegStatuses(prev => {
                     const n = [...prev];
@@ -1150,9 +1155,22 @@ export default function ProjectIntake() {
 
             <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
               <Card className="border-border shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between border-b border-border bg-card px-5 py-4">
-                  <CardTitle className="text-lg">Agenda</CardTitle>
-                  <CardDescription className="m-0">12 segments · kickoff meeting</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-border bg-card px-5 py-4">
+                  <div>
+                    <CardTitle className="text-lg">Agenda</CardTitle>
+                    <CardDescription className="m-0">12 segments · kickoff meeting</CardDescription>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Switch
+                      id="segment-timers"
+                      checked={timersEnabled}
+                      onCheckedChange={(checked) => {
+                        setTimersEnabled(checked);
+                        if (!checked) setActiveTimer(null);
+                      }}
+                    />
+                    <Label htmlFor="segment-timers" className="text-sm text-muted-foreground">Segment timers</Label>
+                  </div>
                 </CardHeader>
                 <CardContent className="divide-y divide-border p-0">
                   {SEGMENTS.map((seg, idx) => {
@@ -1224,21 +1242,23 @@ export default function ProjectIntake() {
                             )}
                           </button>
 
-                          <Button
-                            variant={activeTimer?.segIdx === idx ? "default" : "outline"}
-                            size="sm"
-                            aria-label={activeTimer?.segIdx === idx ? `Stop timer for ${seg.title}` : `Start timer for ${seg.title}`}
-                            className={`flex h-8 w-20 shrink-0 justify-center px-0 shadow-sm ${
-                              activeTimer?.segIdx === idx ? "border-red-600 bg-red-600 text-white hover:bg-red-700" : ""
-                            }`}
-                            onClick={() => handleTimerToggle(idx)}
-                          >
-                            {activeTimer?.segIdx === idx ? (
-                              <><Square className="mr-1 h-3.5 w-3.5 fill-current" aria-hidden="true" /> {formatTime(activeTimer.elapsed)}</>
-                            ) : (
-                              <><Play className="mr-1 h-3.5 w-3.5 fill-current" aria-hidden="true" /> Timer</>
-                            )}
-                          </Button>
+                          {timersEnabled && (
+                            <Button
+                              variant={activeTimer?.segIdx === idx ? "default" : "outline"}
+                              size="sm"
+                              aria-label={activeTimer?.segIdx === idx ? `Stop timer for ${seg.title}` : `Start timer for ${seg.title}`}
+                              className={`flex h-8 w-20 shrink-0 justify-center px-0 shadow-sm ${
+                                activeTimer?.segIdx === idx ? "border-red-600 bg-red-600 text-white hover:bg-red-700" : ""
+                              }`}
+                              onClick={() => handleTimerToggle(idx)}
+                            >
+                              {activeTimer?.segIdx === idx ? (
+                                <><Square className="mr-1 h-3.5 w-3.5 fill-current" aria-hidden="true" /> {formatTime(activeTimer.elapsed)}</>
+                              ) : (
+                                <><Play className="mr-1 h-3.5 w-3.5 fill-current" aria-hidden="true" /> Timer</>
+                              )}
+                            </Button>
+                          )}
                         </div>
 
                         {isOpen && (
@@ -1372,7 +1392,7 @@ export default function ProjectIntake() {
                       </div>
                     </div>
 
-                    {activeTimer && (
+                    {timersEnabled && activeTimer && (
                       <div className="flex items-center gap-3 rounded-lg border border-red-100 bg-red-50/50 p-3 text-sm font-medium text-red-600">
                         <span className="h-2 w-2 animate-pulse rounded-full bg-red-600" aria-hidden="true"></span>
                         Running: Segment {activeTimer.segIdx + 1}

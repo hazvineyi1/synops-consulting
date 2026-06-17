@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   ChevronRight,
   ArrowRight,
+  Clock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -189,6 +190,21 @@ export default function ProjectDetail() {
                       <p className="whitespace-pre-wrap">{project.description}</p>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Time tracking</CardTitle>
+                  <CardDescription>Log hours worked on this project.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href={`/projects/${project.id}/time`}>
+                      <Clock className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Open time tracker
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             </aside>

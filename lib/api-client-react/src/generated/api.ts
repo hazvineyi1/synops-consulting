@@ -105,6 +105,9 @@ import type {
   StandardsFrameworkInput,
   StartImpersonationInput,
   SubmitResult,
+  TimeEntry,
+  TimeEntryInput,
+  TimeEntryUpdate,
   UpdateBrandingInput,
   UpdateBuilderStatusInput,
   UploadUrlRequest,
@@ -4035,6 +4038,367 @@ export const useDeleteMeetingRecording = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteMeetingRecordingMutationOptions(options));
+    }
+
+export const getListTimeEntriesUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/compass/projects/${projectId}/time-entries`
+}
+
+/**
+ * @summary List time entries for a project (newest first)
+ */
+export const listTimeEntries = async (projectId: number, options?: RequestInit): Promise<TimeEntry[]> => {
+
+  return customFetch<TimeEntry[]>(getListTimeEntriesUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTimeEntriesQueryKey = (projectId: number,) => {
+    return [
+    `/api/compass/projects/${projectId}/time-entries`
+    ] as const;
+    }
+
+
+export const getListTimeEntriesQueryOptions = <TData = Awaited<ReturnType<typeof listTimeEntries>>, TError = ErrorType<unknown>>(projectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTimeEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTimeEntriesQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTimeEntries>>> = ({ signal }) => listTimeEntries(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(projectId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTimeEntries>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTimeEntriesQueryResult = NonNullable<Awaited<ReturnType<typeof listTimeEntries>>>
+export type ListTimeEntriesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List time entries for a project (newest first)
+ */
+
+export function useListTimeEntries<TData = Awaited<ReturnType<typeof listTimeEntries>>, TError = ErrorType<unknown>>(
+ projectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTimeEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTimeEntriesQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateTimeEntryUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/compass/projects/${projectId}/time-entries`
+}
+
+/**
+ * @summary Start a timer or log a manual time entry for a project
+ */
+export const createTimeEntry = async (projectId: number,
+    timeEntryInput: TimeEntryInput, options?: RequestInit): Promise<TimeEntry> => {
+
+  return customFetch<TimeEntry>(getCreateTimeEntryUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      timeEntryInput,)
+  }
+);}
+
+
+
+
+export const getCreateTimeEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTimeEntry>>, TError,{projectId: number;data: BodyType<TimeEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTimeEntry>>, TError,{projectId: number;data: BodyType<TimeEntryInput>}, TContext> => {
+
+const mutationKey = ['createTimeEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTimeEntry>>, {projectId: number;data: BodyType<TimeEntryInput>}> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  createTimeEntry(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTimeEntryMutationResult = NonNullable<Awaited<ReturnType<typeof createTimeEntry>>>
+    export type CreateTimeEntryMutationBody = BodyType<TimeEntryInput>
+    export type CreateTimeEntryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Start a timer or log a manual time entry for a project
+ */
+export const useCreateTimeEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTimeEntry>>, TError,{projectId: number;data: BodyType<TimeEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTimeEntry>>,
+        TError,
+        {projectId: number;data: BodyType<TimeEntryInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTimeEntryMutationOptions(options));
+    }
+
+export const getStopTimeEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/time-entries/${id}/stop`
+}
+
+/**
+ * @summary Stop a running timer
+ */
+export const stopTimeEntry = async (id: number, options?: RequestInit): Promise<TimeEntry> => {
+
+  return customFetch<TimeEntry>(getStopTimeEntryUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getStopTimeEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopTimeEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof stopTimeEntry>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['stopTimeEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof stopTimeEntry>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  stopTimeEntry(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StopTimeEntryMutationResult = NonNullable<Awaited<ReturnType<typeof stopTimeEntry>>>
+
+    export type StopTimeEntryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Stop a running timer
+ */
+export const useStopTimeEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopTimeEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof stopTimeEntry>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getStopTimeEntryMutationOptions(options));
+    }
+
+export const getUpdateTimeEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/time-entries/${id}`
+}
+
+/**
+ * @summary Edit a time entry (note, duration, or date)
+ */
+export const updateTimeEntry = async (id: number,
+    timeEntryUpdate: TimeEntryUpdate, options?: RequestInit): Promise<TimeEntry> => {
+
+  return customFetch<TimeEntry>(getUpdateTimeEntryUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      timeEntryUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateTimeEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTimeEntry>>, TError,{id: number;data: BodyType<TimeEntryUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateTimeEntry>>, TError,{id: number;data: BodyType<TimeEntryUpdate>}, TContext> => {
+
+const mutationKey = ['updateTimeEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateTimeEntry>>, {id: number;data: BodyType<TimeEntryUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateTimeEntry(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateTimeEntryMutationResult = NonNullable<Awaited<ReturnType<typeof updateTimeEntry>>>
+    export type UpdateTimeEntryMutationBody = BodyType<TimeEntryUpdate>
+    export type UpdateTimeEntryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Edit a time entry (note, duration, or date)
+ */
+export const useUpdateTimeEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTimeEntry>>, TError,{id: number;data: BodyType<TimeEntryUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateTimeEntry>>,
+        TError,
+        {id: number;data: BodyType<TimeEntryUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateTimeEntryMutationOptions(options));
+    }
+
+export const getDeleteTimeEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/time-entries/${id}`
+}
+
+/**
+ * @summary Delete a time entry
+ */
+export const deleteTimeEntry = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteTimeEntryUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteTimeEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTimeEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteTimeEntry>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteTimeEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTimeEntry>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteTimeEntry(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteTimeEntryMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTimeEntry>>>
+
+    export type DeleteTimeEntryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a time entry
+ */
+export const useDeleteTimeEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTimeEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteTimeEntry>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteTimeEntryMutationOptions(options));
     }
 
 export const getListProjectMeetingsUrl = (projectId: number,) => {

@@ -275,6 +275,71 @@ export interface MeetingRecordingInput {
   sizeBytes?: number;
 }
 
+export type TimeEntrySource = typeof TimeEntrySource[keyof typeof TimeEntrySource];
+
+
+export const TimeEntrySource = {
+  timer: 'timer',
+  manual: 'manual',
+} as const;
+
+export interface TimeEntry {
+  id: number;
+  projectId: number;
+  userId: number;
+  /** @nullable */
+  userName?: string | null;
+  /** @nullable */
+  description?: string | null;
+  source: TimeEntrySource;
+  startedAt: string;
+  /** @nullable */
+  endedAt?: string | null;
+  /** @nullable */
+  durationSeconds?: number | null;
+  createdAt: string;
+}
+
+/**
+ * timer starts a running stopwatch now; manual logs a completed entry and requires minutes.
+ */
+export type TimeEntryInputKind = typeof TimeEntryInputKind[keyof typeof TimeEntryInputKind];
+
+
+export const TimeEntryInputKind = {
+  timer: 'timer',
+  manual: 'manual',
+} as const;
+
+export interface TimeEntryInput {
+  /** timer starts a running stopwatch now; manual logs a completed entry and requires minutes. */
+  kind: TimeEntryInputKind;
+  /** @maxLength 500 */
+  description?: string;
+  /**
+     * Required when kind is manual; total minutes worked.
+     * @minimum 1
+     * @maximum 1440
+     */
+  minutes?: number;
+  /** Optional when kind is manual; the date the work happened (defaults to today). */
+  spentOn?: string;
+}
+
+export interface TimeEntryUpdate {
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  description?: string | null;
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  minutes?: number;
+  spentOn?: string;
+}
+
 export interface AgendaPlanItem {
   title: string;
   minutes: number;

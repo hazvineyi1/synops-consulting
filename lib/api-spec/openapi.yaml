@@ -30,6 +30,8 @@ tags:
     description: Dashboard summaries
   - name: recordings
     description: Project meeting recordings (uploads and external links)
+  - name: time-tracking
+    description: Per-project billing time entries (hours and minutes only)
   - name: agenda
     description: Per-project meeting agenda, notes, action items, and derived progress
   - name: storage
@@ -1098,6 +1100,108 @@ paths:
       operationId: deleteMeetingRecording
       tags: [recordings]
       summary: Delete a meeting recording
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Time tracking (per-project billing time entries) ─────────
+  /compass/projects/{projectId}/time-entries:
+    get:
+      operationId: listTimeEntries
+      tags: [time-tracking]
+      summary: List time entries for a project (newest first)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Time entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeEntry"
+    post:
+      operationId: createTimeEntry
+      tags: [time-tracking]
+      summary: Start a timer or log a manual time entry for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeEntryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeEntry"
+
+  /compass/time-entries/{id}/stop:
+    post:
+      operationId: stopTimeEntry
+      tags: [time-tracking]
+      summary: Stop a running timer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Stopped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeEntry"
+
+  /compass/time-entries/{id}:
+    patch:
+      operationId: updateTimeEntry
+      tags: [time-tracking]
+      summary: Edit a time entry (note, duration, or date)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeEntryUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeEntry"
+    delete:
+      operationId: deleteTimeEntry
+      tags: [time-tracking]
+      summary: Delete a time entry
       parameters:
         - name: id
           in: path
@@ -2410,6 +2514,71 @@ components:
         sizeBytes:
           type: integer
           minimum: 0
+
+    # ── Time tracking (per-project billing time entries) ──────────
+    TimeEntry:
+      type: object
+      required: [id, projectId, userId, source, startedAt, createdAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        source:
+          type: string
+          enum: [timer, manual]
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: ["string", "null"]
+          format: date-time
+        durationSeconds:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    TimeEntryInput:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [timer, manual]
+          description: timer starts a running stopwatch now; manual logs a completed entry and requires minutes.
+        description:
+          type: string
+          maxLength: 500
+        minutes:
+          type: integer
+          minimum: 1
+          maximum: 1440
+          description: Required when kind is manual; total minutes worked.
+        spentOn:
+          type: string
+          format: date
+          description: Optional when kind is manual; the date the work happened (defaults to today).
+
+    TimeEntryUpdate:
+      type: object
+      properties:
+        description:
+          type: ["string", "null"]
+          maxLength: 500
+        minutes:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        spentOn:
+          type: string
+          format: date
 
     # ── Agenda (meetings, action items, derived progress) ─────────
     AgendaPlanItem:
