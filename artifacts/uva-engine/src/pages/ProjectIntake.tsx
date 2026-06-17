@@ -814,21 +814,21 @@ export default function ProjectIntake() {
                     ))}
                   </div>
 
-                  <div className="overflow-hidden rounded-xl border bg-card">
+                  <div className="max-h-80 overflow-auto rounded-xl border bg-card">
                     <table className="w-full text-left text-sm">
-                      <thead className="border-b border-border bg-muted/50">
+                      <thead className="sticky top-0 z-10 border-b border-border bg-muted">
                         <tr>
-                          <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Asset</th>
-                          <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Decision</th>
-                          <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rights</th>
-                          <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Accessibility</th>
+                          <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Asset</th>
+                          <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Decision</th>
+                          <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rights</th>
+                          <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Accessibility</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
                         {INVENTORY.map((item) => (
                           <tr key={item.id} className="hover:bg-muted/20">
-                            <td className="px-4 py-3 font-medium text-foreground">{item.asset}</td>
-                            <td className="px-4 py-3">
+                            <td className="px-3 py-2 font-medium text-foreground">{item.asset}</td>
+                            <td className="px-3 py-2">
                               <div className="inline-flex rounded-md shadow-sm">
                                 {["Reuse", "Refresh", "Rebuild"].map((opt) => (
                                   <button
