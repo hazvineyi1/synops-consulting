@@ -2308,6 +2308,9 @@ components:
         lms:
           type: ["string", "null"]
           description: "Learning management system (Canvas, Blackboard, Moodle, D2L Brightspace, Schoology, other)"
+        designMethod:
+          type: ["string", "null"]
+          description: "Selected instructional design method key that guides the build (addie, sam, backward-design, blooms, gagne, merrill, four-c-id, kirkpatrick)"
         description:
           type: ["string", "null"]
         targetDeliveryDate:
@@ -2357,6 +2360,10 @@ components:
           type: string
         lms:
           type: string
+        designMethod:
+          type: ["string", "null"]
+          enum: [addie, sam, backward-design, blooms, gagne, merrill, four-c-id, kirkpatrick, null]
+          description: "Instructional design method key that guides the build, or null to clear"
         targetDeliveryDate:
           type: string
           format: date

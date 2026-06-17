@@ -25,6 +25,11 @@ export interface Project {
      * @nullable
      */
   lms?: string | null;
+  /**
+     * Selected instructional design method key that guides the build (addie, sam, backward-design, blooms, gagne, merrill, four-c-id, kirkpatrick)
+     * @nullable
+     */
+  designMethod?: string | null;
   /** @nullable */
   description?: string | null;
   /** @nullable */

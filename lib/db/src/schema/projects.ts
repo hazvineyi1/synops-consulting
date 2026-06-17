@@ -11,6 +11,7 @@ export const projectsTable = pgTable("projects", {
   tier: text("tier"),
   modality: text("modality"),
   lms: text("lms"),
+  designMethod: text("design_method"),
   description: text("description"),
   targetDeliveryDate: date("target_delivery_date", { mode: "string" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

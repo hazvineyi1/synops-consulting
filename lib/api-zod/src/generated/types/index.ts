@@ -96,6 +96,7 @@ export * from './productKey';
 export * from './project';
 export * from './projectInput';
 export * from './projectUpdate';
+export * from './projectUpdateDesignMethod';
 export * from './qACheck';
 export * from './qACheckInput';
 export * from './qACheckUpdate';

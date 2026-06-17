@@ -8,7 +8,8 @@ import {
   useListAssessments, getListAssessmentsQueryKey,
   useCreateActivity, useCreateAssessment,
   useDeleteActivity, useDeleteAssessment,
-  type Activity, type Assessment, type Objective,
+  useUpdateProject, getGetProjectQueryKey, getListProjectsQueryKey,
+  type Activity, type Assessment, type Objective, type ProjectUpdateDesignMethod,
 } from "@workspace/api-client-react";
 import {
   Plus, Target, LayoutList, Map as MapIcon, Trash2, BookOpen, Lightbulb, ArrowRight, Check, Loader2,
@@ -53,12 +54,19 @@ function typeLabel(kind: Kind, value: string): string {
 export default function ProjectDesign() {
   return (
     <ProjectWorkspace stageId={1}>
-      {({ project }) => <DesignWorkspace projectId={project.id} />}
+      {({ project }) => (
+        <DesignWorkspace projectId={project.id} designMethod={project.designMethod ?? null} />
+      )}
     </ProjectWorkspace>
   );
 }
 
-function DesignWorkspace({ projectId }: { projectId: number }) {
+function DesignWorkspace({
+  projectId, designMethod,
+}: {
+  projectId: number;
+  designMethod: string | null;
+}) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -84,9 +92,27 @@ function DesignWorkspace({ projectId }: { projectId: number }) {
   const createAssessment = useCreateAssessment();
   const deleteActivity = useDeleteActivity();
   const deleteAssessment = useDeleteAssessment();
+  const updateProject = useUpdateProject();
 
   const [dialog, setDialog] = useState<DialogState | null>(null);
+  const [settingKey, setSettingKey] = useState<string | null>(null);
   const isSaving = createActivity.isPending || createAssessment.isPending;
+
+  function setProjectMethod(key: string) {
+    setSettingKey(key);
+    updateProject.mutate(
+      { id: projectId, data: { designMethod: key as ProjectUpdateDesignMethod } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(projectId) });
+          queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+          toast({ title: "Project method set", description: getMethod(key)?.name ?? key });
+        },
+        onError: () => toast({ title: "Could not set project method", variant: "destructive" }),
+        onSettled: () => setSettingKey(null),
+      },
+    );
+  }
 
   function openAdd(
     kind: Kind,
@@ -97,7 +123,7 @@ function DesignWorkspace({ projectId }: { projectId: number }) {
       title: prefill?.title ?? "",
       type: prefill?.type ?? (kind === "activity" ? "discussion" : "formative"),
       description: prefill?.description ?? "",
-      methodKey: prefill?.methodKey ?? "",
+      methodKey: prefill?.methodKey ?? designMethod ?? "",
       alignedIds: [],
     });
   }
@@ -182,8 +208,13 @@ function DesignWorkspace({ projectId }: { projectId: number }) {
     );
   }
 
+  const method = designMethod ? getMethod(designMethod) : undefined;
+
   return (
     <>
+      <div className="mb-6">
+        <DesignMethodBanner method={method} />
+      </div>
       <Tabs defaultValue="assessments" className="w-full">
         <TabsList>
           <TabsTrigger value="assessments">
@@ -232,7 +263,12 @@ function DesignWorkspace({ projectId }: { projectId: number }) {
 
         {/* METHODS LIBRARY */}
         <TabsContent value="methods" className="mt-6">
-          <MethodLibrary onUse={openAdd} />
+          <MethodLibrary
+            onUse={openAdd}
+            selectedKey={designMethod}
+            onSetProjectMethod={setProjectMethod}
+            settingKey={settingKey}
+          />
         </TabsContent>
 
         {/* ALIGNMENT */}
@@ -372,6 +408,53 @@ function DesignWorkspace({ projectId }: { projectId: number }) {
   );
 }
 
+function DesignMethodBanner({ method }: { method: ReturnType<typeof getMethod> }) {
+  if (!method) {
+    return (
+      <div className="rounded-lg border border-dashed bg-muted/30 p-4">
+        <div className="flex items-start gap-3">
+          <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <div>
+            <div className="font-semibold">No design approach chosen yet</div>
+            <p className="mt-1 max-w-[70ch] text-sm text-muted-foreground">
+              Choose an instructional design method in the Intake stage to guide this build, or set one
+              from the Methods tab below. Until then, add items from scratch or pick a method per item.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-lg border border-primary/30 bg-primary/[0.04] p-4">
+      <div className="flex items-start gap-3">
+        <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold">This build follows {method.name}</span>
+            <Badge variant="outline" className="text-xs font-normal">{method.origin}</Badge>
+          </div>
+          <p className="mt-1 max-w-[70ch] text-sm text-muted-foreground">
+            {method.summary} New activities and assessments start from this method; change it from the
+            Methods tab.
+          </p>
+          <ol className="mt-3 flex flex-wrap gap-1.5">
+            {method.phases.map((p, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs"
+              >
+                <span className="font-mono text-muted-foreground">{i + 1}</span>
+                <span className="font-medium">{p.name}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MethodTemplatePicker({
   kind, methodKey, onPick,
 }: {
@@ -495,9 +578,12 @@ function ItemList({
 }
 
 function MethodLibrary({
-  onUse,
+  onUse, selectedKey, onSetProjectMethod, settingKey,
 }: {
   onUse: (kind: Kind, prefill: { title: string; type: string; description: string; methodKey: string }) => void;
+  selectedKey: string | null;
+  onSetProjectMethod: (key: string) => void;
+  settingKey: string | null;
 }) {
   return (
     <div className="space-y-4">
@@ -511,7 +597,10 @@ function MethodLibrary({
             <CardHeader>
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="text-base">{m.name}</CardTitle>
-                <Badge variant="outline" className="shrink-0 text-xs font-normal">{m.origin}</Badge>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {m.key === selectedKey && <Badge className="text-xs">Project method</Badge>}
+                  <Badge variant="outline" className="text-xs font-normal">{m.origin}</Badge>
+                </div>
               </div>
               <CardDescription>{m.tagline}</CardDescription>
             </CardHeader>
@@ -561,6 +650,27 @@ function MethodLibrary({
                       <LayoutList className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Use as activity
                     </Button>
                   ))}
+                </div>
+                <div className="pt-1">
+                  {m.key === selectedKey ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary">
+                      <Check className="h-3.5 w-3.5" aria-hidden="true" /> Current project method
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-auto px-2 py-1 text-xs"
+                      onClick={() => onSetProjectMethod(m.key)}
+                      disabled={settingKey === m.key}
+                    >
+                      {settingKey === m.key ? (
+                        <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Setting</>
+                      ) : (
+                        <>Set as project method</>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>

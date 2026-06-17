@@ -31,6 +31,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
+import { DeliveryTimeline } from "@/components/engine/DeliveryTimeline";
+import { DesignApproachCard } from "@/components/engine/DesignApproachCard";
 
 // Data Definitions
 const INVENTORY = [
@@ -722,9 +724,14 @@ export default function ProjectIntake() {
 
           {/* PREPARE: gather and audit materials */}
           <TabsContent value="prepare" className="space-y-6">
+            <DeliveryTimeline progressPct={progressPct} />
+
             <p className="max-w-[70ch] text-sm text-muted-foreground">
-              Gather the source materials and audit what already exists before the kickoff meeting.
+              Set the design approach, then gather the source materials and audit what already exists
+              before the kickoff meeting.
             </p>
+
+            <DesignApproachCard projectId={projectId} selectedKey={project.designMethod ?? null} />
 
             <Card className="border-border shadow-sm">
               <CardHeader className="border-b border-border bg-card px-5 py-4">
@@ -866,68 +873,6 @@ export default function ProjectIntake() {
                 </Collapsible>
               </CardContent>
             </Card>
-
-            {/* Progressive disclosure: project goals and delivery timeline */}
-            <Collapsible>
-              <Card className="border-border shadow-sm">
-                <CollapsibleTrigger className="group flex w-full items-center justify-between px-5 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <div>
-                    <div className="text-base font-semibold">Goals and delivery timeline</div>
-                    <div className="text-sm text-muted-foreground">Engagement targets and the gated schedule</div>
-                  </div>
-                  <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" aria-hidden="true" />
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="border-t border-border p-6">
-                    <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                      {[
-                        { title: "Kickoff completeness", due: "due today · Wk 0", desc: "All intake parts covered and the accessibility audit run before we close.", p: progressPct },
-                        { title: "Aligned, measurable outcomes", due: "due Wk 3", desc: "Every module objective mapped to a course outcome and at least one assessment", p: 0 },
-                        { title: "Accessibility conformance", due: "Wk 0 to 16", desc: "All incoming assets audited; zero critical WCAG 2.1 AA issues at QA", p: 80 },
-                        { title: "Faculty-approved prototype", due: "due Wk 4", desc: "", p: 0 },
-                        { title: "Evidence-based media", due: "Wk 5 to 14", desc: "", p: 0 },
-                        { title: "On-time delivery", due: "due Wk 17", desc: "14 of 14 modules built with 6 of 6 stage gates passed", p: 0 },
-                      ].map((g, i) => (
-                        <div key={i} className="flex flex-col rounded-xl border border-border bg-card/50 p-4">
-                          <div className="mb-2 flex items-start justify-between">
-                            <div className="text-sm font-semibold leading-tight text-foreground">{g.title}</div>
-                            <Badge variant="secondary" className="ml-2 shrink-0 border-none bg-blue-50 text-blue-700 shadow-none hover:bg-blue-50">{g.due}</Badge>
-                          </div>
-                          {g.desc && <div className="mb-4 flex-1 text-[13px] leading-snug text-muted-foreground">{g.desc}</div>}
-                          <div className="mt-auto flex items-center gap-3">
-                            <Progress value={g.p} className="h-2 flex-1 [&>div]:bg-primary" />
-                            <span className="font-mono text-xs font-medium">{g.p}%</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div>
-                      <div className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">Timeline and gates</div>
-                      <div className="flex gap-3 overflow-x-auto pb-2">
-                        {[
-                          { lbl: "Wk 0 · Kickoff and intake", active: true },
-                          { lbl: "Wk 1 to 3 · Backward design / Gate: alignment", active: false },
-                          { lbl: "Wk 4 · Prototype module / Gate: faculty sign-off", active: false },
-                          { lbl: "Wk 5 to 14 · Production", active: false },
-                          { lbl: "Wk 15 to 16 · QA and accessibility", active: false },
-                          { lbl: "Wk 17 · Handoff", active: false },
-                        ].map((s, i) => (
-                          <div
-                            key={i}
-                            className={`flex-shrink-0 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
-                              s.active ? "border-primary bg-primary/5 text-primary" : "border-transparent bg-muted/30 text-muted-foreground"
-                            }`}
-                          >
-                            {s.lbl}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
 
             {/* Progressive disclosure: design foundations */}
             <Collapsible>

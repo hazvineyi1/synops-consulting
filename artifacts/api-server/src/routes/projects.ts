@@ -241,6 +241,7 @@ router.patch("/projects/:id", async (req, res): Promise<void> => {
   if (parsed.data.tier !== undefined) updates.tier = parsed.data.tier;
   if (parsed.data.modality !== undefined) updates.modality = parsed.data.modality;
   if (parsed.data.lms !== undefined) updates.lms = parsed.data.lms;
+  if (parsed.data.designMethod !== undefined) updates.designMethod = parsed.data.designMethod;
   if (parsed.data.targetDeliveryDate !== undefined)
     updates.targetDeliveryDate = parsed.data.targetDeliveryDate
       ? parsed.data.targetDeliveryDate.toISOString().slice(0, 10)

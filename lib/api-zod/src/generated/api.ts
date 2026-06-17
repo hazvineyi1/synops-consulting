@@ -144,6 +144,7 @@ export const ListProjectsResponseItem = zod.object({
   "tier": zod.string().nullish(),
   "modality": zod.string().nullish(),
   "lms": zod.string().nullish().describe('Learning management system (Canvas, Blackboard, Moodle, D2L Brightspace, Schoology, other)'),
+  "designMethod": zod.string().nullish().describe('Selected instructional design method key that guides the build (addie, sam, backward-design, blooms, gagne, merrill, four-c-id, kirkpatrick)'),
   "description": zod.string().nullish(),
   "targetDeliveryDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
@@ -186,6 +187,7 @@ export const GetProjectResponse = zod.object({
   "tier": zod.string().nullish(),
   "modality": zod.string().nullish(),
   "lms": zod.string().nullish().describe('Learning management system (Canvas, Blackboard, Moodle, D2L Brightspace, Schoology, other)'),
+  "designMethod": zod.string().nullish().describe('Selected instructional design method key that guides the build (addie, sam, backward-design, blooms, gagne, merrill, four-c-id, kirkpatrick)'),
   "description": zod.string().nullish(),
   "targetDeliveryDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
@@ -207,6 +209,7 @@ export const UpdateProjectBody = zod.object({
   "tier": zod.string().optional(),
   "modality": zod.string().optional(),
   "lms": zod.string().optional(),
+  "designMethod": zod.union([zod.literal('addie'),zod.literal('sam'),zod.literal('backward-design'),zod.literal('blooms'),zod.literal('gagne'),zod.literal('merrill'),zod.literal('four-c-id'),zod.literal('kirkpatrick'),zod.literal(null)]).nullish().describe('Instructional design method key that guides the build, or null to clear'),
   "targetDeliveryDate": zod.coerce.date().optional()
 })
 
@@ -220,6 +223,7 @@ export const UpdateProjectResponse = zod.object({
   "tier": zod.string().nullish(),
   "modality": zod.string().nullish(),
   "lms": zod.string().nullish().describe('Learning management system (Canvas, Blackboard, Moodle, D2L Brightspace, Schoology, other)'),
+  "designMethod": zod.string().nullish().describe('Selected instructional design method key that guides the build (addie, sam, backward-design, blooms, gagne, merrill, four-c-id, kirkpatrick)'),
   "description": zod.string().nullish(),
   "targetDeliveryDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
@@ -248,6 +252,7 @@ export const AdvanceProjectStageResponse = zod.object({
   "tier": zod.string().nullish(),
   "modality": zod.string().nullish(),
   "lms": zod.string().nullish().describe('Learning management system (Canvas, Blackboard, Moodle, D2L Brightspace, Schoology, other)'),
+  "designMethod": zod.string().nullish().describe('Selected instructional design method key that guides the build (addie, sam, backward-design, blooms, gagne, merrill, four-c-id, kirkpatrick)'),
   "description": zod.string().nullish(),
   "targetDeliveryDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),

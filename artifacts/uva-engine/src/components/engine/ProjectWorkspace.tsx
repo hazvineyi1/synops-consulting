@@ -1,10 +1,12 @@
 import { type ReactNode } from "react";
 import { useParams } from "wouter";
 import { useGetProject, getGetProjectQueryKey, type Project } from "@workspace/api-client-react";
+import { Lightbulb } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader, type Crumb } from "@/components/engine/PageHeader";
 import { StageRail } from "@/components/engine/StageRail";
 import { getStage, STAGE_COUNT } from "@/lib/stages";
+import { getMethod } from "@/lib/instructional-methods";
 
 interface WorkspaceContext {
   project: Project;
@@ -45,6 +47,7 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
   if (!project) return <div className="p-8">Project not found.</div>;
 
   const stage = stageId != null ? getStage(stageId) : undefined;
+  const method = project.designMethod ? getMethod(project.designMethod) : undefined;
   const ctx: WorkspaceContext = { project };
 
   const crumbs: Crumb[] = [
@@ -62,11 +65,17 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
         crumbs={crumbs}
         actions={actions?.(ctx)}
       >
-        {(stage || meta) && (
+        {(stage || meta || method) && (
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             {stage && (
               <Badge variant="secondary" className="uppercase tracking-wide">
                 Stage {stage.id + 1} of {STAGE_COUNT}: {stage.title}
+              </Badge>
+            )}
+            {method && (
+              <Badge variant="outline" className="gap-1.5 font-normal">
+                <Lightbulb className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                Method: {method.name}
               </Badge>
             )}
             {meta?.(ctx)}

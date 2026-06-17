@@ -7,6 +7,13 @@
 //   activityType:   discussion | assignment | interactive | learnersourcing | peer_review | simulation | lab
 //   assessmentType: formative | summative | quiz | assignment | project | exam | discussion
 
+import type { ProjectUpdateDesignMethod } from "@workspace/api-client-react";
+
+// A method key is one of the API's design-method enum values (never null). Typing
+// the library against the generated enum makes any drift between this library and
+// the OpenAPI contract a compile-time error instead of a runtime 400.
+export type MethodKey = NonNullable<ProjectUpdateDesignMethod>;
+
 export type ActivityType =
   | "discussion"
   | "assignment"
@@ -43,7 +50,7 @@ export interface MethodPhase {
 }
 
 export interface InstructionalMethod {
-  key: string;
+  key: MethodKey;
   name: string;
   origin: string;
   tagline: string;

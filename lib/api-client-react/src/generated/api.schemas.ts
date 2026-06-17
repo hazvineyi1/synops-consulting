@@ -346,6 +346,11 @@ export interface Project {
      * @nullable
      */
   lms?: string | null;
+  /**
+     * Selected instructional design method key that guides the build (addie, sam, backward-design, blooms, gagne, merrill, four-c-id, kirkpatrick)
+     * @nullable
+     */
+  designMethod?: string | null;
   /** @nullable */
   description?: string | null;
   /** @nullable */
@@ -366,6 +371,24 @@ export interface ProjectInput {
   targetDeliveryDate?: string;
 }
 
+/**
+ * Instructional design method key that guides the build, or null to clear
+ * @nullable
+ */
+export type ProjectUpdateDesignMethod = typeof ProjectUpdateDesignMethod[keyof typeof ProjectUpdateDesignMethod] | null;
+
+
+export const ProjectUpdateDesignMethod = {
+  addie: 'addie',
+  sam: 'sam',
+  'backward-design': 'backward-design',
+  blooms: 'blooms',
+  gagne: 'gagne',
+  merrill: 'merrill',
+  'four-c-id': 'four-c-id',
+  kirkpatrick: 'kirkpatrick',
+} as const;
+
 export interface ProjectUpdate {
   title?: string;
   description?: string;
@@ -373,6 +396,11 @@ export interface ProjectUpdate {
   tier?: string;
   modality?: string;
   lms?: string;
+  /**
+     * Instructional design method key that guides the build, or null to clear
+     * @nullable
+     */
+  designMethod?: ProjectUpdateDesignMethod;
   targetDeliveryDate?: string;
 }
 
