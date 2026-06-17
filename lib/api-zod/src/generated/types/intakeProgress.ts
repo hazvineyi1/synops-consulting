@@ -5,6 +5,7 @@
  * UVA Production Engine API
  * OpenAPI spec version: 0.1.0
  */
+import type { GeneratedAgenda } from './generatedAgenda';
 import type { IntakeProgressAutoRules } from './intakeProgressAutoRules';
 import type { IntakeProgressInventorySelections } from './intakeProgressInventorySelections';
 import type { IntakeProgressNotes } from './intakeProgressNotes';
@@ -17,6 +18,7 @@ export interface IntakeProgress {
   notes: IntakeProgressNotes;
   inventorySelections: IntakeProgressInventorySelections;
   autoRules: IntakeProgressAutoRules;
+  generatedAgenda?: GeneratedAgenda | null;
   /** @nullable */
   updatedAt?: Date | null;
 }

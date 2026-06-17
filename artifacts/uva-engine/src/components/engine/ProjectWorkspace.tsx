@@ -55,7 +55,7 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
   ];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 p-6 md:p-8">
+    <div className="mx-auto max-w-6xl p-6 md:p-8">
       <PageHeader
         title={project.title}
         subtitle={subtitle ?? stage?.blurb}
@@ -74,7 +74,11 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
         )}
       </PageHeader>
 
-      <section aria-label="Curriculum pipeline">
+      {/* Pinned so progress and stage navigation stay visible while scrolling content. */}
+      <section
+        aria-label="Curriculum pipeline"
+        className="sticky top-0 z-20 -mx-6 mt-5 border-b bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8"
+      >
         <StageRail
           projectId={project.id}
           currentStage={project.stage}
@@ -83,7 +87,7 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
         />
       </section>
 
-      <div className="space-y-6">{children(ctx)}</div>
+      <div className="space-y-6 pt-6">{children(ctx)}</div>
     </div>
   );
 }

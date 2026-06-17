@@ -13,6 +13,7 @@ import {
   qaChecksTable,
   crosswalkLinksTable,
   allocationsTable,
+  meetingRecordingsTable,
   type AllocationScopeType,
 } from "@workspace/db";
 import type { ActorContext } from "./actor";
@@ -327,6 +328,17 @@ export async function resolveCrosswalkLinkScope(linkId: number): Promise<ScopeRe
     .innerJoin(projectsTable, eq(crosswalkLinksTable.projectId, projectsTable.id))
     .innerJoin(clientsTable, eq(projectsTable.clientId, clientsTable.id))
     .where(eq(crosswalkLinksTable.id, linkId));
+  if (!row) return null;
+  return { orgId: row.orgId, level: "project", projectId: row.projectId, courseId: null, classId: null };
+}
+
+export async function resolveMeetingRecordingScope(recordingId: number): Promise<ScopeRef | null> {
+  const [row] = await db
+    .select({ orgId: clientsTable.organizationId, projectId: projectsTable.id })
+    .from(meetingRecordingsTable)
+    .innerJoin(projectsTable, eq(meetingRecordingsTable.projectId, projectsTable.id))
+    .innerJoin(clientsTable, eq(projectsTable.clientId, clientsTable.id))
+    .where(eq(meetingRecordingsTable.id, recordingId));
   if (!row) return null;
   return { orgId: row.orgId, level: "project", projectId: row.projectId, courseId: null, classId: null };
 }

@@ -20,6 +20,8 @@ import classesRouter from "./classes";
 import schoolRouter from "./school";
 import consoleRouter from "./console";
 import impersonationRouter from "./impersonation";
+import meetingRecordingsRouter from "./meeting-recordings";
+import storageRouter from "./storage";
 import { requireAuth, requireProduct } from "../lib/auth";
 import { loadActorContext } from "../lib/actor";
 
@@ -52,12 +54,19 @@ engineRouter.use(ledgerRouter);
 engineRouter.use(qaRouter);
 engineRouter.use(standardsRouter);
 engineRouter.use(intakeRouter);
+engineRouter.use(meetingRecordingsRouter);
 engineRouter.use(buildersRouter);
 engineRouter.use(allocationsRouter);
 engineRouter.use(classesRouter);
 engineRouter.use(schoolRouter);
 engineRouter.use(consoleRouter);
 router.use("/compass", engineRouter);
+
+// ── Object storage (top-level, self-gated) ──────────────────
+// Storage lives outside /compass but is not public: the router authenticates and
+// loads the actor itself, and the serving route enforces a DB-backed ACL (an
+// object path is only served when it belongs to a recording the actor may read).
+router.use(storageRouter);
 
 // ── Authenticated routes ────────────────────────────────────
 // Everything below requires a valid session.

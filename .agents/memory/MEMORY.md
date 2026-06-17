@@ -3,3 +3,4 @@
 - [Impersonation + branding safety](impersonation-safety.md) — every identity change (incl login/register) must regenerateSession to drop the stale impersonator marker; every privileged write needs blockWhileImpersonating; host branding never authorizes.
 - [Global-role UI parity](global-role-ui-parity.md) — client gates must bypass for admin AND super_admin (use isGlobalAdmin); org-scoped UI needs an explicit tenant selector for global roles (no org-directory endpoint).
 - [Compass multi-tenancy & roles](compass-multitenancy.md) — org is the tenant boundary; all Compass routes in one guarded /compass namespace, every handler org-scoped (cross-org by-id => 404); + the Express req-augmentation gotcha.
+- [Object-storage upload ACL](object-upload-acl.md) — when a DB row's objectPath is the serving ACL, bind the object namespace to the uploader at mint AND re-check it at attach, or a forged row reads another tenant's object.

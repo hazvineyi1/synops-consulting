@@ -9,6 +9,10 @@ export const intakeProgressTable = pgTable("intake_progress", {
   notes: text("notes").notNull().default("{}"),
   inventorySelections: text("inventory_selections").notNull().default("{}"),
   autoRules: text("auto_rules").notNull().default("{}"),
+  // Rules-based agenda generated from the project/course/objectives. Stored
+  // separately from the fixed-length SEGMENTS arrays above so generating it can
+  // never clobber the kickoff checklist autosave (and vice versa).
+  generatedAgenda: text("generated_agenda").notNull().default("{}"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

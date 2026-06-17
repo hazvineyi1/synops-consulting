@@ -171,6 +171,22 @@ export type IntakeProgressInventorySelections = {[key: string]: string};
 
 export type IntakeProgressAutoRules = {[key: string]: boolean};
 
+export interface GeneratedAgendaItem {
+  title: string;
+  minutes: number;
+  prompts: string[];
+}
+
+export interface GeneratedAgenda {
+  generatedAt: string;
+  projectTitle: string;
+  /** @nullable */
+  courseTitle?: string | null;
+  objectiveCount?: number;
+  totalMinutes: number;
+  items: GeneratedAgendaItem[];
+}
+
 export interface IntakeProgress {
   projectId: number;
   agendaChecks: boolean[][];
@@ -179,8 +195,72 @@ export interface IntakeProgress {
   notes: IntakeProgressNotes;
   inventorySelections: IntakeProgressInventorySelections;
   autoRules: IntakeProgressAutoRules;
+  generatedAgenda?: GeneratedAgenda | null;
   /** @nullable */
   updatedAt?: string | null;
+}
+
+export type MeetingRecordingKind = typeof MeetingRecordingKind[keyof typeof MeetingRecordingKind];
+
+
+export const MeetingRecordingKind = {
+  upload: 'upload',
+  external: 'external',
+} as const;
+
+export interface MeetingRecording {
+  id: number;
+  projectId: number;
+  kind: MeetingRecordingKind;
+  title: string;
+  /** @nullable */
+  objectPath?: string | null;
+  /** @nullable */
+  externalUrl?: string | null;
+  /** @nullable */
+  durationSec?: number | null;
+  /** @nullable */
+  contentType?: string | null;
+  /** @nullable */
+  sizeBytes?: number | null;
+  createdAt: string;
+}
+
+export type MeetingRecordingInputKind = typeof MeetingRecordingInputKind[keyof typeof MeetingRecordingInputKind];
+
+
+export const MeetingRecordingInputKind = {
+  upload: 'upload',
+  external: 'external',
+} as const;
+
+export interface MeetingRecordingInput {
+  kind: MeetingRecordingInputKind;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /** Required when kind is "upload"; the path returned by the upload endpoint. */
+  objectPath?: string;
+  /** Required when kind is "external"; an http(s) link to the recording. */
+  externalUrl?: string;
+  /** @minimum 0 */
+  durationSec?: number;
+  contentType?: string;
+  /** @minimum 0 */
+  sizeBytes?: number;
+}
+
+export interface UploadUrlRequest {
+  name?: string;
+  size?: number;
+  contentType?: string;
+}
+
+export interface UploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
 }
 
 export interface HealthStatus {

@@ -28,6 +28,10 @@ tags:
     description: Standards frameworks and accreditation crosswalk
   - name: dashboard
     description: Dashboard summaries
+  - name: recordings
+    description: Project meeting recordings (uploads and external links)
+  - name: storage
+    description: Object storage upload and serving
 
 paths:
   /healthz:
@@ -1023,6 +1027,85 @@ paths:
               schema:
                 $ref: "#/components/schemas/IntakeProgress"
 
+  /compass/projects/{projectId}/intake-generated-agenda:
+    post:
+      operationId: generateIntakeAgenda
+      tags: [intake]
+      summary: Generate a rules-based kickoff agenda from the project, course, and objectives
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Generated agenda
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedAgenda"
+
+  # ── Meeting recordings ───────────────────────────────────────
+  /compass/projects/{projectId}/recordings:
+    get:
+      operationId: listMeetingRecordings
+      tags: [recordings]
+      summary: List meeting recordings for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recordings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MeetingRecording"
+    post:
+      operationId: createMeetingRecording
+      tags: [recordings]
+      summary: Attach a meeting recording (uploaded object or external link) to a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingRecordingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingRecording"
+
+  /compass/meeting-recordings/{id}:
+    delete:
+      operationId: deleteMeetingRecording
+      tags: [recordings]
+      summary: Delete a meeting recording
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
   # ── Builders (school admin management) ───────────────────────
   /compass/builders:
     get:
@@ -1644,6 +1727,48 @@ paths:
               schema:
                 $ref: "#/components/schemas/SubmitResult"
 
+  # ── Object storage ───────────────────────────────────────────
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned URL to upload a file directly to object storage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL and the object path to persist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+
+  /storage/objects/{objectPath}:
+    get:
+      operationId: getStorageObject
+      tags: [storage]
+      summary: Serve an uploaded object entity (auth + ACL enforced server-side)
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The object bytes
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Not found or not accessible
+
 # ── Component Schemas ───────────────────────────────────────────────
 components:
   schemas:
@@ -1927,9 +2052,120 @@ components:
           type: object
           additionalProperties:
             type: boolean
+        generatedAgenda:
+          oneOf:
+            - $ref: "#/components/schemas/GeneratedAgenda"
+            - type: "null"
         updatedAt:
           type: ["string", "null"]
           format: date-time
+
+    GeneratedAgendaItem:
+      type: object
+      required: [title, minutes, prompts]
+      properties:
+        title:
+          type: string
+        minutes:
+          type: integer
+        prompts:
+          type: array
+          items:
+            type: string
+
+    GeneratedAgenda:
+      type: object
+      required: [generatedAt, projectTitle, totalMinutes, items]
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        projectTitle:
+          type: string
+        courseTitle:
+          type: ["string", "null"]
+        objectiveCount:
+          type: integer
+        totalMinutes:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/GeneratedAgendaItem"
+
+    # ── Meeting recordings ────────────────────────────────────────
+    MeetingRecording:
+      type: object
+      required: [id, projectId, kind, title, createdAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        kind:
+          type: string
+          enum: [upload, external]
+        title:
+          type: string
+        objectPath:
+          type: ["string", "null"]
+        externalUrl:
+          type: ["string", "null"]
+        durationSec:
+          type: ["integer", "null"]
+        contentType:
+          type: ["string", "null"]
+        sizeBytes:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    MeetingRecordingInput:
+      type: object
+      required: [kind, title]
+      properties:
+        kind:
+          type: string
+          enum: [upload, external]
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        objectPath:
+          type: string
+          description: Required when kind is "upload"; the path returned by the upload endpoint.
+        externalUrl:
+          type: string
+          description: Required when kind is "external"; an http(s) link to the recording.
+        durationSec:
+          type: integer
+          minimum: 0
+        contentType:
+          type: string
+        sizeBytes:
+          type: integer
+          minimum: 0
+
+    # ── Object storage ────────────────────────────────────────────
+    UploadUrlRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        contentType:
+          type: string
+
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
 
     HealthStatus:
       type: object

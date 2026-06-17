@@ -14,6 +14,7 @@ export * from "./standards";
 export * from "./audit";
 export * from "./impersonation";
 export * from "./intake";
+export * from "./meeting-recordings";
 export * from "./users";
 export * from "./marketing";
 export * from "./sessions";

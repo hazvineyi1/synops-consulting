@@ -53,6 +53,7 @@ import type {
   DemoLevelOption,
   DemoSessionInput,
   GateStatus,
+  GeneratedAgenda,
   GetDemoBankParams,
   GetSchoolReportMarkdownParams,
   GetSchoolReportParams,
@@ -66,6 +67,8 @@ import type {
   ListAllocationsParams,
   ListBuildersParams,
   LoginInput,
+  MeetingRecording,
+  MeetingRecordingInput,
   Module,
   ModuleInput,
   ModuleUpdate,
@@ -95,7 +98,9 @@ import type {
   StartImpersonationInput,
   SubmitResult,
   UpdateBrandingInput,
-  UpdateBuilderStatusInput
+  UpdateBuilderStatusInput,
+  UploadUrlRequest,
+  UploadUrlResponse
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -3735,6 +3740,295 @@ export const useUpdateIntakeProgress = <TError = ErrorType<unknown>,
       return useMutation(getUpdateIntakeProgressMutationOptions(options));
     }
 
+export const getGenerateIntakeAgendaUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/compass/projects/${projectId}/intake-generated-agenda`
+}
+
+/**
+ * @summary Generate a rules-based kickoff agenda from the project, course, and objectives
+ */
+export const generateIntakeAgenda = async (projectId: number, options?: RequestInit): Promise<GeneratedAgenda> => {
+
+  return customFetch<GeneratedAgenda>(getGenerateIntakeAgendaUrl(projectId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenerateIntakeAgendaMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateIntakeAgenda>>, TError,{projectId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateIntakeAgenda>>, TError,{projectId: number}, TContext> => {
+
+const mutationKey = ['generateIntakeAgenda'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateIntakeAgenda>>, {projectId: number}> = (props) => {
+          const {projectId} = props ?? {};
+
+          return  generateIntakeAgenda(projectId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateIntakeAgendaMutationResult = NonNullable<Awaited<ReturnType<typeof generateIntakeAgenda>>>
+
+    export type GenerateIntakeAgendaMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Generate a rules-based kickoff agenda from the project, course, and objectives
+ */
+export const useGenerateIntakeAgenda = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateIntakeAgenda>>, TError,{projectId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateIntakeAgenda>>,
+        TError,
+        {projectId: number},
+        TContext
+      > => {
+      return useMutation(getGenerateIntakeAgendaMutationOptions(options));
+    }
+
+export const getListMeetingRecordingsUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/compass/projects/${projectId}/recordings`
+}
+
+/**
+ * @summary List meeting recordings for a project
+ */
+export const listMeetingRecordings = async (projectId: number, options?: RequestInit): Promise<MeetingRecording[]> => {
+
+  return customFetch<MeetingRecording[]>(getListMeetingRecordingsUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMeetingRecordingsQueryKey = (projectId: number,) => {
+    return [
+    `/api/compass/projects/${projectId}/recordings`
+    ] as const;
+    }
+
+
+export const getListMeetingRecordingsQueryOptions = <TData = Awaited<ReturnType<typeof listMeetingRecordings>>, TError = ErrorType<unknown>>(projectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMeetingRecordings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMeetingRecordingsQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMeetingRecordings>>> = ({ signal }) => listMeetingRecordings(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(projectId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMeetingRecordings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMeetingRecordingsQueryResult = NonNullable<Awaited<ReturnType<typeof listMeetingRecordings>>>
+export type ListMeetingRecordingsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List meeting recordings for a project
+ */
+
+export function useListMeetingRecordings<TData = Awaited<ReturnType<typeof listMeetingRecordings>>, TError = ErrorType<unknown>>(
+ projectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMeetingRecordings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMeetingRecordingsQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateMeetingRecordingUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/compass/projects/${projectId}/recordings`
+}
+
+/**
+ * @summary Attach a meeting recording (uploaded object or external link) to a project
+ */
+export const createMeetingRecording = async (projectId: number,
+    meetingRecordingInput: MeetingRecordingInput, options?: RequestInit): Promise<MeetingRecording> => {
+
+  return customFetch<MeetingRecording>(getCreateMeetingRecordingUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      meetingRecordingInput,)
+  }
+);}
+
+
+
+
+export const getCreateMeetingRecordingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMeetingRecording>>, TError,{projectId: number;data: BodyType<MeetingRecordingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMeetingRecording>>, TError,{projectId: number;data: BodyType<MeetingRecordingInput>}, TContext> => {
+
+const mutationKey = ['createMeetingRecording'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMeetingRecording>>, {projectId: number;data: BodyType<MeetingRecordingInput>}> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  createMeetingRecording(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMeetingRecordingMutationResult = NonNullable<Awaited<ReturnType<typeof createMeetingRecording>>>
+    export type CreateMeetingRecordingMutationBody = BodyType<MeetingRecordingInput>
+    export type CreateMeetingRecordingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Attach a meeting recording (uploaded object or external link) to a project
+ */
+export const useCreateMeetingRecording = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMeetingRecording>>, TError,{projectId: number;data: BodyType<MeetingRecordingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMeetingRecording>>,
+        TError,
+        {projectId: number;data: BodyType<MeetingRecordingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMeetingRecordingMutationOptions(options));
+    }
+
+export const getDeleteMeetingRecordingUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/meeting-recordings/${id}`
+}
+
+/**
+ * @summary Delete a meeting recording
+ */
+export const deleteMeetingRecording = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteMeetingRecordingUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteMeetingRecordingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMeetingRecording>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMeetingRecording>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteMeetingRecording'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMeetingRecording>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteMeetingRecording(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMeetingRecordingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMeetingRecording>>>
+
+    export type DeleteMeetingRecordingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a meeting recording
+ */
+export const useDeleteMeetingRecording = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMeetingRecording>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMeetingRecording>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteMeetingRecordingMutationOptions(options));
+    }
+
 export const getListBuildersUrl = (params?: ListBuildersParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -6141,4 +6435,152 @@ export const useSaveDemoSession = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getSaveDemoSessionMutationOptions(options));
     }
+
+export const getRequestUploadUrlUrl = () => {
+
+
+
+
+  return `/api/storage/uploads/request-url`
+}
+
+/**
+ * @summary Request a presigned URL to upload a file directly to object storage
+ */
+export const requestUploadUrl = async (uploadUrlRequest: UploadUrlRequest, options?: RequestInit): Promise<UploadUrlResponse> => {
+
+  return customFetch<UploadUrlResponse>(getRequestUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      uploadUrlRequest,)
+  }
+);}
+
+
+
+
+export const getRequestUploadUrlMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext> => {
+
+const mutationKey = ['requestUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestUploadUrl>>, {data: BodyType<UploadUrlRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestUploadUrl(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestUploadUrl>>>
+    export type RequestUploadUrlMutationBody = BodyType<UploadUrlRequest>
+    export type RequestUploadUrlMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Request a presigned URL to upload a file directly to object storage
+ */
+export const useRequestUploadUrl = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestUploadUrl>>,
+        TError,
+        {data: BodyType<UploadUrlRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestUploadUrlMutationOptions(options));
+    }
+
+export const getGetStorageObjectUrl = (objectPath: string,) => {
+
+
+
+
+  return `/api/storage/objects/${objectPath}`
+}
+
+/**
+ * @summary Serve an uploaded object entity (auth + ACL enforced server-side)
+ */
+export const getStorageObject = async (objectPath: string, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetStorageObjectUrl(objectPath),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStorageObjectQueryKey = (objectPath: string,) => {
+    return [
+    `/api/storage/objects/${objectPath}`
+    ] as const;
+    }
+
+
+export const getGetStorageObjectQueryOptions = <TData = Awaited<ReturnType<typeof getStorageObject>>, TError = ErrorType<void>>(objectPath: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStorageObject>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStorageObjectQueryKey(objectPath);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStorageObject>>> = ({ signal }) => getStorageObject(objectPath, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(objectPath), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStorageObject>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStorageObjectQueryResult = NonNullable<Awaited<ReturnType<typeof getStorageObject>>>
+export type GetStorageObjectQueryError = ErrorType<void>
+
+
+/**
+ * @summary Serve an uploaded object entity (auth + ACL enforced server-side)
+ */
+
+export function useGetStorageObject<TData = Awaited<ReturnType<typeof getStorageObject>>, TError = ErrorType<void>>(
+ objectPath: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStorageObject>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStorageObjectQueryOptions(objectPath,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

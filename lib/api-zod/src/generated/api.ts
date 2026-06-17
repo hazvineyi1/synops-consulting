@@ -1029,6 +1029,18 @@ export const GetIntakeProgressResponse = zod.object({
   "notes": zod.record(zod.string(), zod.string()),
   "inventorySelections": zod.record(zod.string(), zod.string()),
   "autoRules": zod.record(zod.string(), zod.boolean()),
+  "generatedAgenda": zod.union([zod.object({
+  "generatedAt": zod.coerce.date(),
+  "projectTitle": zod.string(),
+  "courseTitle": zod.string().nullish(),
+  "objectiveCount": zod.number().optional(),
+  "totalMinutes": zod.number(),
+  "items": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string())
+}))
+}),zod.null()]).optional(),
   "updatedAt": zod.coerce.date().nullish()
 })
 
@@ -1057,7 +1069,96 @@ export const UpdateIntakeProgressResponse = zod.object({
   "notes": zod.record(zod.string(), zod.string()),
   "inventorySelections": zod.record(zod.string(), zod.string()),
   "autoRules": zod.record(zod.string(), zod.boolean()),
+  "generatedAgenda": zod.union([zod.object({
+  "generatedAt": zod.coerce.date(),
+  "projectTitle": zod.string(),
+  "courseTitle": zod.string().nullish(),
+  "objectiveCount": zod.number().optional(),
+  "totalMinutes": zod.number(),
+  "items": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string())
+}))
+}),zod.null()]).optional(),
   "updatedAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Generate a rules-based kickoff agenda from the project, course, and objectives
+ */
+export const GenerateIntakeAgendaParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const GenerateIntakeAgendaResponse = zod.object({
+  "generatedAt": zod.coerce.date(),
+  "projectTitle": zod.string(),
+  "courseTitle": zod.string().nullish(),
+  "objectiveCount": zod.number().optional(),
+  "totalMinutes": zod.number(),
+  "items": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string())
+}))
+})
+
+
+/**
+ * @summary List meeting recordings for a project
+ */
+export const ListMeetingRecordingsParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const ListMeetingRecordingsResponseItem = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "kind": zod.enum(['upload', 'external']),
+  "title": zod.string(),
+  "objectPath": zod.string().nullish(),
+  "externalUrl": zod.string().nullish(),
+  "durationSec": zod.number().nullish(),
+  "contentType": zod.string().nullish(),
+  "sizeBytes": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMeetingRecordingsResponse = zod.array(ListMeetingRecordingsResponseItem)
+
+
+/**
+ * @summary Attach a meeting recording (uploaded object or external link) to a project
+ */
+export const CreateMeetingRecordingParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const createMeetingRecordingBodyTitleMax = 200;
+
+export const createMeetingRecordingBodyDurationSecMin = 0;
+
+export const createMeetingRecordingBodySizeBytesMin = 0;
+
+
+
+export const CreateMeetingRecordingBody = zod.object({
+  "kind": zod.enum(['upload', 'external']),
+  "title": zod.string().min(1).max(createMeetingRecordingBodyTitleMax),
+  "objectPath": zod.string().optional().describe('Required when kind is \"upload\"; the path returned by the upload endpoint.'),
+  "externalUrl": zod.string().optional().describe('Required when kind is \"external\"; an http(s) link to the recording.'),
+  "durationSec": zod.number().min(createMeetingRecordingBodyDurationSecMin).optional(),
+  "contentType": zod.string().optional(),
+  "sizeBytes": zod.number().min(createMeetingRecordingBodySizeBytesMin).optional()
+})
+
+
+/**
+ * @summary Delete a meeting recording
+ */
+export const DeleteMeetingRecordingParams = zod.object({
+  "id": zod.coerce.number()
 })
 
 
@@ -1694,6 +1795,29 @@ export const SaveDemoSessionBody = zod.object({
   "difficulty": zod.number(),
   "correct": zod.boolean()
 }))
+})
+
+
+/**
+ * @summary Request a presigned URL to upload a file directly to object storage
+ */
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().optional(),
+  "size": zod.number().optional(),
+  "contentType": zod.string().optional()
+})
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string(),
+  "objectPath": zod.string()
+})
+
+
+/**
+ * @summary Serve an uploaded object entity (auth + ACL enforced server-side)
+ */
+export const GetStorageObjectParams = zod.object({
+  "objectPath": zod.coerce.string()
 })
 
 
