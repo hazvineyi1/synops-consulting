@@ -1,6 +1,5 @@
 import { type ReactNode } from "react";
-import { useParams, Link } from "wouter";
-import { Lock } from "lucide-react";
+import { useParams } from "wouter";
 import { useGetProject, getGetProjectQueryKey, type Project } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader, type Crumb } from "@/components/engine/PageHeader";
@@ -48,12 +47,6 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
   const stage = stageId != null ? getStage(stageId) : undefined;
   const ctx: WorkspaceContext = { project };
 
-  const currentStage = getStage(project.stage);
-  const isLocked = stage != null && stage.id > project.stage;
-  const resumeHref = currentStage
-    ? `/projects/${project.id}/${currentStage.slug}`
-    : `/projects/${project.id}`;
-
   const crumbs: Crumb[] = [
     { label: "Dashboard", href: "/" },
     { label: "Projects", href: "/projects" },
@@ -90,26 +83,7 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
         />
       </section>
 
-      <div className="space-y-6">
-        {isLocked ? (
-          <div className="rounded-lg border border-dashed bg-muted/20 p-10 text-center">
-            <Lock className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
-            <h2 className="mt-3 text-lg font-semibold text-foreground">This stage is not open yet</h2>
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-              {stage?.title} opens once the earlier stages are complete.
-              {currentStage ? ` Continue from the current stage, ${currentStage.title}.` : ""}
-            </p>
-            <Link
-              href={resumeHref}
-              className="mt-5 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              Go to {currentStage ? currentStage.title : "the project"}
-            </Link>
-          </div>
-        ) : (
-          children(ctx)
-        )}
-      </div>
+      <div className="space-y-6">{children(ctx)}</div>
     </div>
   );
 }

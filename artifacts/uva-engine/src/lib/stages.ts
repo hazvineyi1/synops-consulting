@@ -59,10 +59,10 @@ export function getStage(id: number): StageDef | undefined {
   return STAGES.find((s) => s.id === id);
 }
 
-export type StageState = "done" | "current" | "locked";
+export type StageState = "done" | "current" | "upcoming";
 
 export function stageState(stageId: number, currentStage: number): StageState {
   if (stageId < currentStage) return "done";
   if (stageId === currentStage) return "current";
-  return "locked";
+  return "upcoming";
 }

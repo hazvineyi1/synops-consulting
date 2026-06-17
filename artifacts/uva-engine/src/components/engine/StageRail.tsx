@@ -1,11 +1,11 @@
 import { Link } from "wouter";
-import { Check, Lock } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STAGES, STAGE_COUNT, stageState, getStage } from "@/lib/stages";
 
 interface StageRailProps {
   projectId: number;
-  /** The stage the project has actually reached (drives done / current / locked). */
+  /** The stage the project has actually reached (drives done / current / upcoming). */
   currentStage: number;
   /** The stage whose workspace is open now (the "you are here" marker). */
   viewingStage?: number;
@@ -19,8 +19,9 @@ interface StageRailProps {
 
 /**
  * The visible backbone of the curriculum pipeline. Renders the four stages in
- * order with done / current / locked states. Reachable stages link to their
- * workspace; locked stages are not yet reachable (the server enforces the gates).
+ * order with done / current / upcoming states. Every stage links to its
+ * workspace so users can move between stages freely; the server still owns
+ * real progression and authorization.
  * When viewingStage is set, that stage is marked as the current page so a builder
  * always knows where they are. Accessible: an ordered list, aria-current on the
  * active stage or page, and text (not color alone) conveys each stage's state.
@@ -45,7 +46,7 @@ export function StageRail({ projectId, currentStage, viewingStage, variant = "fu
                     "block h-1.5 rounded-full",
                     state === "done" && "bg-primary",
                     state === "current" && "bg-accent",
-                    state === "locked" && "bg-muted"
+                    state === "upcoming" && "bg-muted"
                   )}
                 />
               </li>
@@ -69,9 +70,8 @@ export function StageRail({ projectId, currentStage, viewingStage, variant = "fu
       {STAGES.map((stage) => {
         const state = stageState(stage.id, currentStage);
         const Icon = stage.icon;
-        const reachable = state !== "locked";
         const isViewing = viewingStage != null && stage.id === viewingStage;
-        const stateLabel = state === "done" ? "Completed" : state === "current" ? "In progress" : "Locked";
+        const stateLabel = state === "done" ? "Completed" : state === "current" ? "In progress" : "Upcoming";
         const ariaCurrent: "page" | "step" | undefined = isViewing
           ? "page"
           : viewingStage == null && state === "current"
@@ -86,13 +86,11 @@ export function StageRail({ projectId, currentStage, viewingStage, variant = "fu
                   "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
                   state === "current" && "bg-primary text-primary-foreground",
                   state === "done" && "bg-primary/15 text-primary",
-                  state === "locked" && "bg-muted text-muted-foreground"
+                  state === "upcoming" && "bg-muted text-muted-foreground"
                 )}
               >
                 {state === "done" ? (
                   <Check className="h-4 w-4" aria-hidden="true" />
-                ) : state === "locked" ? (
-                  <Lock className="h-3.5 w-3.5" aria-hidden="true" />
                 ) : (
                   stage.id + 1
                 )}
@@ -109,7 +107,7 @@ export function StageRail({ projectId, currentStage, viewingStage, variant = "fu
               <div
                 className={cn(
                   "truncate text-sm font-semibold",
-                  state === "locked" ? "text-muted-foreground" : "text-foreground"
+                  state === "upcoming" ? "text-muted-foreground" : "text-foreground"
                 )}
               >
                 {stage.title}
@@ -125,26 +123,20 @@ export function StageRail({ projectId, currentStage, viewingStage, variant = "fu
           "block rounded-lg border p-3 text-left transition-colors",
           state === "current" && "border-primary/40 bg-primary/5",
           state === "done" && "bg-card hover:bg-muted/50",
-          state === "locked" && "border-dashed bg-muted/20",
+          state === "upcoming" && "border-dashed bg-muted/20 hover:bg-muted/40",
           isViewing && "ring-2 ring-primary ring-offset-2 ring-offset-background"
         );
 
         return (
           <li key={stage.id}>
-            {reachable ? (
-              <Link
-                href={`/projects/${projectId}/${stage.slug}`}
-                aria-current={ariaCurrent}
-                aria-label={`${stage.title}: ${stateLabel}.${isViewing ? " Current page." : " Open workspace."}`}
-                className={cn(base, "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}
-              >
-                {inner}
-              </Link>
-            ) : (
-              <div className={base} aria-label={`${stage.title}: ${stateLabel}`}>
-                {inner}
-              </div>
-            )}
+            <Link
+              href={`/projects/${projectId}/${stage.slug}`}
+              aria-current={ariaCurrent}
+              aria-label={`${stage.title}: ${stateLabel}.${isViewing ? " Current page." : " Open workspace."}`}
+              className={cn(base, "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}
+            >
+              {inner}
+            </Link>
           </li>
         );
       })}
