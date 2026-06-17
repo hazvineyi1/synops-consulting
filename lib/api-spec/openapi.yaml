@@ -30,6 +30,8 @@ tags:
     description: Dashboard summaries
   - name: recordings
     description: Project meeting recordings (uploads and external links)
+  - name: agenda
+    description: Per-project meeting agenda, notes, action items, and derived progress
   - name: storage
     description: Object storage upload and serving
 
@@ -1105,6 +1107,230 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  # ── Agenda (meetings, action items, derived progress) ────────
+  /compass/projects/{projectId}/meetings:
+    get:
+      operationId: listProjectMeetings
+      tags: [agenda]
+      summary: List meetings for a project (newest first)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Meetings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Meeting"
+    post:
+      operationId: createProjectMeeting
+      tags: [agenda]
+      summary: Log a meeting for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meeting"
+
+  /compass/meetings/{id}:
+    get:
+      operationId: getMeeting
+      tags: [agenda]
+      summary: Get a single meeting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Meeting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meeting"
+    put:
+      operationId: updateMeeting
+      tags: [agenda]
+      summary: Update a meeting's title, schedule, or notes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meeting"
+    delete:
+      operationId: deleteMeeting
+      tags: [agenda]
+      summary: Delete a meeting (its action items are retained)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /compass/meetings/{id}/process-notes:
+    post:
+      operationId: processMeetingNotes
+      tags: [agenda]
+      summary: Turn a meeting's notes into action items and a proposed next-meeting agenda
+      description: >-
+        Uses the built-in AI when configured and falls back to a deterministic
+        rules-based extractor otherwise. Returns the created action items and the
+        proposed agenda, and records which provider was used.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessNotesResult"
+
+  /compass/projects/{projectId}/action-items:
+    get:
+      operationId: listProjectActionItems
+      tags: [agenda]
+      summary: List action items for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Action items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActionItem"
+    post:
+      operationId: createProjectActionItem
+      tags: [agenda]
+      summary: Add an action item to a project by hand
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionItemInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionItem"
+
+  /compass/action-items/{id}:
+    patch:
+      operationId: updateActionItem
+      tags: [agenda]
+      summary: Update an action item (status, owner, due date, category, week)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionItemUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionItem"
+    delete:
+      operationId: deleteActionItem
+      tags: [agenda]
+      summary: Delete an action item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /compass/projects/{projectId}/agenda-summary:
+    get:
+      operationId: getAgendaSummary
+      tags: [agenda]
+      summary: Derived agenda progress for a project (build bars, accessibility, latest agenda)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Agenda summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgendaSummary"
 
   # ── Builders (school admin management) ───────────────────────
   /compass/builders:
@@ -2184,6 +2410,274 @@ components:
         sizeBytes:
           type: integer
           minimum: 0
+
+    # ── Agenda (meetings, action items, derived progress) ─────────
+    AgendaPlanItem:
+      type: object
+      required: [title, minutes, prompts]
+      properties:
+        title:
+          type: string
+        minutes:
+          type: integer
+        prompts:
+          type: array
+          items:
+            type: string
+
+    AgendaPlan:
+      type: object
+      required: [generatedAt, summary, items, openActionCount]
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        proposedDate:
+          type: ["string", "null"]
+          format: date
+        proposedTime:
+          type: ["string", "null"]
+        summary:
+          type: array
+          items:
+            type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgendaPlanItem"
+        openActionCount:
+          type: integer
+
+    Meeting:
+      type: object
+      required: [id, projectId, title, notes, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        title:
+          type: string
+        scheduledAt:
+          type: ["string", "null"]
+          format: date-time
+        notes:
+          type: string
+        nextMeetingAt:
+          type: ["string", "null"]
+          format: date-time
+        generatedAgenda:
+          oneOf:
+            - $ref: "#/components/schemas/AgendaPlan"
+            - type: "null"
+        aiProvider:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MeetingInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        scheduledAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          maxLength: 20000
+
+    MeetingUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        scheduledAt:
+          type: ["string", "null"]
+          format: date-time
+        notes:
+          type: string
+          maxLength: 20000
+        nextMeetingAt:
+          type: ["string", "null"]
+          format: date-time
+
+    ActionItem:
+      type: object
+      required: [id, projectId, title, status, category, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        sourceMeetingId:
+          type: ["integer", "null"]
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        ownerName:
+          type: ["string", "null"]
+        dueAt:
+          type: ["string", "null"]
+          format: date-time
+        status:
+          type: string
+          enum: [open, done]
+        category:
+          type: string
+          enum: [general, content, review, accessibility]
+        weekIndex:
+          type: ["integer", "null"]
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ActionItemInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        description:
+          type: string
+          maxLength: 2000
+        ownerName:
+          type: string
+          maxLength: 200
+        dueAt:
+          type: string
+          format: date-time
+        category:
+          type: string
+          enum: [general, content, review, accessibility]
+        weekIndex:
+          type: integer
+          minimum: 0
+
+    ActionItemUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        description:
+          type: ["string", "null"]
+          maxLength: 2000
+        ownerName:
+          type: ["string", "null"]
+          maxLength: 200
+        dueAt:
+          type: ["string", "null"]
+          format: date-time
+        status:
+          type: string
+          enum: [open, done]
+        category:
+          type: string
+          enum: [general, content, review, accessibility]
+        weekIndex:
+          type: ["integer", "null"]
+          minimum: 0
+
+    ProcessNotesResult:
+      type: object
+      required: [provider, meeting, createdActionItems, agenda]
+      properties:
+        provider:
+          type: string
+          enum: [openai, rules]
+        meeting:
+          $ref: "#/components/schemas/Meeting"
+        createdActionItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActionItem"
+        agenda:
+          $ref: "#/components/schemas/AgendaPlan"
+
+    WeekProgress:
+      type: object
+      required: [weekIndex, label, total, done, percent]
+      properties:
+        weekIndex:
+          type: integer
+        label:
+          type: string
+        total:
+          type: integer
+        done:
+          type: integer
+        percent:
+          type: integer
+
+    CategoryProgress:
+      type: object
+      required: [total, done, percent]
+      properties:
+        total:
+          type: integer
+        done:
+          type: integer
+        percent:
+          type: integer
+
+    AgendaSummary:
+      type: object
+      required:
+        [
+          projectId,
+          totalActionItems,
+          doneActionItems,
+          openActionItems,
+          buildProgressPercent,
+          weeks,
+          accessibility,
+          latestAgenda,
+          nextMeetingAt,
+        ]
+      properties:
+        projectId:
+          type: integer
+        totalActionItems:
+          type: integer
+        doneActionItems:
+          type: integer
+        openActionItems:
+          type: integer
+        buildProgressPercent:
+          type: integer
+        weeks:
+          type: array
+          items:
+            $ref: "#/components/schemas/WeekProgress"
+        accessibility:
+          $ref: "#/components/schemas/CategoryProgress"
+        latestAgenda:
+          oneOf:
+            - $ref: "#/components/schemas/AgendaPlan"
+            - type: "null"
+        nextMeetingAt:
+          type: ["string", "null"]
+          format: date-time
 
     # ── Object storage ────────────────────────────────────────────
     UploadUrlRequest:

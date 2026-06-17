@@ -14,6 +14,8 @@ import {
   crosswalkLinksTable,
   allocationsTable,
   meetingRecordingsTable,
+  projectMeetingsTable,
+  meetingActionItemsTable,
   type AllocationScopeType,
 } from "@workspace/db";
 import type { ActorContext } from "./actor";
@@ -339,6 +341,28 @@ export async function resolveMeetingRecordingScope(recordingId: number): Promise
     .innerJoin(projectsTable, eq(meetingRecordingsTable.projectId, projectsTable.id))
     .innerJoin(clientsTable, eq(projectsTable.clientId, clientsTable.id))
     .where(eq(meetingRecordingsTable.id, recordingId));
+  if (!row) return null;
+  return { orgId: row.orgId, level: "project", projectId: row.projectId, courseId: null, classId: null };
+}
+
+export async function resolveMeetingScope(meetingId: number): Promise<ScopeRef | null> {
+  const [row] = await db
+    .select({ orgId: clientsTable.organizationId, projectId: projectsTable.id })
+    .from(projectMeetingsTable)
+    .innerJoin(projectsTable, eq(projectMeetingsTable.projectId, projectsTable.id))
+    .innerJoin(clientsTable, eq(projectsTable.clientId, clientsTable.id))
+    .where(eq(projectMeetingsTable.id, meetingId));
+  if (!row) return null;
+  return { orgId: row.orgId, level: "project", projectId: row.projectId, courseId: null, classId: null };
+}
+
+export async function resolveActionItemScope(actionItemId: number): Promise<ScopeRef | null> {
+  const [row] = await db
+    .select({ orgId: clientsTable.organizationId, projectId: projectsTable.id })
+    .from(meetingActionItemsTable)
+    .innerJoin(projectsTable, eq(meetingActionItemsTable.projectId, projectsTable.id))
+    .innerJoin(clientsTable, eq(projectsTable.clientId, clientsTable.id))
+    .where(eq(meetingActionItemsTable.id, actionItemId));
   if (!row) return null;
   return { orgId: row.orgId, level: "project", projectId: row.projectId, courseId: null, classId: null };
 }

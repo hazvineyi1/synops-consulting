@@ -1222,6 +1222,352 @@ export const DeleteMeetingRecordingParams = zod.object({
 
 
 /**
+ * @summary List meetings for a project (newest first)
+ */
+export const ListProjectMeetingsParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const ListProjectMeetingsResponseItem = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "scheduledAt": zod.coerce.date().nullish(),
+  "notes": zod.string(),
+  "nextMeetingAt": zod.coerce.date().nullish(),
+  "generatedAgenda": zod.union([zod.object({
+  "generatedAt": zod.coerce.date(),
+  "proposedDate": zod.coerce.date().nullish(),
+  "proposedTime": zod.string().nullish(),
+  "summary": zod.array(zod.string()),
+  "items": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string())
+})),
+  "openActionCount": zod.number()
+}),zod.null()]).optional(),
+  "aiProvider": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListProjectMeetingsResponse = zod.array(ListProjectMeetingsResponseItem)
+
+
+/**
+ * @summary Log a meeting for a project
+ */
+export const CreateProjectMeetingParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const createProjectMeetingBodyTitleMax = 200;
+
+export const createProjectMeetingBodyNotesMax = 20000;
+
+
+
+export const CreateProjectMeetingBody = zod.object({
+  "title": zod.string().min(1).max(createProjectMeetingBodyTitleMax),
+  "scheduledAt": zod.coerce.date().optional(),
+  "notes": zod.string().max(createProjectMeetingBodyNotesMax).optional()
+})
+
+
+/**
+ * @summary Get a single meeting
+ */
+export const GetMeetingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMeetingResponse = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "scheduledAt": zod.coerce.date().nullish(),
+  "notes": zod.string(),
+  "nextMeetingAt": zod.coerce.date().nullish(),
+  "generatedAgenda": zod.union([zod.object({
+  "generatedAt": zod.coerce.date(),
+  "proposedDate": zod.coerce.date().nullish(),
+  "proposedTime": zod.string().nullish(),
+  "summary": zod.array(zod.string()),
+  "items": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string())
+})),
+  "openActionCount": zod.number()
+}),zod.null()]).optional(),
+  "aiProvider": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a meeting's title, schedule, or notes
+ */
+export const UpdateMeetingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateMeetingBodyTitleMax = 200;
+
+export const updateMeetingBodyNotesMax = 20000;
+
+
+
+export const UpdateMeetingBody = zod.object({
+  "title": zod.string().min(1).max(updateMeetingBodyTitleMax).optional(),
+  "scheduledAt": zod.coerce.date().nullish(),
+  "notes": zod.string().max(updateMeetingBodyNotesMax).optional(),
+  "nextMeetingAt": zod.coerce.date().nullish()
+})
+
+export const UpdateMeetingResponse = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "scheduledAt": zod.coerce.date().nullish(),
+  "notes": zod.string(),
+  "nextMeetingAt": zod.coerce.date().nullish(),
+  "generatedAgenda": zod.union([zod.object({
+  "generatedAt": zod.coerce.date(),
+  "proposedDate": zod.coerce.date().nullish(),
+  "proposedTime": zod.string().nullish(),
+  "summary": zod.array(zod.string()),
+  "items": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string())
+})),
+  "openActionCount": zod.number()
+}),zod.null()]).optional(),
+  "aiProvider": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a meeting (its action items are retained)
+ */
+export const DeleteMeetingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * Uses the built-in AI when configured and falls back to a deterministic rules-based extractor otherwise. Returns the created action items and the proposed agenda, and records which provider was used.
+ * @summary Turn a meeting's notes into action items and a proposed next-meeting agenda
+ */
+export const ProcessMeetingNotesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ProcessMeetingNotesResponse = zod.object({
+  "provider": zod.enum(['openai', 'rules']),
+  "meeting": zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "scheduledAt": zod.coerce.date().nullish(),
+  "notes": zod.string(),
+  "nextMeetingAt": zod.coerce.date().nullish(),
+  "generatedAgenda": zod.union([zod.object({
+  "generatedAt": zod.coerce.date(),
+  "proposedDate": zod.coerce.date().nullish(),
+  "proposedTime": zod.string().nullish(),
+  "summary": zod.array(zod.string()),
+  "items": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string())
+})),
+  "openActionCount": zod.number()
+}),zod.null()]).optional(),
+  "aiProvider": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "createdActionItems": zod.array(zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "sourceMeetingId": zod.number().nullish(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "ownerName": zod.string().nullish(),
+  "dueAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['open', 'done']),
+  "category": zod.enum(['general', 'content', 'review', 'accessibility']),
+  "weekIndex": zod.number().nullish(),
+  "completedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "agenda": zod.object({
+  "generatedAt": zod.coerce.date(),
+  "proposedDate": zod.coerce.date().nullish(),
+  "proposedTime": zod.string().nullish(),
+  "summary": zod.array(zod.string()),
+  "items": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string())
+})),
+  "openActionCount": zod.number()
+})
+})
+
+
+/**
+ * @summary List action items for a project
+ */
+export const ListProjectActionItemsParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const ListProjectActionItemsResponseItem = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "sourceMeetingId": zod.number().nullish(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "ownerName": zod.string().nullish(),
+  "dueAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['open', 'done']),
+  "category": zod.enum(['general', 'content', 'review', 'accessibility']),
+  "weekIndex": zod.number().nullish(),
+  "completedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListProjectActionItemsResponse = zod.array(ListProjectActionItemsResponseItem)
+
+
+/**
+ * @summary Add an action item to a project by hand
+ */
+export const CreateProjectActionItemParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const createProjectActionItemBodyTitleMax = 300;
+
+export const createProjectActionItemBodyDescriptionMax = 2000;
+
+export const createProjectActionItemBodyOwnerNameMax = 200;
+
+export const createProjectActionItemBodyWeekIndexMin = 0;
+
+
+
+export const CreateProjectActionItemBody = zod.object({
+  "title": zod.string().min(1).max(createProjectActionItemBodyTitleMax),
+  "description": zod.string().max(createProjectActionItemBodyDescriptionMax).optional(),
+  "ownerName": zod.string().max(createProjectActionItemBodyOwnerNameMax).optional(),
+  "dueAt": zod.coerce.date().optional(),
+  "category": zod.enum(['general', 'content', 'review', 'accessibility']).optional(),
+  "weekIndex": zod.number().min(createProjectActionItemBodyWeekIndexMin).optional()
+})
+
+
+/**
+ * @summary Update an action item (status, owner, due date, category, week)
+ */
+export const UpdateActionItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateActionItemBodyTitleMax = 300;
+
+export const updateActionItemBodyDescriptionMax = 2000;
+
+export const updateActionItemBodyOwnerNameMax = 200;
+
+export const updateActionItemBodyWeekIndexMin = 0;
+
+
+
+export const UpdateActionItemBody = zod.object({
+  "title": zod.string().min(1).max(updateActionItemBodyTitleMax).optional(),
+  "description": zod.string().max(updateActionItemBodyDescriptionMax).nullish(),
+  "ownerName": zod.string().max(updateActionItemBodyOwnerNameMax).nullish(),
+  "dueAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['open', 'done']).optional(),
+  "category": zod.enum(['general', 'content', 'review', 'accessibility']).optional(),
+  "weekIndex": zod.number().min(updateActionItemBodyWeekIndexMin).nullish()
+})
+
+export const UpdateActionItemResponse = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "sourceMeetingId": zod.number().nullish(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "ownerName": zod.string().nullish(),
+  "dueAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['open', 'done']),
+  "category": zod.enum(['general', 'content', 'review', 'accessibility']),
+  "weekIndex": zod.number().nullish(),
+  "completedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete an action item
+ */
+export const DeleteActionItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Derived agenda progress for a project (build bars, accessibility, latest agenda)
+ */
+export const GetAgendaSummaryParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const GetAgendaSummaryResponse = zod.object({
+  "projectId": zod.number(),
+  "totalActionItems": zod.number(),
+  "doneActionItems": zod.number(),
+  "openActionItems": zod.number(),
+  "buildProgressPercent": zod.number(),
+  "weeks": zod.array(zod.object({
+  "weekIndex": zod.number(),
+  "label": zod.string(),
+  "total": zod.number(),
+  "done": zod.number(),
+  "percent": zod.number()
+})),
+  "accessibility": zod.object({
+  "total": zod.number(),
+  "done": zod.number(),
+  "percent": zod.number()
+}),
+  "latestAgenda": zod.union([zod.object({
+  "generatedAt": zod.coerce.date(),
+  "proposedDate": zod.coerce.date().nullish(),
+  "proposedTime": zod.string().nullish(),
+  "summary": zod.array(zod.string()),
+  "items": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string())
+})),
+  "openActionCount": zod.number()
+}),zod.null()]),
+  "nextMeetingAt": zod.coerce.date().nullable()
+})
+
+
+/**
  * @summary List builders the actor manages
  */
 export const ListBuildersQueryParams = zod.object({

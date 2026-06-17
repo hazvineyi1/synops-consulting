@@ -275,6 +275,217 @@ export interface MeetingRecordingInput {
   sizeBytes?: number;
 }
 
+export interface AgendaPlanItem {
+  title: string;
+  minutes: number;
+  prompts: string[];
+}
+
+export interface AgendaPlan {
+  generatedAt: string;
+  /** @nullable */
+  proposedDate?: string | null;
+  /** @nullable */
+  proposedTime?: string | null;
+  summary: string[];
+  items: AgendaPlanItem[];
+  openActionCount: number;
+}
+
+export interface Meeting {
+  id: number;
+  projectId: number;
+  title: string;
+  /** @nullable */
+  scheduledAt?: string | null;
+  notes: string;
+  /** @nullable */
+  nextMeetingAt?: string | null;
+  generatedAgenda?: AgendaPlan | null;
+  /** @nullable */
+  aiProvider?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MeetingInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  scheduledAt?: string;
+  /** @maxLength 20000 */
+  notes?: string;
+}
+
+export interface MeetingUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title?: string;
+  /** @nullable */
+  scheduledAt?: string | null;
+  /** @maxLength 20000 */
+  notes?: string;
+  /** @nullable */
+  nextMeetingAt?: string | null;
+}
+
+export type ActionItemStatus = typeof ActionItemStatus[keyof typeof ActionItemStatus];
+
+
+export const ActionItemStatus = {
+  open: 'open',
+  done: 'done',
+} as const;
+
+export type ActionItemCategory = typeof ActionItemCategory[keyof typeof ActionItemCategory];
+
+
+export const ActionItemCategory = {
+  general: 'general',
+  content: 'content',
+  review: 'review',
+  accessibility: 'accessibility',
+} as const;
+
+export interface ActionItem {
+  id: number;
+  projectId: number;
+  /** @nullable */
+  sourceMeetingId?: number | null;
+  title: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  ownerName?: string | null;
+  /** @nullable */
+  dueAt?: string | null;
+  status: ActionItemStatus;
+  category: ActionItemCategory;
+  /** @nullable */
+  weekIndex?: number | null;
+  /** @nullable */
+  completedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ActionItemInputCategory = typeof ActionItemInputCategory[keyof typeof ActionItemInputCategory];
+
+
+export const ActionItemInputCategory = {
+  general: 'general',
+  content: 'content',
+  review: 'review',
+  accessibility: 'accessibility',
+} as const;
+
+export interface ActionItemInput {
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  title: string;
+  /** @maxLength 2000 */
+  description?: string;
+  /** @maxLength 200 */
+  ownerName?: string;
+  dueAt?: string;
+  category?: ActionItemInputCategory;
+  /** @minimum 0 */
+  weekIndex?: number;
+}
+
+export type ActionItemUpdateStatus = typeof ActionItemUpdateStatus[keyof typeof ActionItemUpdateStatus];
+
+
+export const ActionItemUpdateStatus = {
+  open: 'open',
+  done: 'done',
+} as const;
+
+export type ActionItemUpdateCategory = typeof ActionItemUpdateCategory[keyof typeof ActionItemUpdateCategory];
+
+
+export const ActionItemUpdateCategory = {
+  general: 'general',
+  content: 'content',
+  review: 'review',
+  accessibility: 'accessibility',
+} as const;
+
+export interface ActionItemUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  title?: string;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  description?: string | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  ownerName?: string | null;
+  /** @nullable */
+  dueAt?: string | null;
+  status?: ActionItemUpdateStatus;
+  category?: ActionItemUpdateCategory;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  weekIndex?: number | null;
+}
+
+export type ProcessNotesResultProvider = typeof ProcessNotesResultProvider[keyof typeof ProcessNotesResultProvider];
+
+
+export const ProcessNotesResultProvider = {
+  openai: 'openai',
+  rules: 'rules',
+} as const;
+
+export interface ProcessNotesResult {
+  provider: ProcessNotesResultProvider;
+  meeting: Meeting;
+  createdActionItems: ActionItem[];
+  agenda: AgendaPlan;
+}
+
+export interface WeekProgress {
+  weekIndex: number;
+  label: string;
+  total: number;
+  done: number;
+  percent: number;
+}
+
+export interface CategoryProgress {
+  total: number;
+  done: number;
+  percent: number;
+}
+
+export interface AgendaSummary {
+  projectId: number;
+  totalActionItems: number;
+  doneActionItems: number;
+  openActionItems: number;
+  buildProgressPercent: number;
+  weeks: WeekProgress[];
+  accessibility: CategoryProgress;
+  latestAgenda: AgendaPlan | null;
+  /** @nullable */
+  nextMeetingAt: string | null;
+}
+
 export interface UploadUrlRequest {
   name?: string;
   size?: number;
