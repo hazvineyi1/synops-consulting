@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useParams } from "wouter";
 import {
-  useGetProject,
   useListQAChecks,
   useCreateQACheck,
-  getGetProjectQueryKey,
   getListQAChecksQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,7 +36,8 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronLeft, ShieldCheck, AlertTriangle, Plus, Download, Clock, Wrench } from "lucide-react";
+import { ShieldCheck, AlertTriangle, Plus, Download, Clock, Wrench } from "lucide-react";
+import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 
 const CHECK_TYPES: { value: string; label: string }[] = [
   { value: "oedi_rubric", label: "OEDI Rubric" },
@@ -72,10 +71,6 @@ export default function ProjectQA() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
 
-  const { data: project } = useGetProject(projectId, {
-    query: { enabled: !!projectId, queryKey: getGetProjectQueryKey(projectId) },
-  });
-
   const { data: checks } = useListQAChecks(projectId, {
     query: { enabled: !!projectId, queryKey: getListQAChecksQueryKey(projectId) },
   });
@@ -86,8 +81,6 @@ export default function ProjectQA() {
     resolver: zodResolver(qaSchema),
     defaultValues: { checkType: "", status: "pending", findings: "" },
   });
-
-  if (!project) return <div className="p-8">Loading...</div>;
 
   const projectChecks = checks?.filter((c) => c.projectId === projectId) || [];
 
@@ -127,11 +120,11 @@ export default function ProjectQA() {
     );
   }
 
-  function exportReport() {
+  function exportReport(projectTitle: string) {
     const lines: string[] = [];
     lines.push("# QA and Accessibility Report");
     lines.push("");
-    lines.push(`Project: ${project!.title}`);
+    lines.push(`Project: ${projectTitle}`);
     lines.push(`Generated: ${new Date().toLocaleString()}`);
     lines.push("");
     lines.push("## Summary");
@@ -156,7 +149,7 @@ export default function ProjectQA() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `qa-report-${project!.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.md`;
+    a.download = `qa-report-${projectTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.md`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -164,206 +157,198 @@ export default function ProjectQA() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href={`/projects/${projectId}`}>
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">Stage 2</Badge>
-            <h1 className="text-3xl font-bold tracking-tight">QA and Accessibility</h1>
-          </div>
-          <p className="text-muted-foreground mt-1">{project.title}</p>
-        </div>
+    <ProjectWorkspace
+      stageId={2}
+      actions={({ project }) => (
         <Button
           variant="outline"
-          onClick={exportReport}
+          onClick={() => exportReport(project.title)}
           disabled={projectChecks.length === 0}
         >
           <Download className="mr-2 h-4 w-4" /> Export report
         </Button>
-      </div>
-
-      {/* Report summary */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5 text-green-600" /> Pass
-            </div>
-            <div className="mt-1 text-2xl font-bold">{counts.pass}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <AlertTriangle className="h-3.5 w-3.5 text-red-600" /> Fail
-            </div>
-            <div className="mt-1 text-2xl font-bold">{counts.fail}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Wrench className="h-3.5 w-3.5 text-amber-600" /> Remediation
-            </div>
-            <div className="mt-1 text-2xl font-bold">{counts.in_remediation}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" /> Pending
-            </div>
-            <div className="mt-1 text-2xl font-bold">{counts.pending}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-xs text-muted-foreground">Accessibility</div>
-            <div className="mt-1 text-sm font-semibold">{a11yStatus}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader className="flex flex-row justify-between items-center">
-          <div>
-            <CardTitle>Quality Assurance Checks</CardTitle>
-            <CardDescription>Record results of automated and manual QA processes.</CardDescription>
-          </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" /> Log QA Check
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Log a QA Check</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="checkType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Check type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a check type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {CHECK_TYPES.map((t) => (
-                              <SelectItem key={t.value} value={t.value}>
-                                {t.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {STATUSES.map((s) => (
-                              <SelectItem key={s.value} value={s.value}>
-                                {s.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="findings"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Findings</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            rows={4}
-                            placeholder="Summarize what was checked and any issues found."
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="flex justify-end pt-2">
-                    <Button type="submit" disabled={createCheck.isPending}>
-                      {createCheck.isPending ? "Saving..." : "Save QA check"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent>
-          {projectChecks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border-dashed border-2 rounded-lg">
-              <ShieldCheck className="h-12 w-12 mb-4 text-muted" />
-              <p>No QA checks logged yet.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {projectChecks.map((check) => (
-                <div key={check.id} className="p-4 border rounded-md flex items-start gap-4">
-                  <div className="mt-1">
-                    {check.status === "pass" ? (
-                      <ShieldCheck className="text-green-500" />
-                    ) : check.status === "fail" ? (
-                      <AlertTriangle className="text-red-500" />
-                    ) : check.status === "in_remediation" ? (
-                      <Wrench className="text-amber-500" />
-                    ) : (
-                      <Clock className="text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-medium text-sm">{typeLabel(check.checkType)}</h4>
-                      <Badge variant={check.status === "pass" ? "default" : "secondary"}>
-                        {statusLabel(check.status)}
-                      </Badge>
-                    </div>
-                    {check.findings && <p className="text-sm mt-2">{check.findings}</p>}
-                    {check.remediationNotes && (
-                      <div className="mt-3 text-sm bg-muted/50 p-3 rounded border">
-                        <span className="font-semibold block mb-1">Remediation Notes:</span>
-                        {check.remediationNotes}
-                      </div>
-                    )}
-                  </div>
+      )}
+    >
+      {() => (
+        <>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <ShieldCheck className="h-3.5 w-3.5 text-green-600" /> Pass
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                <div className="mt-1 text-2xl font-bold">{counts.pass}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <AlertTriangle className="h-3.5 w-3.5 text-red-600" /> Fail
+                </div>
+                <div className="mt-1 text-2xl font-bold">{counts.fail}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Wrench className="h-3.5 w-3.5 text-amber-600" /> Remediation
+                </div>
+                <div className="mt-1 text-2xl font-bold">{counts.in_remediation}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" /> Pending
+                </div>
+                <div className="mt-1 text-2xl font-bold">{counts.pending}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs text-muted-foreground">Accessibility</div>
+                <div className="mt-1 text-sm font-semibold">{a11yStatus}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Quality assurance checks</CardTitle>
+                <CardDescription>Record results of automated and manual QA processes.</CardDescription>
+              </div>
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" /> Log QA check
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Log a QA check</DialogTitle>
+                  </DialogHeader>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="checkType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Check type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a check type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {CHECK_TYPES.map((t) => (
+                                  <SelectItem key={t.value} value={t.value}>
+                                    {t.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Status</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a status" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {STATUSES.map((s) => (
+                                  <SelectItem key={s.value} value={s.value}>
+                                    {s.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="findings"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Findings</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                rows={4}
+                                placeholder="Summarize what was checked and any issues found."
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex justify-end pt-2">
+                        <Button type="submit" disabled={createCheck.isPending}>
+                          {createCheck.isPending ? "Saving..." : "Save QA check"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {projectChecks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-12 text-center text-muted-foreground">
+                  <ShieldCheck className="mb-4 h-12 w-12 text-muted" />
+                  <p>No QA checks logged yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {projectChecks.map((check) => (
+                    <div key={check.id} className="flex items-start gap-4 rounded-md border p-4">
+                      <div className="mt-1">
+                        {check.status === "pass" ? (
+                          <ShieldCheck className="text-green-500" />
+                        ) : check.status === "fail" ? (
+                          <AlertTriangle className="text-red-500" />
+                        ) : check.status === "in_remediation" ? (
+                          <Wrench className="text-amber-500" />
+                        ) : (
+                          <Clock className="text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between">
+                          <h4 className="text-sm font-medium">{typeLabel(check.checkType)}</h4>
+                          <Badge variant={check.status === "pass" ? "default" : "secondary"}>
+                            {statusLabel(check.status)}
+                          </Badge>
+                        </div>
+                        {check.findings && <p className="mt-2 text-sm">{check.findings}</p>}
+                        {check.remediationNotes && (
+                          <div className="mt-3 rounded border bg-muted/50 p-3 text-sm">
+                            <span className="mb-1 block font-semibold">Remediation notes:</span>
+                            {check.remediationNotes}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </ProjectWorkspace>
   );
 }

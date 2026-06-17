@@ -12,7 +12,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Check, ChevronDown, ChevronUp, Play, Square,
-  UploadCloud, Pause,
+  UploadCloud,
   AlertTriangle, Building2,
   CheckCircle2, Trash2, ArrowRight, Loader2, Target
 } from "lucide-react";
@@ -26,8 +26,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { PageHeader } from "@/components/engine/PageHeader";
-import { StageRail } from "@/components/engine/StageRail";
+import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 
 // Data Definitions
 const INVENTORY = [
@@ -500,32 +499,22 @@ export default function ProjectIntake() {
   const progressPct = Math.round((completedChecks / totalChecks) * 100);
 
   return (
-    <div className="w-full min-h-screen bg-background text-foreground font-sans">
-      <div className="mx-auto max-w-6xl space-y-8 p-6 md:p-8">
-        <PageHeader
-          title="Intake"
-          subtitle="Kickoff, course goals, and an audit of existing materials."
-          crumbs={[
-            { label: "Projects", href: "/projects" },
-            { label: project.title, href: `/projects/${projectId}` },
-            { label: "Intake" },
-          ]}
-        >
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <Building2 className="h-4 w-4" aria-hidden="true" />
-              {project.clientName || "Unknown client"}
-            </span>
-            <span>
-              {completedChecks} of {totalChecks} agenda checks covered
-            </span>
-          </div>
-        </PageHeader>
-
-        <section aria-label="Pipeline">
-          <StageRail projectId={projectId} currentStage={project.stage} variant="full" />
-        </section>
-
+    <ProjectWorkspace
+      stageId={0}
+      subtitle="Kickoff, course goals, and an audit of existing materials."
+      meta={() => (
+        <>
+          <span className="flex items-center gap-1.5">
+            <Building2 className="h-4 w-4" aria-hidden="true" />
+            {project.clientName || "Unknown client"}
+          </span>
+          <span>
+            {completedChecks} of {totalChecks} agenda checks covered
+          </span>
+        </>
+      )}
+    >
+      {() => (
         <Tabs defaultValue="prepare" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:grid-cols-4">
             <TabsTrigger value="prepare">Prepare</TabsTrigger>
@@ -762,19 +751,9 @@ export default function ProjectIntake() {
           <TabsContent value="meet" className="space-y-6">
             <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
               <Card className="border-border shadow-sm">
-                <CardHeader className="border-b border-border bg-card px-5 py-4">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Agenda</CardTitle>
-                      <CardDescription className="m-0">12 segments · kickoff meeting</CardDescription>
-                    </div>
-                    <div>
-                      <Progress value={progressPct} className="h-2 [&>div]:bg-primary" />
-                      <div className="mt-2 text-right text-xs font-semibold text-muted-foreground">
-                        {completedChecks} / {totalChecks} checks
-                      </div>
-                    </div>
-                  </div>
+                <CardHeader className="flex flex-row items-center justify-between border-b border-border bg-card px-5 py-4">
+                  <CardTitle className="text-lg">Agenda</CardTitle>
+                  <CardDescription className="m-0">12 segments · kickoff meeting</CardDescription>
                 </CardHeader>
                 <CardContent className="divide-y divide-border p-0">
                   {SEGMENTS.map((seg, idx) => {
@@ -992,26 +971,6 @@ export default function ProjectIntake() {
                         <div className="font-semibold text-foreground">Kickoff progress</div>
                         <div className="text-sm text-muted-foreground">{completedChecks} of {totalChecks} checklist items covered</div>
                       </div>
-                    </div>
-
-                    <div className="space-y-3 pt-2">
-                      {[
-                        { label: "Prepare", status: "done" },
-                        { label: "Meet", status: "doing" },
-                        { label: "Wrap", status: "todo" },
-                      ].map((phase, i) => (
-                        <div key={i} className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-foreground">{phase.label}</span>
-                          <Badge
-                            variant="outline"
-                            className={`h-5 border-none px-2 py-0 text-[10px] font-semibold uppercase tracking-wider shadow-none ${
-                              phase.status === "done" ? "bg-green-100 text-green-800" : phase.status === "doing" ? "bg-blue-100 text-blue-800" : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {phase.status === "done" ? "Done" : phase.status === "doing" ? "In progress" : "To do"}
-                          </Badge>
-                        </div>
-                      ))}
                     </div>
 
                     {activeTimer && (
@@ -1336,7 +1295,7 @@ export default function ProjectIntake() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
+      )}
+    </ProjectWorkspace>
   );
 }

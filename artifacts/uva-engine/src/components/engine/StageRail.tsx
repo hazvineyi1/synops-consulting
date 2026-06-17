@@ -5,10 +5,12 @@ import { STAGES, STAGE_COUNT, stageState, getStage } from "@/lib/stages";
 
 interface StageRailProps {
   projectId: number;
-  /** The stage the project is currently on (0-5). */
+  /** The stage the project has actually reached (drives done / current / locked). */
   currentStage: number;
+  /** The stage whose workspace is open now (the "you are here" marker). */
+  viewingStage?: number;
   /**
-   * "full": labelled, interactive rail for the project hub.
+   * "full": labelled, interactive timeline shown on every project page.
    * "compact": slim progress strip for cards and lists (non-interactive).
    */
   variant?: "full" | "compact";
@@ -16,13 +18,14 @@ interface StageRailProps {
 }
 
 /**
- * The visible backbone of the curriculum pipeline. Renders the six stages in
- * order with done / current / locked states. Done and current stages link to
- * their workspace; locked stages are not yet reachable (the server enforces the
- * gates). Accessible: an ordered list, aria-current on the active stage, and
- * text (not color alone) conveys each stage's state.
+ * The visible backbone of the curriculum pipeline. Renders the four stages in
+ * order with done / current / locked states. Reachable stages link to their
+ * workspace; locked stages are not yet reachable (the server enforces the gates).
+ * When viewingStage is set, that stage is marked as the current page so a builder
+ * always knows where they are. Accessible: an ordered list, aria-current on the
+ * active stage or page, and text (not color alone) conveys each stage's state.
  */
-export function StageRail({ projectId, currentStage, variant = "full", className }: StageRailProps) {
+export function StageRail({ projectId, currentStage, viewingStage, variant = "full", className }: StageRailProps) {
   if (variant === "compact") {
     const current = getStage(currentStage);
     const doneCount = Math.min(currentStage, STAGE_COUNT);
@@ -60,17 +63,20 @@ export function StageRail({ projectId, currentStage, variant = "full", className
 
   return (
     <ol
-      className={cn(
-        "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6",
-        className
-      )}
+      className={cn("grid grid-cols-2 gap-2 sm:grid-cols-4", className)}
       aria-label="Curriculum pipeline stages"
     >
       {STAGES.map((stage) => {
         const state = stageState(stage.id, currentStage);
         const Icon = stage.icon;
         const reachable = state !== "locked";
+        const isViewing = viewingStage != null && stage.id === viewingStage;
         const stateLabel = state === "done" ? "Completed" : state === "current" ? "In progress" : "Locked";
+        const ariaCurrent: "page" | "step" | undefined = isViewing
+          ? "page"
+          : viewingStage == null && state === "current"
+            ? "step"
+            : undefined;
 
         const inner = (
           <>
@@ -88,7 +94,7 @@ export function StageRail({ projectId, currentStage, variant = "full", className
                 ) : state === "locked" ? (
                   <Lock className="h-3.5 w-3.5" aria-hidden="true" />
                 ) : (
-                  stage.id
+                  stage.id + 1
                 )}
               </span>
               <Icon
@@ -108,7 +114,9 @@ export function StageRail({ projectId, currentStage, variant = "full", className
               >
                 {stage.title}
               </div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{stateLabel}</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                {isViewing ? "You are here" : stateLabel}
+              </div>
             </div>
           </>
         );
@@ -117,7 +125,8 @@ export function StageRail({ projectId, currentStage, variant = "full", className
           "block rounded-lg border p-3 text-left transition-colors",
           state === "current" && "border-primary/40 bg-primary/5",
           state === "done" && "bg-card hover:bg-muted/50",
-          state === "locked" && "border-dashed bg-muted/20"
+          state === "locked" && "border-dashed bg-muted/20",
+          isViewing && "ring-2 ring-primary ring-offset-2 ring-offset-background"
         );
 
         return (
@@ -125,8 +134,8 @@ export function StageRail({ projectId, currentStage, variant = "full", className
             {reachable ? (
               <Link
                 href={`/projects/${projectId}/${stage.slug}`}
-                aria-current={state === "current" ? "step" : undefined}
-                aria-label={`${stage.title}: ${stateLabel}. Open workspace.`}
+                aria-current={ariaCurrent}
+                aria-label={`${stage.title}: ${stateLabel}.${isViewing ? " Current page." : " Open workspace."}`}
                 className={cn(base, "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}
               >
                 {inner}
