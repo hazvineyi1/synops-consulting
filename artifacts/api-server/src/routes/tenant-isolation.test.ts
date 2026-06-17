@@ -137,17 +137,33 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Best-effort teardown in FK-safe order; never let cleanup fail the suite.
-  try {
-    const { db, organizationsTable, clientsTable, projectsTable, usersTable } = dbMod;
-    await db.delete(projectsTable).where(inArray(projectsTable.id, [projectAId, projectBId]));
-    await db.delete(clientsTable).where(inArray(clientsTable.id, [clientAId, clientBId]));
-    if (createdUserIds.length > 0) {
-      await db.delete(usersTable).where(inArray(usersTable.id, createdUserIds));
+  // Best-effort teardown in FK-safe order. Each step runs independently so one
+  // failure does not block the rest, and leftover rows are surfaced (not silently
+  // swallowed) so DB pollution is visible. A cleanup miss never fails the suite:
+  // unique slugs/emails mean leftover fixtures cannot collide with a rerun.
+  const { db, organizationsTable, clientsTable, projectsTable, usersTable } = dbMod;
+  const steps: Array<[string, () => Promise<unknown>]> = [
+    ["projects", () => db.delete(projectsTable).where(inArray(projectsTable.id, [projectAId, projectBId]))],
+    ["clients", () => db.delete(clientsTable).where(inArray(clientsTable.id, [clientAId, clientBId]))],
+    [
+      "users",
+      () =>
+        createdUserIds.length > 0
+          ? db.delete(usersTable).where(inArray(usersTable.id, createdUserIds))
+          : Promise.resolve(),
+    ],
+    ["organizations", () => db.delete(organizationsTable).where(inArray(organizationsTable.id, [orgAId, orgBId]))],
+  ];
+  const failures: string[] = [];
+  for (const [label, run] of steps) {
+    try {
+      await run();
+    } catch (err) {
+      failures.push(`${label}: ${(err as Error).message}`);
     }
-    await db.delete(organizationsTable).where(inArray(organizationsTable.id, [orgAId, orgBId]));
-  } catch {
-    // Unique slugs/emails mean leftover fixtures never collide with a rerun.
+  }
+  if (failures.length > 0) {
+    console.warn(`[tenant-isolation.test] fixture cleanup left rows behind: ${failures.join("; ")}`);
   }
   try {
     await dbMod.pool.end();
@@ -192,17 +208,26 @@ describe("Compass tenant isolation (DB-backed)", () => {
   });
 
   it("scopes the project list to the actor's own organization", async () => {
+    // Each test org has exactly one client, so a correctly scoped project list
+    // must reference only that client. Asserting every row (not just the fixture
+    // id) catches any unrelated project leaking into the list.
     const resA = await agentSchoolA.get("/api/compass/projects");
     expect(resA.status).toBe(200);
     const idsA = resA.body.map((p: { id: number }) => p.id);
     expect(idsA).toContain(projectAId);
     expect(idsA).not.toContain(projectBId);
+    for (const p of resA.body as { clientId: number }[]) {
+      expect(p.clientId, "School A must only see projects under School A clients").toBe(clientAId);
+    }
 
     const resB = await agentSchoolB.get("/api/compass/projects");
     expect(resB.status).toBe(200);
     const idsB = resB.body.map((p: { id: number }) => p.id);
     expect(idsB).toContain(projectBId);
     expect(idsB).not.toContain(projectAId);
+    for (const p of resB.body as { clientId: number }[]) {
+      expect(p.clientId, "School B must only see projects under School B clients").toBe(clientBId);
+    }
   });
 
   it("returns 404 (not 403) when reading another organization's client by id", async () => {
