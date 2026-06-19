@@ -1182,6 +1182,9 @@ export const ListMeetingRecordingsResponseItem = zod.object({
   "durationSec": zod.number().nullish(),
   "contentType": zod.string().nullish(),
   "sizeBytes": zod.number().nullish(),
+  "transcript": zod.string().nullish().describe('Speech-to-text transcript, present after transcription.'),
+  "draftNotes": zod.string().nullish().describe('AI-drafted meeting notes derived from the transcript.'),
+  "transcribedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListMeetingRecordingsResponse = zod.array(ListMeetingRecordingsResponseItem)
@@ -1218,6 +1221,32 @@ export const CreateMeetingRecordingBody = zod.object({
  */
 export const DeleteMeetingRecordingParams = zod.object({
   "id": zod.coerce.number()
+})
+
+
+/**
+ * Transcribes the audio of an uploaded recording (speech-to-text) and drafts clean meeting notes from the transcript using AI. Only uploaded recordings are supported. Requires the AI integration to be configured.
+
+ * @summary Transcribe an uploaded recording and draft meeting notes from it
+ */
+export const TranscribeMeetingRecordingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const TranscribeMeetingRecordingResponse = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "kind": zod.enum(['upload', 'external']),
+  "title": zod.string(),
+  "objectPath": zod.string().nullish(),
+  "externalUrl": zod.string().nullish(),
+  "durationSec": zod.number().nullish(),
+  "contentType": zod.string().nullish(),
+  "sizeBytes": zod.number().nullish(),
+  "transcript": zod.string().nullish().describe('Speech-to-text transcript, present after transcription.'),
+  "draftNotes": zod.string().nullish().describe('AI-drafted meeting notes derived from the transcript.'),
+  "transcribedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
 })
 
 

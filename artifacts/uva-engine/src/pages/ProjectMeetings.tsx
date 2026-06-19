@@ -487,7 +487,16 @@ export default function ProjectMeetings() {
 
           {/* ============================ MEETINGS ============================ */}
           <TabsContent value="meetings" className="space-y-6">
-            <MeetingRecordings projectId={projectId} />
+            <MeetingRecordings
+              projectId={projectId}
+              meetings={meetings.map((m) => ({ id: m.id, title: m.title, notes: m.notes ?? "" }))}
+              onInsertNotes={(meetingId, notes) =>
+                updateMeeting.mutateAsync({ id: meetingId, data: { notes } }).then(() => {
+                  invalidateMeetings();
+                  invalidateSummary();
+                })
+              }
+            />
 
             <Card>
               <CardHeader>

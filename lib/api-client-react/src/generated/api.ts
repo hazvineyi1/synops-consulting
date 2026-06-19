@@ -4044,6 +4044,78 @@ export const useDeleteMeetingRecording = <TError = ErrorType<unknown>,
       return useMutation(getDeleteMeetingRecordingMutationOptions(options));
     }
 
+export const getTranscribeMeetingRecordingUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/meeting-recordings/${id}/transcribe`
+}
+
+/**
+ * Transcribes the audio of an uploaded recording (speech-to-text) and drafts clean meeting notes from the transcript using AI. Only uploaded recordings are supported. Requires the AI integration to be configured.
+
+ * @summary Transcribe an uploaded recording and draft meeting notes from it
+ */
+export const transcribeMeetingRecording = async (id: number, options?: RequestInit): Promise<MeetingRecording> => {
+
+  return customFetch<MeetingRecording>(getTranscribeMeetingRecordingUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTranscribeMeetingRecordingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transcribeMeetingRecording>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof transcribeMeetingRecording>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['transcribeMeetingRecording'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof transcribeMeetingRecording>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  transcribeMeetingRecording(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TranscribeMeetingRecordingMutationResult = NonNullable<Awaited<ReturnType<typeof transcribeMeetingRecording>>>
+
+    export type TranscribeMeetingRecordingMutationError = ErrorType<void>
+
+    /**
+ * @summary Transcribe an uploaded recording and draft meeting notes from it
+ */
+export const useTranscribeMeetingRecording = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transcribeMeetingRecording>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof transcribeMeetingRecording>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getTranscribeMeetingRecordingMutationOptions(options));
+    }
+
 export const getListTimeEntriesUrl = (projectId: number,) => {
 
 

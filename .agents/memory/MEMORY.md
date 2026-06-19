@@ -5,4 +5,5 @@
 - [Compass multi-tenancy & roles](compass-multitenancy.md) — org is the tenant boundary; all Compass routes in one guarded /compass namespace, every handler org-scoped (cross-org by-id => 404); + the Express req-augmentation gotcha.
 - [intake_progress patch-safe upsert](intake-progress-autosave.md) — one row holds several independently-autosaved JSON columns; the PUT must only set columns present in the body or a partial save wipes siblings.
 - [Object-storage upload ACL](object-upload-acl.md) — when a DB row's objectPath is the serving ACL, bind the object namespace to the uploader at mint AND re-check it at attach, or a forged row reads another tenant's object.
+- [Audio STT empty transcript](audio-stt-empty-transcript.md) — proxy gpt-4o-mini-transcribe returns "" (no throw) for silent/no-speech audio; treat empty transcript as a failure, not success.
 - [Drizzle pg error codes](drizzle-pg-error-codes.md) — SQLSTATE (e.g. 23505) sits on err.cause not err; unwrap to map a DB constraint to a 4xx. Pair a partial unique index + atomic close for one-running-row rules.

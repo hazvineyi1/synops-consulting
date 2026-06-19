@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
-import { db, meetingRecordingsTable } from "@workspace/db";
+import { db, meetingRecordingsTable, projectsTable } from "@workspace/db";
 import {
   ListMeetingRecordingsParams,
   CreateMeetingRecordingParams,
   CreateMeetingRecordingBody,
   DeleteMeetingRecordingParams,
+  TranscribeMeetingRecordingParams,
 } from "@workspace/api-zod";
 import {
   denyNoScope,
@@ -14,9 +15,19 @@ import {
 } from "../lib/tenancy";
 import { recordActorAudit } from "../lib/audit";
 import { ObjectStorageService } from "../lib/objectStorage";
+import {
+  isRecordingAiConfigured,
+  transcribeAndDraftNotes,
+} from "../lib/recordingNotesAi";
 
 const router = Router();
 const objectStorageService = new ObjectStorageService();
+
+// Hard guards on what we will pull into memory and transcribe synchronously.
+// A recording past either limit is rejected (413) rather than risking a request
+// timeout or a large in-memory buffer. These match the upload-side expectations.
+const MAX_TRANSCRIBE_BYTES = 25 * 1024 * 1024; // 25 MB
+const MAX_TRANSCRIBE_SECONDS = 20 * 60; // 20 minutes
 
 function serialize(row: typeof meetingRecordingsTable.$inferSelect) {
   return {
@@ -29,6 +40,9 @@ function serialize(row: typeof meetingRecordingsTable.$inferSelect) {
     durationSec: row.durationSec,
     contentType: row.contentType,
     sizeBytes: row.sizeBytes,
+    transcript: row.transcript,
+    draftNotes: row.draftNotes,
+    transcribedAt: row.transcribedAt ? row.transcribedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -184,6 +198,126 @@ router.delete("/meeting-recordings/:id", async (req, res): Promise<void> => {
   });
 
   res.status(204).end();
+});
+
+router.post("/meeting-recordings/:id/transcribe", async (req, res): Promise<void> => {
+  const params = TranscribeMeetingRecordingParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  // Org-scope check first: a recording the actor cannot write is reported as
+  // "not found" (cross-org stays a 404, never a 403) and the audio is never read.
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveMeetingRecordingScope(params.data.id),
+      "write",
+      "Recording not found",
+    )
+  ) {
+    return;
+  }
+
+  const [row] = await db
+    .select()
+    .from(meetingRecordingsTable)
+    .where(eq(meetingRecordingsTable.id, params.data.id));
+  if (!row) {
+    res.status(404).json({ error: "Recording not found" });
+    return;
+  }
+
+  // Only uploaded audio can be transcribed. External links are refused (not
+  // fetched) so the server never makes an outbound request to a client-supplied
+  // URL (SSRF) on behalf of the actor.
+  if (row.kind !== "upload" || !row.objectPath) {
+    res.status(409).json({ error: "Only uploaded recordings can be transcribed." });
+    return;
+  }
+
+  // Refuse work up front when AI is not configured, so we never download a large
+  // object just to discover we cannot transcribe it.
+  if (!isRecordingAiConfigured()) {
+    res.status(503).json({ error: "AI transcription is not configured." });
+    return;
+  }
+
+  // Cheap guards from the stored metadata before any download.
+  if (row.sizeBytes != null && row.sizeBytes > MAX_TRANSCRIBE_BYTES) {
+    res.status(413).json({ error: "Recording is too large to transcribe (limit 25 MB)." });
+    return;
+  }
+  if (row.durationSec != null && row.durationSec > MAX_TRANSCRIBE_SECONDS) {
+    res.status(413).json({ error: "Recording is too long to transcribe (limit 20 minutes)." });
+    return;
+  }
+
+  // Read ONLY the object referenced by this row (never a request-supplied path)
+  // into memory, re-checking the actual byte length after download.
+  let audio: Buffer;
+  try {
+    const file = await objectStorageService.getObjectEntityFile(row.objectPath);
+    const response = await objectStorageService.downloadObject(file);
+    const arrayBuffer = await response.arrayBuffer();
+    audio = Buffer.from(arrayBuffer);
+  } catch (error) {
+    req.log.error({ err: error, recordingId: row.id }, "Failed to read recording for transcription");
+    res.status(404).json({ error: "Recording audio not found" });
+    return;
+  }
+
+  if (audio.byteLength > MAX_TRANSCRIBE_BYTES) {
+    res.status(413).json({ error: "Recording is too large to transcribe (limit 25 MB)." });
+    return;
+  }
+  if (audio.byteLength === 0) {
+    res.status(422).json({ error: "Recording audio could not be decoded for transcription." });
+    return;
+  }
+
+  const [project] = await db
+    .select({ title: projectsTable.title })
+    .from(projectsTable)
+    .where(eq(projectsTable.id, row.projectId));
+
+  const outcome = await transcribeAndDraftNotes(audio, {
+    recordingTitle: row.title,
+    projectTitle: project?.title ?? null,
+  });
+
+  if (outcome.status === "ai_unavailable") {
+    res.status(503).json({ error: "AI transcription is not configured." });
+    return;
+  }
+  if (outcome.status === "decode_failed") {
+    res.status(422).json({ error: "Recording audio could not be transcribed." });
+    return;
+  }
+
+  // Persist the transcript (and the draft notes when the draft step succeeded).
+  // A successful transcription is saved even when note drafting failed, so a slow
+  // or paid transcription is never discarded for a second-step failure.
+  const [updated] = await db
+    .update(meetingRecordingsTable)
+    .set({
+      transcript: outcome.transcript,
+      draftNotes: outcome.draftNotes,
+      transcribedAt: new Date(),
+    })
+    .where(eq(meetingRecordingsTable.id, row.id))
+    .returning();
+
+  await recordActorAudit(req.actor!, {
+    action: "transcribe",
+    entityType: "meeting_recording",
+    entityTitle: row.title,
+    projectId: row.projectId,
+  });
+
+  res.status(200).json(serialize(updated));
 });
 
 export default router;

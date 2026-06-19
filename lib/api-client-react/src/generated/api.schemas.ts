@@ -246,6 +246,18 @@ export interface MeetingRecording {
   contentType?: string | null;
   /** @nullable */
   sizeBytes?: number | null;
+  /**
+     * Speech-to-text transcript, present after transcription.
+     * @nullable
+     */
+  transcript?: string | null;
+  /**
+     * AI-drafted meeting notes derived from the transcript.
+     * @nullable
+     */
+  draftNotes?: string | null;
+  /** @nullable */
+  transcribedAt?: string | null;
   createdAt: string;
 }
 

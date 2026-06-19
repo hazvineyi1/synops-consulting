@@ -1110,6 +1110,37 @@ paths:
         "204":
           description: Deleted
 
+  /compass/meeting-recordings/{id}/transcribe:
+    post:
+      operationId: transcribeMeetingRecording
+      tags: [recordings]
+      summary: Transcribe an uploaded recording and draft meeting notes from it
+      description: >
+        Transcribes the audio of an uploaded recording (speech-to-text) and
+        drafts clean meeting notes from the transcript using AI. Only uploaded
+        recordings are supported. Requires the AI integration to be configured.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Transcript (and draft notes when available) saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingRecording"
+        "409":
+          description: Recording is not an uploaded audio file
+        "413":
+          description: Recording exceeds the size or duration limit for transcription
+        "422":
+          description: Audio could not be decoded for transcription
+        "503":
+          description: AI transcription is not configured
+
   # ── Time tracking (per-project billing time entries) ─────────
   /compass/projects/{projectId}/time-entries:
     get:
@@ -2597,6 +2628,15 @@ components:
           type: ["string", "null"]
         sizeBytes:
           type: ["integer", "null"]
+        transcript:
+          type: ["string", "null"]
+          description: Speech-to-text transcript, present after transcription.
+        draftNotes:
+          type: ["string", "null"]
+          description: AI-drafted meeting notes derived from the transcript.
+        transcribedAt:
+          type: ["string", "null"]
+          format: date-time
         createdAt:
           type: string
           format: date-time

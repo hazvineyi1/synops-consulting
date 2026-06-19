@@ -5,6 +5,7 @@ import {
   useCreateMeetingRecording,
   useDeleteMeetingRecording,
   useRequestUploadUrl,
+  useTranscribeMeetingRecording,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -16,11 +17,25 @@ import {
   CheckCircle2,
   Trash2,
   Clock,
+  Sparkles,
+  FileText,
+  ChevronDown,
+  ListPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 
 function formatDuration(sec?: number | null) {
@@ -30,13 +45,35 @@ function formatDuration(sec?: number | null) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+function statusCode(err: unknown): number | undefined {
+  return typeof err === "object" && err !== null && "status" in err
+    ? (err as { status?: number }).status
+    : undefined;
+}
+
+/** Minimal meeting shape the recordings card needs to offer an insert target. */
+export type RecordingInsertMeeting = { id: number; title: string; notes: string };
+
+type Props = {
+  projectId: number;
+  /** Meetings the drafted notes can be inserted into. */
+  meetings?: RecordingInsertMeeting[];
+  /**
+   * Persist drafted notes into the chosen meeting. The parent owns the meeting
+   * mutation and cache invalidation; this card only composes the text.
+   */
+  onInsertNotes?: (meetingId: number, notes: string) => Promise<void>;
+};
+
 /**
  * Self-contained meeting recordings card: capture audio in the browser or attach
- * an external link, then list, play, and remove saved recordings. All recording
- * state and the MediaRecorder lifecycle live here so the surrounding page stays
- * simple. Recordings are project-scoped on the server.
+ * an external link, then list, play, and remove saved recordings. Uploaded
+ * recordings can be transcribed and turned into a clean draft of meeting notes,
+ * which the user can insert into any meeting (feeding the agenda generator). All
+ * recording state and the MediaRecorder lifecycle live here so the surrounding
+ * page stays simple. Recordings are project-scoped on the server.
  */
-export function MeetingRecordings({ projectId }: { projectId: number }) {
+export function MeetingRecordings({ projectId, meetings = [], onInsertNotes }: Props) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -46,6 +83,7 @@ export function MeetingRecordings({ projectId }: { projectId: number }) {
   const requestUploadUrl = useRequestUploadUrl();
   const createRecording = useCreateMeetingRecording();
   const deleteRecording = useDeleteMeetingRecording();
+  const transcribeRecording = useTranscribeMeetingRecording();
 
   const [isRecording, setIsRecording] = useState(false);
   const [recElapsed, setRecElapsed] = useState(0);
@@ -53,6 +91,16 @@ export function MeetingRecordings({ projectId }: { projectId: number }) {
   const [captureTitle, setCaptureTitle] = useState("");
   const [externalTitle, setExternalTitle] = useState("");
   const [externalUrl, setExternalUrl] = useState("");
+
+  // Transcription / drafting UI state. Only one recording's notes panel is open
+  // at a time, so a single set of insert controls is sufficient.
+  const [transcribingId, setTranscribingId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [aiUnavailable, setAiUnavailable] = useState(false);
+  const [selectedMeetingId, setSelectedMeetingId] = useState<string>("");
+  const [insertMode, setInsertMode] = useState<"append" | "replace">("append");
+  const [insertingId, setInsertingId] = useState<number | null>(null);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recStartRef = useRef<number>(0);
@@ -203,9 +251,86 @@ export function MeetingRecordings({ projectId }: { projectId: number }) {
   const removeRecording = async (id: number) => {
     try {
       await deleteRecording.mutateAsync({ id });
+      if (expandedId === id) setExpandedId(null);
       queryClient.invalidateQueries({ queryKey: getListMeetingRecordingsQueryKey(projectId) });
     } catch {
       toast({ title: "Couldn't remove recording", description: "Please try again.", variant: "destructive" });
+    }
+  };
+
+  // Open a recording's notes panel, defaulting the insert target to the first meeting.
+  const openPanel = (id: number) => {
+    setExpandedId(id);
+    setInsertMode("append");
+    if (meetings.length > 0) setSelectedMeetingId(String(meetings[0].id));
+  };
+
+  const transcribe = async (id: number) => {
+    setTranscribingId(id);
+    try {
+      await transcribeRecording.mutateAsync({ id });
+      queryClient.invalidateQueries({ queryKey: getListMeetingRecordingsQueryKey(projectId) });
+      openPanel(id);
+      toast({ title: "Notes drafted", description: "Review the draft, then insert it into a meeting." });
+    } catch (err) {
+      const code = statusCode(err);
+      if (code === 503) {
+        setAiUnavailable(true);
+        toast({
+          title: "AI is not configured",
+          description: "Transcription needs the AI integration. Everything else still works.",
+          variant: "destructive",
+        });
+      } else if (code === 413) {
+        toast({
+          title: "Recording too large",
+          description: "Audio must be under 25 MB and 20 minutes to transcribe.",
+          variant: "destructive",
+        });
+      } else if (code === 422) {
+        toast({
+          title: "No notes could be drafted",
+          description: "No speech could be detected, or the audio could not be read. Try a clearer recording.",
+          variant: "destructive",
+        });
+      } else if (code === 409) {
+        toast({
+          title: "Cannot transcribe this item",
+          description: "Only uploaded recordings can be transcribed.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Couldn't transcribe", description: "Please try again.", variant: "destructive" });
+      }
+    } finally {
+      setTranscribingId(null);
+    }
+  };
+
+  const insertNotes = async (recording: { id: number; draftNotes?: string | null; transcript?: string | null }) => {
+    if (!onInsertNotes) return;
+    const source = (recording.draftNotes ?? recording.transcript ?? "").trim();
+    if (!source) return;
+    const targetId = Number(selectedMeetingId);
+    const target = meetings.find((m) => m.id === targetId);
+    if (!target) {
+      toast({ title: "Choose a meeting", description: "Pick a meeting to insert these notes into.", variant: "destructive" });
+      return;
+    }
+    const existing = target.notes?.trim() ?? "";
+    const newNotes = insertMode === "append" && existing ? `${existing}\n\n${source}` : source;
+    setInsertingId(recording.id);
+    try {
+      await onInsertNotes(target.id, newNotes);
+      toast({
+        title: insertMode === "append" ? "Notes added to meeting" : "Meeting notes replaced",
+        description: `Saved to "${target.title}".`,
+      });
+      setExpandedId(null);
+    } catch {
+      toast({ title: "Couldn't insert notes", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setInsertingId(null);
     }
   };
 
@@ -216,7 +341,7 @@ export function MeetingRecordings({ projectId }: { projectId: number }) {
           <Mic className="h-5 w-5 text-primary" aria-hidden="true" />
           <div>
             <CardTitle className="text-lg">Meeting recordings</CardTitle>
-            <CardDescription className="m-0">Record in the browser or attach a link</CardDescription>
+            <CardDescription className="m-0">Record or attach a link, then draft notes with AI</CardDescription>
           </div>
         </div>
         <Badge variant="secondary" className="border-primary/20 bg-primary/10 text-primary shadow-none hover:bg-primary/10">
@@ -296,44 +421,190 @@ export function MeetingRecordings({ projectId }: { projectId: number }) {
           </div>
         </div>
 
-        <div className="space-y-2">
+        {aiUnavailable ? (
+          <div
+            role="status"
+            className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+          >
+            AI transcription is not configured for this workspace. Recording, links, and manual notes still work.
+          </div>
+        ) : null}
+
+        <div className="space-y-3">
           {recordingList.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
               No recordings yet. Record audio or attach a link to keep meeting context with the project.
             </div>
           ) : (
-            recordingList.map((r) => (
-              <div key={r.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  {r.kind === "upload" ? <Mic className="h-4 w-4" aria-hidden="true" /> : <Link2 className="h-4 w-4" aria-hidden="true" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium text-foreground">{r.title}</div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                    {r.durationSec ? (
-                      <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" aria-hidden="true" />{formatDuration(r.durationSec)}</span>
+            recordingList.map((r) => {
+              const isUpload = r.kind === "upload" && !!r.objectPath;
+              const hasNotes = !!(r.transcript || r.draftNotes);
+              const isExpanded = expandedId === r.id;
+              const isTranscribing = transcribingId === r.id;
+              return (
+                <div key={r.id} className="rounded-lg border border-border bg-card">
+                  <div className="flex items-center gap-3 p-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      {r.kind === "upload" ? <Mic className="h-4 w-4" aria-hidden="true" /> : <Link2 className="h-4 w-4" aria-hidden="true" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium text-foreground">{r.title}</span>
+                        {hasNotes ? (
+                          <Badge variant="secondary" className="shrink-0 border-primary/20 bg-primary/10 text-primary shadow-none hover:bg-primary/10">
+                            Notes ready
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        {r.durationSec ? (
+                          <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" aria-hidden="true" />{formatDuration(r.durationSec)}</span>
+                        ) : null}
+                        <span>{new Date(r.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    {isUpload ? (
+                      <audio controls preload="none" src={`/api/storage${r.objectPath}`} className="h-8 w-40 max-w-[40%]" />
+                    ) : r.externalUrl ? (
+                      <a href={r.externalUrl} target="_blank" rel="noreferrer" className="shrink-0 text-sm font-medium text-primary hover:underline">
+                        Open link
+                      </a>
                     ) : null}
-                    <span>{new Date(r.createdAt).toLocaleDateString()}</span>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Delete recording: ${r.title}`}
+                      onClick={() => removeRecording(r.id)}
+                      disabled={deleteRecording.isPending}
+                    >
+                      <Trash2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    </Button>
                   </div>
+
+                  {isUpload ? (
+                    <div className="flex flex-wrap items-center gap-2 border-t border-border px-3 py-2">
+                      {hasNotes ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => (isExpanded ? setExpandedId(null) : openPanel(r.id))}
+                          aria-expanded={isExpanded}
+                        >
+                          <FileText className="mr-1 h-4 w-4" aria-hidden="true" />
+                          {isExpanded ? "Hide notes" : "View notes"}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => transcribe(r.id)}
+                          disabled={isTranscribing || aiUnavailable}
+                        >
+                          {isTranscribing ? (
+                            <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <Sparkles className="mr-1 h-4 w-4" aria-hidden="true" />
+                          )}
+                          {isTranscribing ? "Transcribing..." : "Transcribe and draft notes"}
+                        </Button>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {isUpload && isExpanded && hasNotes ? (
+                    <div className="space-y-4 border-t border-border bg-muted/10 p-4">
+                      {r.transcript ? (
+                        <Collapsible>
+                          <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/40">
+                            <span className="inline-flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-muted-foreground" aria-hidden="true" /> Transcript
+                            </span>
+                            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" aria-hidden="true" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <p className="mt-2 max-h-60 overflow-y-auto whitespace-pre-wrap rounded-md border border-border bg-card p-3 text-sm leading-relaxed text-muted-foreground">
+                              {r.transcript}
+                            </p>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ) : null}
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`draft-${r.id}`} className="text-sm font-medium">
+                          {r.draftNotes ? "Draft notes" : "Transcript"}
+                        </Label>
+                        {!r.draftNotes ? (
+                          <p className="text-xs text-muted-foreground">
+                            Draft notes could not be generated, so the transcript is shown. You can still insert it into a meeting.
+                          </p>
+                        ) : null}
+                        <Textarea
+                          id={`draft-${r.id}`}
+                          readOnly
+                          value={r.draftNotes ?? r.transcript ?? ""}
+                          className="min-h-40 resize-y bg-card font-normal"
+                        />
+                      </div>
+
+                      {onInsertNotes ? (
+                        meetings.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            Add a meeting below to insert these notes into it.
+                          </p>
+                        ) : (
+                          <div className="space-y-3 rounded-md border border-border bg-card p-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`meeting-${r.id}`} className="text-xs font-medium text-muted-foreground">
+                                  Insert into meeting
+                                </Label>
+                                <Select value={selectedMeetingId} onValueChange={setSelectedMeetingId}>
+                                  <SelectTrigger id={`meeting-${r.id}`}>
+                                    <SelectValue placeholder="Choose a meeting" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {meetings.map((m) => (
+                                      <SelectItem key={m.id} value={String(m.id)}>
+                                        {m.title}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`mode-${r.id}`} className="text-xs font-medium text-muted-foreground">
+                                  How to apply
+                                </Label>
+                                <Select value={insertMode} onValueChange={(v) => setInsertMode(v as "append" | "replace")}>
+                                  <SelectTrigger id={`mode-${r.id}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="append">Add to existing notes</SelectItem>
+                                    <SelectItem value="replace">Replace existing notes</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => insertNotes(r)}
+                              disabled={insertingId === r.id || !selectedMeetingId}
+                            >
+                              {insertingId === r.id ? (
+                                <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />
+                              ) : (
+                                <ListPlus className="mr-1 h-4 w-4" aria-hidden="true" />
+                              )}
+                              Insert into notes
+                            </Button>
+                          </div>
+                        )
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
-                {r.kind === "upload" && r.objectPath ? (
-                  <audio controls preload="none" src={`/api/storage${r.objectPath}`} className="h-8 w-40 max-w-[40%]" />
-                ) : r.externalUrl ? (
-                  <a href={r.externalUrl} target="_blank" rel="noreferrer" className="shrink-0 text-sm font-medium text-primary hover:underline">
-                    Open link
-                  </a>
-                ) : null}
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  aria-label={`Delete recording: ${r.title}`}
-                  onClick={() => removeRecording(r.id)}
-                  disabled={deleteRecording.isPending}
-                >
-                  <Trash2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                </Button>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </CardContent>

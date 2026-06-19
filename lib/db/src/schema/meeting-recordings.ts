@@ -17,6 +17,12 @@ export const meetingRecordingsTable = pgTable("meeting_recordings", {
   durationSec: integer("duration_sec"),
   contentType: text("content_type"),
   sizeBytes: integer("size_bytes"),
+  // AI recording-to-notes: the speech-to-text transcript and the LLM-drafted
+  // meeting notes derived from it. Both nullable; populated by the transcribe
+  // endpoint. `transcribedAt` marks when transcription last ran.
+  transcript: text("transcript"),
+  draftNotes: text("draft_notes"),
+  transcribedAt: timestamp("transcribed_at", { withTimezone: true }),
   createdByUserId: integer("created_by_user_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
