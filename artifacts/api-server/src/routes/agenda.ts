@@ -888,11 +888,23 @@ router.post("/projects/:projectId/action-items", async (req, res): Promise<void>
     }
   }
 
+  // Likewise, when capturing an action item inside a meeting workspace, the linked
+  // meeting must belong to THIS project (and therefore this org), or we report not
+  // found so a tenant cannot link an item to another project's/org's meeting.
+  if (parsed.data.sourceMeetingId != null) {
+    const meetingScope = await resolveMeetingScope(parsed.data.sourceMeetingId);
+    if (!meetingScope || meetingScope.projectId !== params.data.projectId) {
+      res.status(404).json({ error: "Meeting not found" });
+      return;
+    }
+  }
+
   const [row] = await db
     .insert(meetingActionItemsTable)
     .values({
       projectId: params.data.projectId,
       sourceCorrespondenceId: parsed.data.sourceCorrespondenceId ?? null,
+      sourceMeetingId: parsed.data.sourceMeetingId ?? null,
       title: parsed.data.title,
       description: parsed.data.description ?? null,
       ownerName: parsed.data.ownerName ?? null,

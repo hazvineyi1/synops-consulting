@@ -22,4 +22,5 @@ export interface ActionItemInput {
   /** @minimum 0 */
   weekIndex?: number;
   sourceCorrespondenceId?: number;
+  sourceMeetingId?: number;
 }

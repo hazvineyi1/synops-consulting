@@ -3311,6 +3311,8 @@ components:
           minimum: 0
         sourceCorrespondenceId:
           type: integer
+        sourceMeetingId:
+          type: integer
 
     ActionItemUpdate:
       type: object

@@ -54,6 +54,7 @@ import {
   FileText,
   Gavel,
   HelpCircle,
+  Search,
   ClipboardList,
   Target,
   CheckCircle2,
@@ -419,6 +420,20 @@ export default function ProjectMeetings() {
   const [newMeetingFocus, setNewMeetingFocus] = useState("");
   const [newMeetingAt, setNewMeetingAt] = useState("");
 
+  // ---- Agenda list search ----
+  const [meetingSearch, setMeetingSearch] = useState("");
+  const filteredMeetings = useMemo(() => {
+    const q = meetingSearch.trim().toLowerCase();
+    if (!q) return meetings;
+    return meetings.filter((m) => {
+      const typeLabel = isMeetingType(m.meetingType) ? MEETING_TYPE_LABELS[m.meetingType] : "";
+      return [m.title, m.notes ?? "", m.focus ?? "", m.meetingType, typeLabel]
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
+    });
+  }, [meetings, meetingSearch]);
+
   function addMeeting() {
     const title = newMeetingTitle.trim();
     if (!title) {
@@ -580,6 +595,27 @@ export default function ProjectMeetings() {
           setAiCategory("general");
           setAiOwner("");
           setAiDue("");
+          toast({ title: "Action item added" });
+        },
+        onError: (err) => fail(err, "Could not add the action item"),
+      },
+    );
+  }
+
+  // Capture an action item directly inside a meeting workspace. It is linked to the
+  // meeting via sourceMeetingId so it joins that meeting's stream and carry-forward.
+  function addMeetingActionItem(
+    meetingId: number,
+    data: { title: string; ownerName?: string; dueAt?: string; category: ActionItem["category"] },
+    done: () => void,
+  ) {
+    createActionItem.mutate(
+      { projectId, data: { ...data, sourceMeetingId: meetingId } },
+      {
+        onSuccess: () => {
+          invalidateActionItems();
+          invalidateSummary();
+          done();
           toast({ title: "Action item added" });
         },
         onError: (err) => fail(err, "Could not add the action item"),
@@ -822,7 +858,32 @@ export default function ProjectMeetings() {
               </Card>
             ) : (
               <div className="space-y-4">
-                {meetings.map((meeting) => (
+                <div className="relative">
+                  <Search
+                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <Label htmlFor="meeting-search" className="sr-only">
+                    Search meetings
+                  </Label>
+                  <Input
+                    id="meeting-search"
+                    type="search"
+                    value={meetingSearch}
+                    onChange={(e) => setMeetingSearch(e.target.value)}
+                    placeholder="Search meetings by title, type, focus, or notes"
+                    className="pl-9"
+                  />
+                </div>
+                {filteredMeetings.length === 0 ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                      <Search className="mb-3 h-8 w-8 text-muted" aria-hidden="true" />
+                      <p>No meetings match "{meetingSearch.trim()}".</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  filteredMeetings.map((meeting) => (
                   <MeetingCard
                     key={meeting.id}
                     meeting={meeting}
@@ -833,6 +894,7 @@ export default function ProjectMeetings() {
                     isSavingNotes={updateMeeting.isPending}
                     isSavingDecision={createDecision.isPending}
                     isSavingQuestion={createQuestion.isPending}
+                    isSavingActionItem={createActionItem.isPending}
                     onSaveNotes={(notes) =>
                       updateMeeting.mutate(
                         { id: meeting.id, data: { notes } },
@@ -899,8 +961,10 @@ export default function ProjectMeetings() {
                     onDeleteQuestion={removeQuestion}
                     onToggleActionItem={toggleActionItem}
                     onDeleteActionItem={(item) => setDeletingItem(item)}
+                    onAddActionItem={(data, done) => addMeetingActionItem(meeting.id, data, done)}
                   />
-                ))}
+                  ))
+                )}
               </div>
             )}
           </TabsContent>
@@ -1365,6 +1429,7 @@ function MeetingCard({
   isSavingNotes,
   isSavingDecision,
   isSavingQuestion,
+  isSavingActionItem,
   onSaveNotes,
   onSaveDetails,
   onGenerate,
@@ -1379,6 +1444,7 @@ function MeetingCard({
   onDeleteQuestion,
   onToggleActionItem,
   onDeleteActionItem,
+  onAddActionItem,
 }: {
   meeting: Meeting;
   decisions: MeetingDecision[];
@@ -1388,6 +1454,7 @@ function MeetingCard({
   isSavingNotes: boolean;
   isSavingDecision: boolean;
   isSavingQuestion: boolean;
+  isSavingActionItem: boolean;
   onSaveNotes: (notes: string) => void;
   onSaveDetails: (
     data: { title: string; meetingType: MeetingType; focus: string | null; scheduledAt: string | null },
@@ -1405,6 +1472,10 @@ function MeetingCard({
   onDeleteQuestion: (id: number) => void;
   onToggleActionItem: (item: ActionItem, done: boolean) => void;
   onDeleteActionItem: (item: ActionItem) => void;
+  onAddActionItem: (
+    data: { title: string; ownerName?: string; dueAt?: string; category: ActionItem["category"] },
+    done: () => void,
+  ) => void;
 }) {
   const [notes, setNotes] = useState(meeting.notes);
   // Adopt server-side note changes (e.g. a transcript inserted via MeetingRecordings)
@@ -1427,6 +1498,10 @@ function MeetingCard({
   const [decisionText, setDecisionText] = useState("");
   const [decisionBy, setDecisionBy] = useState("");
   const [questionText, setQuestionText] = useState("");
+  const [itemTitle, setItemTitle] = useState("");
+  const [itemOwner, setItemOwner] = useState("");
+  const [itemDue, setItemDue] = useState("");
+  const [itemCategory, setItemCategory] = useState<ActionItem["category"]>("general");
 
   // Preselect the proposed next type from the current type; the user can override.
   const currentType: MeetingType = isMeetingType(meeting.meetingType) ? meeting.meetingType : "working";
@@ -1470,6 +1545,25 @@ function MeetingCard({
       setDecisionText("");
       setDecisionBy("");
     });
+  }
+
+  function submitActionItem() {
+    const title = itemTitle.trim();
+    if (!title) return;
+    onAddActionItem(
+      {
+        title,
+        ownerName: itemOwner.trim() || undefined,
+        dueAt: dateOnlyToIso(itemDue),
+        category: itemCategory,
+      },
+      () => {
+        setItemTitle("");
+        setItemOwner("");
+        setItemDue("");
+        setItemCategory("general");
+      },
+    );
   }
 
   function submitQuestion() {
@@ -1741,7 +1835,7 @@ function MeetingCard({
               </h5>
               {actionItems.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  None from this meeting yet. Generate the agenda to extract them, or add them under Action items.
+                  None from this meeting yet. Capture one below, or generate the agenda to extract them from the notes.
                 </p>
               ) : (
                 <ul className="space-y-2">
@@ -1781,6 +1875,70 @@ function MeetingCard({
                   })}
                 </ul>
               )}
+              <div className="space-y-1.5">
+                <Label htmlFor={`ai-title-${meeting.id}`} className="sr-only">
+                  Action item
+                </Label>
+                <Input
+                  id={`ai-title-${meeting.id}`}
+                  value={itemTitle}
+                  maxLength={300}
+                  onChange={(e) => setItemTitle(e.target.value)}
+                  placeholder="Capture an action item"
+                />
+                <Label htmlFor={`ai-owner-${meeting.id}`} className="sr-only">
+                  Owner
+                </Label>
+                <Input
+                  id={`ai-owner-${meeting.id}`}
+                  value={itemOwner}
+                  maxLength={200}
+                  onChange={(e) => setItemOwner(e.target.value)}
+                  placeholder="Owner (optional)"
+                />
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div>
+                    <Label htmlFor={`ai-due-${meeting.id}`} className="sr-only">
+                      Due date
+                    </Label>
+                    <Input
+                      id={`ai-due-${meeting.id}`}
+                      type="date"
+                      value={itemDue}
+                      onChange={(e) => setItemDue(e.target.value)}
+                      aria-label="Due date (optional)"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`ai-cat-${meeting.id}`} className="sr-only">
+                      Category
+                    </Label>
+                    <Select
+                      value={itemCategory}
+                      onValueChange={(v) => setItemCategory(v as ActionItem["category"])}
+                    >
+                      <SelectTrigger id={`ai-cat-${meeting.id}`} aria-label="Category">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="content">Content</SelectItem>
+                        <SelectItem value="review">Review</SelectItem>
+                        <SelectItem value="accessibility">Accessibility</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  onClick={submitActionItem}
+                  disabled={isSavingActionItem || !itemTitle.trim()}
+                >
+                  <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Add action item
+                </Button>
+              </div>
             </div>
 
             {/* Open questions */}

@@ -1814,7 +1814,8 @@ export const CreateProjectActionItemBody = zod.object({
   "dueAt": zod.coerce.date().optional(),
   "category": zod.enum(['general', 'content', 'review', 'accessibility']).optional(),
   "weekIndex": zod.number().min(createProjectActionItemBodyWeekIndexMin).optional(),
-  "sourceCorrespondenceId": zod.number().optional()
+  "sourceCorrespondenceId": zod.number().optional(),
+  "sourceMeetingId": zod.number().optional()
 })
 
 
