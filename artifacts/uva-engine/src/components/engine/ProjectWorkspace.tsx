@@ -1,12 +1,13 @@
 import { type ReactNode } from "react";
-import { useParams } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import { useGetProject, getGetProjectQueryKey, type Project } from "@workspace/api-client-react";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, CalendarClock, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader, type Crumb } from "@/components/engine/PageHeader";
 import { StageRail } from "@/components/engine/StageRail";
 import { getStage, STAGE_COUNT } from "@/lib/stages";
 import { getMethod } from "@/lib/instructional-methods";
+import { cn } from "@/lib/utils";
 
 interface WorkspaceContext {
   project: Project;
@@ -37,6 +38,7 @@ interface ProjectWorkspaceProps {
  */
 export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }: ProjectWorkspaceProps) {
   const params = useParams();
+  const [location] = useLocation();
   const projectId = parseInt(params.id || "0", 10);
 
   const { data: project, isLoading } = useGetProject(projectId, {
@@ -55,6 +57,11 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
     { label: "Projects", href: "/projects" },
     { label: project.title, href: `/projects/${project.id}` },
     ...(stage ? [{ label: stage.title }] : []),
+  ];
+
+  const tools = [
+    { href: `/projects/${project.id}/meetings`, label: "Agendas", icon: CalendarClock },
+    { href: `/projects/${project.id}/time`, label: "Time tracking", icon: Clock },
   ];
 
   return (
@@ -85,7 +92,7 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
 
       {/* Pinned so progress and stage navigation stay visible while scrolling content. */}
       <section
-        aria-label="Curriculum pipeline"
+        aria-label="Project navigation"
         className="sticky top-0 z-20 -mx-6 mt-5 border-b bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8"
       >
         <StageRail
@@ -94,6 +101,33 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
           viewingStage={stageId}
           variant="full"
         />
+        <nav
+          aria-label="Project tools"
+          className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3"
+        >
+          <span className="mr-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Tools
+          </span>
+          {tools.map((tool) => {
+            const active = location === tool.href;
+            return (
+              <Link
+                key={tool.href}
+                href={tool.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm font-medium transition-colors",
+                  active
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <tool.icon className="h-4 w-4" aria-hidden="true" />
+                {tool.label}
+              </Link>
+            );
+          })}
+        </nav>
       </section>
 
       <div className="space-y-6 pt-6">{children(ctx)}</div>
