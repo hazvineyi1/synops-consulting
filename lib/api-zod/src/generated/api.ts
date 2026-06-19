@@ -1348,7 +1348,9 @@ export const ListProjectMeetingsResponseItem = zod.object({
   "items": zod.array(zod.object({
   "title": zod.string(),
   "minutes": zod.number(),
-  "prompts": zod.array(zod.string())
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
   "openActionCount": zod.number()
 }),zod.null()]).optional(),
@@ -1401,7 +1403,9 @@ export const GetMeetingResponse = zod.object({
   "items": zod.array(zod.object({
   "title": zod.string(),
   "minutes": zod.number(),
-  "prompts": zod.array(zod.string())
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
   "openActionCount": zod.number()
 }),zod.null()]).optional(),
@@ -1446,7 +1450,9 @@ export const UpdateMeetingResponse = zod.object({
   "items": zod.array(zod.object({
   "title": zod.string(),
   "minutes": zod.number(),
-  "prompts": zod.array(zod.string())
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
   "openActionCount": zod.number()
 }),zod.null()]).optional(),
@@ -1489,7 +1495,9 @@ export const ProcessMeetingNotesResponse = zod.object({
   "items": zod.array(zod.object({
   "title": zod.string(),
   "minutes": zod.number(),
-  "prompts": zod.array(zod.string())
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
   "openActionCount": zod.number()
 }),zod.null()]).optional(),
@@ -1521,10 +1529,59 @@ export const ProcessMeetingNotesResponse = zod.object({
   "items": zod.array(zod.object({
   "title": zod.string(),
   "minutes": zod.number(),
-  "prompts": zod.array(zod.string())
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
   "openActionCount": zod.number()
 })
+})
+
+
+/**
+ * Toggles the completion state of a single proposed-agenda item, or a single prompt within an item, on the meeting's stored agenda. The update is applied with a row lock so concurrent toggles never lose each other.
+ * @summary Check off a proposed-agenda item or one of its prompts
+ */
+export const SetAgendaChecklistParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const setAgendaChecklistBodyItemIndexMin = 0;
+
+export const setAgendaChecklistBodyPromptIndexMin = 0;
+
+
+
+export const SetAgendaChecklistBody = zod.object({
+  "itemIndex": zod.number().min(setAgendaChecklistBodyItemIndexMin),
+  "promptIndex": zod.number().min(setAgendaChecklistBodyPromptIndexMin).nullish(),
+  "done": zod.boolean()
+})
+
+export const SetAgendaChecklistResponse = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "scheduledAt": zod.coerce.date().nullish(),
+  "notes": zod.string(),
+  "nextMeetingAt": zod.coerce.date().nullish(),
+  "generatedAgenda": zod.union([zod.object({
+  "generatedAt": zod.coerce.date(),
+  "proposedDate": zod.coerce.date().nullish(),
+  "proposedTime": zod.string().nullish(),
+  "summary": zod.array(zod.string()),
+  "items": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
+})),
+  "openActionCount": zod.number()
+}),zod.null()]).optional(),
+  "aiProvider": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
 })
 
 
@@ -1668,7 +1725,9 @@ export const GetAgendaSummaryResponse = zod.object({
   "items": zod.array(zod.object({
   "title": zod.string(),
   "minutes": zod.number(),
-  "prompts": zod.array(zod.string())
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
   "openActionCount": zod.number()
 }),zod.null()]),

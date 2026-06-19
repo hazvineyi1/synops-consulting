@@ -18,6 +18,7 @@ export * from './activity';
 export * from './activityFeedItem';
 export * from './activityInput';
 export * from './activityUpdate';
+export * from './agendaChecklistToggle';
 export * from './agendaPlan';
 export * from './agendaPlanItem';
 export * from './agendaSummary';

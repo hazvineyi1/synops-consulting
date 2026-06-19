@@ -18,6 +18,8 @@ import {
   UpdateMeetingBody,
   DeleteMeetingParams,
   ProcessMeetingNotesParams,
+  SetAgendaChecklistParams,
+  SetAgendaChecklistBody,
   ListProjectActionItemsParams,
   CreateProjectActionItemParams,
   CreateProjectActionItemBody,
@@ -46,6 +48,12 @@ interface StoredAgendaItem {
   title: string;
   minutes: number;
   prompts: string[];
+  // Interactive checklist state. `done` checks off the whole item (used for items
+  // with no prompts); `promptsDone` is aligned by index with `prompts`. Both are
+  // optional so agendas stored before checklists existed read back as "unchecked",
+  // and regenerating an agenda omits them, resetting the checklist.
+  done?: boolean;
+  promptsDone?: boolean[];
 }
 
 interface StoredAgenda {
@@ -286,6 +294,84 @@ router.put("/meetings/:id", async (req, res): Promise<void> => {
   });
 
   res.json(serializeMeeting(row));
+});
+
+// Check off (or un-check) a single proposed-agenda item, or one prompt within an
+// item. The agenda lives as a JSON blob in one column, so the read-modify-write
+// runs inside a row-locked transaction: concurrent toggles serialize on the lock
+// and never clobber one another.
+router.patch("/meetings/:id/agenda-checklist", async (req, res): Promise<void> => {
+  const params = SetAgendaChecklistParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const parsed = SetAgendaChecklistBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  if (
+    await denyNoScope(
+      res,
+      req.actor!,
+      await resolveMeetingScope(params.data.id),
+      "write",
+      "Meeting not found",
+    )
+  ) {
+    return;
+  }
+
+  const { itemIndex, promptIndex, done } = parsed.data;
+
+  const result = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(projectMeetingsTable)
+      .where(eq(projectMeetingsTable.id, params.data.id))
+      .for("update");
+    if (!row) return { kind: "not_found" as const };
+
+    const agenda = parseAgenda(row.generatedAgenda);
+    if (!agenda) return { kind: "no_agenda" as const };
+    if (itemIndex >= agenda.items.length) return { kind: "out_of_range" as const };
+
+    const item = agenda.items[itemIndex];
+    if (promptIndex == null) {
+      item.done = done;
+    } else {
+      if (promptIndex >= item.prompts.length) return { kind: "out_of_range" as const };
+      const promptsDone = Array.isArray(item.promptsDone) ? [...item.promptsDone] : [];
+      while (promptsDone.length < item.prompts.length) promptsDone.push(false);
+      promptsDone[promptIndex] = done;
+      item.promptsDone = promptsDone;
+    }
+
+    const [updated] = await tx
+      .update(projectMeetingsTable)
+      .set({ generatedAgenda: JSON.stringify(agenda) })
+      .where(eq(projectMeetingsTable.id, row.id))
+      .returning();
+    return { kind: "ok" as const, row: updated };
+  });
+
+  if (result.kind === "not_found") {
+    res.status(404).json({ error: "Meeting not found" });
+    return;
+  }
+  if (result.kind === "no_agenda") {
+    res.status(409).json({ error: "This meeting has no generated agenda to update" });
+    return;
+  }
+  if (result.kind === "out_of_range") {
+    res.status(400).json({ error: "Agenda item or prompt index is out of range" });
+    return;
+  }
+
+  res.json(serializeMeeting(result.row));
 });
 
 router.delete("/meetings/:id", async (req, res): Promise<void> => {

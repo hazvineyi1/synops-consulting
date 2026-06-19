@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useParams } from "wouter";
 import {
   useListProjectMeetings,
@@ -7,6 +7,7 @@ import {
   useUpdateMeeting,
   useDeleteMeeting,
   useProcessMeetingNotes,
+  useSetAgendaChecklist,
   useListProjectActionItems,
   getListProjectActionItemsQueryKey,
   useCreateProjectActionItem,
@@ -131,6 +132,31 @@ const CATEGORY_STYLES: Record<string, string> = {
   accessibility: "bg-amber-100 text-amber-800",
 };
 
+type AgendaPlan = NonNullable<Meeting["generatedAgenda"]>;
+
+type AgendaToggle = { itemIndex: number; promptIndex: number | null; done: boolean };
+
+// Mirror of the server toggle so the optimistic cache update matches what the API
+// will persist: flip a whole item (no prompt) or one prompt within an item.
+function applyAgendaToggle(
+  agenda: AgendaPlan,
+  itemIndex: number,
+  promptIndex: number | null,
+  done: boolean,
+): AgendaPlan {
+  return {
+    ...agenda,
+    items: agenda.items.map((item, i) => {
+      if (i !== itemIndex) return item;
+      if (promptIndex == null) return { ...item, done };
+      const promptsDone = item.promptsDone ? [...item.promptsDone] : [];
+      while (promptsDone.length < item.prompts.length) promptsDone.push(false);
+      promptsDone[promptIndex] = done;
+      return { ...item, promptsDone };
+    }),
+  };
+}
+
 export default function ProjectMeetings() {
   const params = useParams();
   const projectId = parseInt(params.id || "0", 10);
@@ -163,6 +189,7 @@ export default function ProjectMeetings() {
   const updateMeeting = useUpdateMeeting();
   const deleteMeeting = useDeleteMeeting();
   const processNotes = useProcessMeetingNotes();
+  const setAgendaChecklist = useSetAgendaChecklist();
   const createActionItem = useCreateProjectActionItem();
   const updateActionItem = useUpdateActionItem();
   const deleteActionItem = useDeleteActionItem();
@@ -176,6 +203,58 @@ export default function ProjectMeetings() {
   const invalidateActionItems = () => queryClient.invalidateQueries({ queryKey: actionItemsKey });
   const invalidateCorrespondence = () => queryClient.invalidateQueries({ queryKey: correspondenceKey });
   const invalidateSummary = () => queryClient.invalidateQueries({ queryKey: summaryKey });
+
+  // One promise chain per meeting so rapid checkbox toggles apply in order and the
+  // server's read-modify-write of the agenda JSON never races itself. `agendaPending`
+  // tracks toggles that are queued but not yet confirmed, so when a server response
+  // lands we can replay the still-pending toggles over it instead of letting an
+  // earlier response erase a later optimistic change.
+  const agendaChains = useRef(new Map<number, Promise<unknown>>());
+  const agendaPending = useRef(new Map<number, AgendaToggle[]>());
+
+  function toggleAgenda(
+    meetingId: number,
+    itemIndex: number,
+    promptIndex: number | null,
+    done: boolean,
+  ) {
+    const pending = agendaPending.current.get(meetingId) ?? [];
+    pending.push({ itemIndex, promptIndex, done });
+    agendaPending.current.set(meetingId, pending);
+
+    queryClient.setQueryData<Meeting[]>(meetingsKey, (old) =>
+      old?.map((m) =>
+        m.id === meetingId && m.generatedAgenda
+          ? { ...m, generatedAgenda: applyAgendaToggle(m.generatedAgenda, itemIndex, promptIndex, done) }
+          : m,
+      ),
+    );
+
+    const prev = agendaChains.current.get(meetingId) ?? Promise.resolve();
+    const next = prev
+      .catch(() => {})
+      .then(() => setAgendaChecklist.mutateAsync({ id: meetingId, data: { itemIndex, promptIndex, done } }))
+      .then((updated) => {
+        // Drop this now-confirmed toggle (responses settle in chain order, FIFO),
+        // then replay any toggles still queued so optimistic state survives.
+        const rest = agendaPending.current.get(meetingId) ?? [];
+        rest.shift();
+        let agenda = updated.generatedAgenda;
+        if (agenda) {
+          for (const t of rest) agenda = applyAgendaToggle(agenda, t.itemIndex, t.promptIndex, t.done);
+        }
+        const merged: Meeting = { ...updated, generatedAgenda: agenda };
+        queryClient.setQueryData<Meeting[]>(meetingsKey, (old) =>
+          old?.map((m) => (m.id === merged.id ? merged : m)),
+        );
+      })
+      .catch((err) => {
+        (agendaPending.current.get(meetingId) ?? []).shift();
+        fail(err, "Could not update the agenda");
+        invalidateMeetings();
+      });
+    agendaChains.current.set(meetingId, next);
+  }
 
   // ---- New meeting form ----
   const [newMeetingTitle, setNewMeetingTitle] = useState("");
@@ -506,6 +585,9 @@ export default function ProjectMeetings() {
                       )
                     }
                     onDelete={() => setDeletingMeeting(meeting)}
+                    onToggleAgenda={(itemIndex, promptIndex, done) =>
+                      toggleAgenda(meeting.id, itemIndex, promptIndex, done)
+                    }
                   />
                 ))}
               </div>
@@ -970,6 +1052,7 @@ function MeetingCard({
   onSaveDetails,
   onGenerate,
   onDelete,
+  onToggleAgenda,
 }: {
   meeting: Meeting;
   isProcessing: boolean;
@@ -978,6 +1061,7 @@ function MeetingCard({
   onSaveDetails: (data: { title: string; scheduledAt: string | null }, done: () => void) => void;
   onGenerate: () => void;
   onDelete: () => void;
+  onToggleAgenda: (itemIndex: number, promptIndex: number | null, done: boolean) => void;
 }) {
   const [notes, setNotes] = useState(meeting.notes);
   const [editingDetails, setEditingDetails] = useState(false);
@@ -986,6 +1070,20 @@ function MeetingCard({
 
   const notesDirty = notes !== meeting.notes;
   const agenda = meeting.generatedAgenda ?? null;
+
+  // Checklist progress: each prompt is one item; an item with no prompts counts as
+  // a single checkable line via its own `done` flag.
+  let agendaTotal = 0;
+  let agendaDone = 0;
+  for (const it of agenda?.items ?? []) {
+    if (it.prompts.length > 0) {
+      agendaTotal += it.prompts.length;
+      agendaDone += it.prompts.filter((_, j) => it.promptsDone?.[j]).length;
+    } else {
+      agendaTotal += 1;
+      if (it.done) agendaDone += 1;
+    }
+  }
 
   function openEdit() {
     setEditTitle(meeting.title);
@@ -1070,22 +1168,90 @@ function MeetingCard({
                 ))}
               </ul>
             )}
+            {agendaTotal > 0 && (
+              <div className="mb-3 space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Meeting checklist</span>
+                  <span>
+                    {agendaDone} of {agendaTotal} covered
+                  </span>
+                </div>
+                <Progress
+                  value={agendaTotal > 0 ? (agendaDone / agendaTotal) * 100 : 0}
+                  aria-label={`Agenda progress: ${agendaDone} of ${agendaTotal} items covered`}
+                />
+              </div>
+            )}
             <ol className="space-y-2">
-              {agenda.items.map((it, i) => (
-                <li key={i} className="rounded-md border bg-card p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{it.title}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{it.minutes} min</span>
-                  </div>
-                  {it.prompts.length > 0 && (
-                    <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
-                      {it.prompts.map((p, j) => (
-                        <li key={j}>{p}</li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
+              {agenda.items.map((it, i) => {
+                const hasPrompts = it.prompts.length > 0;
+                const promptsDone = it.promptsDone ?? [];
+                const itemComplete = hasPrompts
+                  ? it.prompts.every((_, j) => promptsDone[j])
+                  : Boolean(it.done);
+                return (
+                  <li key={i} className="rounded-md border bg-card p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      {hasPrompts ? (
+                        <span
+                          className={`font-medium ${itemComplete ? "text-muted-foreground line-through" : ""}`}
+                        >
+                          {it.title}
+                        </span>
+                      ) : (
+                        <label className="flex items-start gap-2" htmlFor={`agenda-${meeting.id}-${i}`}>
+                          <Checkbox
+                            id={`agenda-${meeting.id}-${i}`}
+                            checked={itemComplete}
+                            onCheckedChange={(checked) =>
+                              onToggleAgenda(i, null, checked === true)
+                            }
+                            className="mt-0.5"
+                          />
+                          <span
+                            className={`font-medium ${itemComplete ? "text-muted-foreground line-through" : ""}`}
+                          >
+                            {it.title}
+                          </span>
+                        </label>
+                      )}
+                      <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                        {hasPrompts && (
+                          <span>
+                            {it.prompts.filter((_, j) => promptsDone[j]).length}/{it.prompts.length}
+                          </span>
+                        )}
+                        <span>{it.minutes} min</span>
+                      </span>
+                    </div>
+                    {hasPrompts && (
+                      <ul className="mt-2 space-y-1.5 pl-1">
+                        {it.prompts.map((p, j) => {
+                          const checked = Boolean(promptsDone[j]);
+                          const id = `agenda-${meeting.id}-${i}-${j}`;
+                          return (
+                            <li key={j}>
+                              <label className="flex items-start gap-2 text-sm" htmlFor={id}>
+                                <Checkbox
+                                  id={id}
+                                  checked={checked}
+                                  onCheckedChange={(value) => onToggleAgenda(i, j, value === true)}
+                                  className="mt-0.5"
+                                />
+                                <span
+                                  className={checked ? "text-muted-foreground line-through" : ""}
+                                >
+                                  {p}
+                                </span>
+                              </label>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
             </ol>
           </div>
         )}

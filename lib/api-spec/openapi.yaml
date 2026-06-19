@@ -1335,6 +1335,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProcessNotesResult"
 
+  /compass/meetings/{id}/agenda-checklist:
+    patch:
+      operationId: setAgendaChecklist
+      tags: [agenda]
+      summary: Check off a proposed-agenda item or one of its prompts
+      description: >-
+        Toggles the completion state of a single proposed-agenda item, or a
+        single prompt within an item, on the meeting's stored agenda. The update
+        is applied with a row lock so concurrent toggles never lose each other.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgendaChecklistToggle"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meeting"
+
   /compass/projects/{projectId}/action-items:
     get:
       operationId: listProjectActionItems
@@ -2676,6 +2705,27 @@ components:
           type: array
           items:
             type: string
+        done:
+          type: boolean
+          description: Whether the whole item is checked off (used for items with no prompts).
+        promptsDone:
+          type: array
+          description: Per-prompt completion, aligned by index with prompts.
+          items:
+            type: boolean
+
+    AgendaChecklistToggle:
+      type: object
+      required: [itemIndex, done]
+      properties:
+        itemIndex:
+          type: integer
+          minimum: 0
+        promptIndex:
+          type: ["integer", "null"]
+          minimum: 0
+        done:
+          type: boolean
 
     AgendaPlan:
       type: object

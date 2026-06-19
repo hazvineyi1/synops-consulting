@@ -27,6 +27,7 @@ import type {
   ActivityFeedItem,
   ActivityInput,
   ActivityUpdate,
+  AgendaChecklistToggle,
   AgendaSummary,
   Allocation,
   Assessment,
@@ -4841,6 +4842,79 @@ export const useProcessMeetingNotes = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getProcessMeetingNotesMutationOptions(options));
+    }
+
+export const getSetAgendaChecklistUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/meetings/${id}/agenda-checklist`
+}
+
+/**
+ * Toggles the completion state of a single proposed-agenda item, or a single prompt within an item, on the meeting's stored agenda. The update is applied with a row lock so concurrent toggles never lose each other.
+ * @summary Check off a proposed-agenda item or one of its prompts
+ */
+export const setAgendaChecklist = async (id: number,
+    agendaChecklistToggle: AgendaChecklistToggle, options?: RequestInit): Promise<Meeting> => {
+
+  return customFetch<Meeting>(getSetAgendaChecklistUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      agendaChecklistToggle,)
+  }
+);}
+
+
+
+
+export const getSetAgendaChecklistMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setAgendaChecklist>>, TError,{id: number;data: BodyType<AgendaChecklistToggle>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setAgendaChecklist>>, TError,{id: number;data: BodyType<AgendaChecklistToggle>}, TContext> => {
+
+const mutationKey = ['setAgendaChecklist'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setAgendaChecklist>>, {id: number;data: BodyType<AgendaChecklistToggle>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setAgendaChecklist(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetAgendaChecklistMutationResult = NonNullable<Awaited<ReturnType<typeof setAgendaChecklist>>>
+    export type SetAgendaChecklistMutationBody = BodyType<AgendaChecklistToggle>
+    export type SetAgendaChecklistMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Check off a proposed-agenda item or one of its prompts
+ */
+export const useSetAgendaChecklist = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setAgendaChecklist>>, TError,{id: number;data: BodyType<AgendaChecklistToggle>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setAgendaChecklist>>,
+        TError,
+        {id: number;data: BodyType<AgendaChecklistToggle>},
+        TContext
+      > => {
+      return useMutation(getSetAgendaChecklistMutationOptions(options));
     }
 
 export const getListProjectActionItemsUrl = (projectId: number,) => {

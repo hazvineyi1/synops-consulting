@@ -10,4 +10,8 @@ export interface AgendaPlanItem {
   title: string;
   minutes: number;
   prompts: string[];
+  /** Whether the whole item is checked off (used for items with no prompts). */
+  done?: boolean;
+  /** Per-prompt completion, aligned by index with prompts. */
+  promptsDone?: boolean[];
 }
