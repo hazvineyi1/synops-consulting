@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class Development Agenda System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#14213d;
+    --ink:#1d2840;
+    --cream:#f7f3e9;
+    --amber:#c9821f;
+    --rule:#d8cfb8;
+    --muted:#5b6478;
+    --soft:#fbf8f0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{-webkit-font-smoothing:antialiased;}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Manrope',system-ui,sans-serif;
+    line-height:1.55;
+    padding:48px 20px 72px;
+  }
+  .sheet{
+    max-width:760px;
+    margin:0 auto;
+    background:#fffdf7;
+    border:1px solid var(--rule);
+    border-radius:4px;
+    padding:56px 60px 64px;
+    box-shadow:0 18px 50px rgba(20,33,61,.10);
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;font-weight:600;
+    letter-spacing:.22em;text-transform:uppercase;
+    color:var(--amber);margin-bottom:14px;
+  }
+  h1{
+    font-family:'Instrument Serif',Georgia,serif;
+    font-weight:400;font-size:56px;line-height:1.0;
+    color:var(--navy);letter-spacing:.5px;
+  }
+  .lede{margin-top:16px;color:var(--muted);font-size:15px;max-width:58ch;}
+
+  .section-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;font-weight:600;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--amber);
+    margin-bottom:6px;
+  }
+  h2.part{
+    font-family:'Instrument Serif',Georgia,serif;
+    font-weight:400;font-size:34px;color:var(--navy);
+    line-height:1.05;
+  }
+  .rule{height:1px;background:var(--rule);margin:40px 0 26px;}
+
+  /* principles */
+  .principles{list-style:none;margin-top:18px;}
+  .principles li{
+    display:grid;grid-template-columns:130px 1fr;
+    column-gap:18px;padding:13px 0;
+    border-top:1px solid var(--rule);
+  }
+  .principles li:last-child{border-bottom:1px solid var(--rule);}
+  .principles .k{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;font-weight:600;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--navy);padding-top:2px;
+  }
+  .principles .v{font-size:14.5px;color:var(--ink);}
+
+  /* workflow */
+  ol.flow{list-style:none;margin-top:18px;}
+  ol.flow > li{
+    display:grid;grid-template-columns:42px 1fr;column-gap:16px;
+    padding:16px 0;border-bottom:1px solid var(--rule);
+  }
+  ol.flow > li:last-child{border-bottom:none;}
+  .fn{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:13px;color:var(--amber);padding-top:3px;}
+  .flow h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:3px;}
+  .flow p{font-size:14.5px;color:var(--ink);}
+  .flow .branch{
+    margin-top:9px;font-size:13.5px;color:var(--muted);
+    border-left:2px solid var(--amber);padding:2px 0 2px 12px;
+  }
+
+  /* agenda cards */
+  .card{
+    background:var(--soft);
+    border:1px solid var(--rule);
+    border-radius:5px;
+    padding:30px 32px 34px;
+    margin-top:26px;
+  }
+  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;}
+  .card-title{
+    font-family:'Instrument Serif',Georgia,serif;
+    font-weight:400;font-size:30px;color:var(--navy);line-height:1.05;
+  }
+  .card-sub{font-size:13px;color:var(--muted);margin-top:2px;}
+  .weight{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--navy);background:rgba(201,130,31,.13);
+    border:1px solid rgba(201,130,31,.32);border-radius:3px;
+    padding:4px 8px;white-space:nowrap;
+  }
+  .dots{letter-spacing:1px;}
+  .block-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--amber);margin:20px 0 8px;
+  }
+  .card ol{margin:0 0 0 2px;list-style:none;counter-reset:a;}
+  .card ol li{
+    position:relative;padding-left:30px;font-size:14.5px;color:var(--ink);
+    margin-bottom:7px;line-height:1.45;
+  }
+  .card ol li::before{
+    counter-increment:a;content:counter(a,decimal-leading-zero);
+    position:absolute;left:0;top:1px;
+    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--amber);
+  }
+  .card ul{list-style:none;margin:0 0 0 2px;}
+  .card ul li{position:relative;padding-left:18px;font-size:14px;color:var(--ink);margin-bottom:6px;}
+  .card ul li::before{content:"";position:absolute;left:2px;top:9px;width:5px;height:5px;background:var(--amber);border-radius:50%;}
+  .exit{
+    margin-top:20px;padding:14px 16px;
+    background:#fff;border:1px dashed var(--amber);border-radius:4px;
+    font-size:13.5px;color:var(--ink);
+  }
+  .exit b{color:var(--navy);font-family:'Manrope';font-weight:700;}
+  .em{color:var(--navy);font-weight:600;}
+
+  footer{
+    margin-top:40px;padding-top:18px;border-top:1px solid var(--rule);
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--muted);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  }
+
+  @media print{
+    body{background:#fff;padding:0;}
+    .sheet{box-shadow:none;border:none;border-radius:0;max-width:none;padding:0 6px;}
+    .card{break-inside:avoid;background:#fff;}
+    ol.flow > li, .principles li{break-inside:avoid;}
+    h1{font-size:46px;}
+    .card.pagebreak{break-before:page;}
+  }
+  @page{margin:16mm;}
+
+  @media(max-width:600px){
+    .sheet{padding:34px 24px 40px;}
+    h1{font-size:42px;}
+    .principles li{grid-template-columns:1fr;row-gap:2px;}
+    .card{padding:24px 20px 28px;}
+  }
+</style>
+</head>
+<body>
+<main class="sheet">
+
+  <p class="eyebrow">Instructional Design · Course Build</p>
+  <h1>Class Development<br>Agenda System</h1>
+  <p class="lede">An optimized, meeting-type-aware workflow for building a course with a subject-matter expert. The kickoff and final sessions are weighted heavier by design. The working sessions in between stay lean and repeatable so momentum holds. Built on backward design, with compliance and accessibility folded into the cadence instead of left to the end.</p>
+
+  <div class="rule"></div>
+
+  <!-- PART 1 -->
+  <p class="section-label">Part 1</p>
+  <h2 class="part">What the optimization changes</h2>
+  <ul class="principles">
+    <li><span class="k">Type-aware</span><span class="v">One generic agenda becomes three. The system loads a different template depending on whether the meeting is a kickoff, a working session, or the final review.</span></li>
+    <li><span class="k">Three streams</span><span class="v">Live capture splits into decisions, action items with an owner and a due date, and open questions. These are different objects, so they are tracked separately rather than as one note blob.</span></li>
+    <li><span class="k">Carry-forward</span><span class="v">The next agenda seeds itself from three sources: unresolved open items, the standing items for that meeting type, and whatever milestone is due in that period.</span></li>
+    <li><span class="k">Exit criteria</span><span class="v">Every meeting has a Definition of Done. The session is not closed until its purpose is met, and anything unmet rolls forward.</span></li>
+    <li><span class="k">Compliance early</span><span class="v">Required instructional time, accreditation, and accessibility checks appear from the kickoff onward, not as a scramble in the last week.</span></li>
+    <li><span class="k">One repository</span><span class="v">Every agenda, transcript, decision log, and asset is stored, dated, and tagged by course, module, and meeting type in a single searchable place.</span></li>
+  </ul>
+
+  <div class="rule"></div>
+
+  <!-- PART 2 -->
+  <p class="section-label">Part 2</p>
+  <h2 class="part">The optimized workflow</h2>
+  <ol class="flow">
+    <li><span class="fn">01</span>
+      <div><h3>Set up the course workspace (one time)</h3>
+      <p>Create the repository, set the meeting cadence, assign roles, and lay down the milestone calendar before any meeting happens.</p></div>
+    </li>
+    <li><span class="fn">02</span>
+      <div><h3>Load the meeting-type template</h3>
+      <p>The system selects the agenda by where you are in the build.</p>
+      <div class="branch">Kickoff and Final load the expanded agendas. Working sessions load the lean, repeatable one.</div></div>
+    </li>
+    <li><span class="fn">03</span>
+      <div><h3>Auto-draft the agenda and send pre-work</h3>
+      <p>The agenda is drafted from standing items plus carried-forward open items plus the period's milestone. Pre-work goes to the SME a set number of days ahead so the meeting is for decisions, not catch-up.</p></div>
+    </li>
+    <li><span class="fn">04</span>
+      <div><h3>Start with the recording disclaimer</h3>
+      <p>Open the session with the scripted AI-recorder notice and capture acknowledgment, then press record.</p></div>
+    </li>
+    <li><span class="fn">05</span>
+      <div><h3>Work the agenda with live capture</h3>
+      <p>Agenda items act as check boxes. Capture flows into three streams as you go: decisions, action items with owner and due date, and open questions.</p></div>
+    </li>
+    <li><span class="fn">06</span>
+      <div><h3>Stop, transcribe, generate</h3>
+      <p>Stopping the meeting produces the transcript, the meeting notes, the decision log, the action list, and a suggested next agenda seeded from everything still open.</p></div>
+    </li>
+    <li><span class="fn">07</span>
+      <div><h3>Confirm, archive, repeat</h3>
+      <p>The user confirms the next meeting date and type. The new agenda builds itself, the prior agenda minimizes but stays accessible, and all records are stored and dated in the same repository.</p></div>
+    </li>
+  </ol>
+
+  <div class="rule"></div>
+
+  <!-- PART 3 -->
+  <p class="section-label">Part 3</p>
+  <h2 class="part">The agenda library</h2>
+
+  <!-- KICKOFF -->
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Kickoff Meeting</div>
+        <div class="card-sub">Define and Align · run once, at the start</div>
+      </div>
+      <span class="weight">Weight <span class="dots">●●●</span></span>
+    </div>
+
+    <div class="block-label">Pre-work, sent ahead</div>
+    <ul>
+      <li>SME completes a course intake brief: prior version, existing scripts and recordings, known pain points.</li>
+      <li>Both parties review program, accreditation, and required-hours expectations.</li>
+    </ul>
+
+    <div class="block-label">Agenda</div>
+    <ol>
+      <li>Recording disclaimer and consent.</li>
+      <li>Roles and decision authority. SME owns content accuracy, the ID owns pedagogy, build, and QA, reviewers and stakeholders are named.</li>
+      <li>Learner profile and course vision. Who the learners are, what they already know, and what success looks like.</li>
+      <li>Terminal learning outcomes. What a learner should be able to do by the end, framed as backward design.</li>
+      <li>Scope and constraints. Credit hours and required instructional time, delivery modality and LMS, term dates, what is fixed versus flexible.</li>
+      <li>High-level blueprint. A rough module and unit map.</li>
+      <li>Assessment strategy. How each outcome will be measured, and the alignment principle that ties them together.</li>
+      <li>Standards and compliance. Accreditation and program standards, accessibility to 508 and WCAG 2.1 AA, quality rubric and syllabus template.</li>
+      <li>Existing asset inventory. What is reusable and what must be built fresh.</li>
+      <li>Working agreements. Cadence, tools, file naming, where things live, response times.</li>
+      <li>Milestones and timeline. Map deliverables to a build calendar and flag the critical path.</li>
+      <li>Risks and dependencies. SME availability, recording schedule, third-party content and permissions.</li>
+      <li>Confirm next meeting and immediate action items.</li>
+    </ol>
+
+    <div class="exit"><b>Exit criteria.</b> Agreed outcomes, scope, and modality. A milestone calendar exists. Roles are set and the repository is live. <span class="em">If outcomes are not agreed, the kickoff is not done.</span></div>
+  </div>
+
+  <!-- WORKING -->
+  <div class="card pagebreak">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Working Session</div>
+        <div class="card-sub">Build and Review · repeat as needed, time-boxed</div>
+      </div>
+      <span class="weight">Weight <span class="dots">●</span></span>
+    </div>
+
+    <div class="block-label">Pre-work, sent ahead</div>
+    <ul>
+      <li>Review the module draft or assets due this period. Arrive with blockers named.</li>
+    </ul>
+
+    <div class="block-label">Agenda</div>
+    <ol>
+      <li>Brief recording disclaimer.</li>
+      <li>Status. Action items from last session, marked done or carried over.</li>
+      <li>Focus block. Walk this period's module or storyboard and confirm the chain holds: objective, content, activity, assessment.</li>
+      <li>Pedagogy and engagement check. Activities, formative checks, application and Socratic prompts.</li>
+      <li>Accessibility and media captured inline. Alt text, captions, on-screen text, readable LMS pages.</li>
+      <li>Log decisions and open questions.</li>
+      <li>Next module preview. What each owner brings next time.</li>
+      <li>Confirm next meeting and action items.</li>
+    </ol>
+
+    <div class="exit"><b>Exit criteria.</b> This period's milestone advanced, with clear owners on the next deliverables. <span class="em">The recurring focus rotates across the build:</span> blueprint, content development, media and assets, LMS embedding, then assignment and gradebook setup. Same skeleton, different focus each time.</div>
+  </div>
+
+  <!-- FINAL -->
+  <div class="card pagebreak">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Final Meeting</div>
+        <div class="card-sub">QA, Launch, and Handoff · run once, at the end</div>
+      </div>
+      <span class="weight">Weight <span class="dots">●●●</span></span>
+    </div>
+
+    <div class="block-label">Pre-work, sent ahead</div>
+    <ul>
+      <li>Full QA pass complete and checklists filled.</li>
+      <li>SME final content sign-off submitted.</li>
+    </ul>
+
+    <div class="block-label">Agenda</div>
+    <ol>
+      <li>Recording disclaimer and consent.</li>
+      <li>Completion review against the blueprint. Every module has its objectives, content, activities, and assessments in place.</li>
+      <li>Alignment audit. Outcomes to assessments to activities, with no orphans on either side.</li>
+      <li>Compliance sign-off. Required instructional time and program standards verified, including direct-instruction minutes.</li>
+      <li>Accessibility sign-off. 508 and WCAG 2.1 AA: captions, alt text, heading structure, color contrast, keyboard navigation, document accessibility.</li>
+      <li>LMS quality pass. Syllabus and LMS alignment, links, dates, gradebook, assignment setup, navigation, and a mobile check.</li>
+      <li>Syllabus final check against the template.</li>
+      <li>Punch list. Everything outstanding, each item with an owner and a hard deadline.</li>
+      <li>Launch readiness. A go or no-go decision, then the publish and enrollment steps.</li>
+      <li>Handoff. Who maintains the course, where everything lives, the update cadence, and faculty support.</li>
+      <li>Retrospective. What worked and what to improve, fed back into the next build.</li>
+      <li>Archive and notes for the next offering.</li>
+    </ol>
+
+    <div class="exit"><b>Exit criteria.</b> A go or no-go decision is made. The punch list is owned with dates. The retrospective is captured and everything is archived and dated in the repository. <span class="em">If the course is not go, the no-go reasons become the next agenda.</span></div>
+  </div>
+
+  <footer>
+    <span>Class Development Agenda System</span>
+    <span>Backward design · ABA · 508 / WCAG 2.1 AA</span>
+  </footer>
+
+</main>
+</body>
+</html>
