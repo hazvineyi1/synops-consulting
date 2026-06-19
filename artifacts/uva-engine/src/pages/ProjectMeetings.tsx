@@ -487,6 +487,8 @@ export default function ProjectMeetings() {
 
           {/* ============================ MEETINGS ============================ */}
           <TabsContent value="meetings" className="space-y-6">
+            <MeetingRecordings projectId={projectId} />
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -592,8 +594,6 @@ export default function ProjectMeetings() {
                 ))}
               </div>
             )}
-
-            <MeetingRecordings projectId={projectId} />
           </TabsContent>
 
           {/* ========================== ACTION ITEMS ========================== */}
