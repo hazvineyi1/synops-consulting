@@ -8,11 +8,21 @@ import {
   useDeleteMeeting,
   useProcessMeetingNotes,
   useSetAgendaChecklist,
+  useSetMeetingChecklist,
   useListProjectActionItems,
   getListProjectActionItemsQueryKey,
   useCreateProjectActionItem,
   useUpdateActionItem,
   useDeleteActionItem,
+  useListProjectDecisions,
+  getListProjectDecisionsQueryKey,
+  useCreateProjectDecision,
+  useDeleteDecision,
+  useListProjectOpenQuestions,
+  getListProjectOpenQuestionsQueryKey,
+  useCreateProjectOpenQuestion,
+  useUpdateOpenQuestion,
+  useDeleteOpenQuestion,
   useListProjectCorrespondence,
   getListProjectCorrespondenceQueryKey,
   useCreateProjectCorrespondence,
@@ -21,8 +31,11 @@ import {
   useGetAgendaSummary,
   getGetAgendaSummaryQueryKey,
   type Meeting,
+  type MeetingPlan,
   type ActionItem,
   type Correspondence,
+  type MeetingDecision,
+  type MeetingOpenQuestion,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -39,6 +52,12 @@ import {
   Clock,
   Link2,
   FileText,
+  Gavel,
+  HelpCircle,
+  ClipboardList,
+  Target,
+  CheckCircle2,
+  RotateCcw,
 } from "lucide-react";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 import { MeetingRecordings } from "@/components/engine/MeetingRecordings";
@@ -132,12 +151,38 @@ const CATEGORY_STYLES: Record<string, string> = {
   accessibility: "bg-amber-100 text-amber-800",
 };
 
+type MeetingType = "kickoff" | "working" | "final";
+
+const MEETING_TYPES: MeetingType[] = ["kickoff", "working", "final"];
+
+const MEETING_TYPE_LABELS: Record<MeetingType, string> = {
+  kickoff: "Kickoff",
+  working: "Working",
+  final: "Final",
+};
+
+const MEETING_TYPE_STYLES: Record<MeetingType, string> = {
+  kickoff: "bg-emerald-100 text-emerald-800",
+  working: "bg-sky-100 text-sky-800",
+  final: "bg-violet-100 text-violet-800",
+};
+
+function isMeetingType(v: string): v is MeetingType {
+  return v === "kickoff" || v === "working" || v === "final";
+}
+
+// Client-side mirror of the server's next-type suggestion (meetingTemplates.ts:
+// every type defaults to a following working session), used only to preselect the
+// "next meeting type" control. The user can override before generating.
+function suggestNextType(_current: MeetingType): MeetingType {
+  return "working";
+}
+
 type AgendaPlan = NonNullable<Meeting["generatedAgenda"]>;
 
-type AgendaToggle = { itemIndex: number; promptIndex: number | null; done: boolean };
-
-// Mirror of the server toggle so the optimistic cache update matches what the API
-// will persist: flip a whole item (no prompt) or one prompt within an item.
+// Mirror of the server toggle for the proposed NEXT-meeting agenda so the
+// optimistic cache update matches what the API will persist: flip a whole item
+// (no prompt) or one prompt within an item.
 function applyAgendaToggle(
   agenda: AgendaPlan,
   itemIndex: number,
@@ -157,6 +202,43 @@ function applyAgendaToggle(
   };
 }
 
+type PlanSection = "prework" | "agenda" | "exitCriteria";
+
+// Mirror of the server toggle for the meeting's OWN plan (pre-work, standing
+// agenda, exit criteria) so the optimistic cache update matches what the API
+// persists.
+function applyPlanToggle(
+  plan: MeetingPlan,
+  section: PlanSection,
+  itemIndex: number,
+  promptIndex: number | null,
+  value: boolean,
+): MeetingPlan {
+  if (section === "prework") {
+    return {
+      ...plan,
+      prework: plan.prework.map((it, i) => (i === itemIndex ? { ...it, done: value } : it)),
+    };
+  }
+  if (section === "exitCriteria") {
+    return {
+      ...plan,
+      exitCriteria: plan.exitCriteria.map((it, i) => (i === itemIndex ? { ...it, met: value } : it)),
+    };
+  }
+  return {
+    ...plan,
+    agenda: plan.agenda.map((it, i) => {
+      if (i !== itemIndex) return it;
+      if (promptIndex == null) return { ...it, done: value };
+      const promptsDone = it.promptsDone ? [...it.promptsDone] : [];
+      while (promptsDone.length < it.prompts.length) promptsDone.push(false);
+      promptsDone[promptIndex] = value;
+      return { ...it, promptsDone };
+    }),
+  };
+}
+
 export default function ProjectMeetings() {
   const params = useParams();
   const projectId = parseInt(params.id || "0", 10);
@@ -165,6 +247,8 @@ export default function ProjectMeetings() {
 
   const meetingsKey = getListProjectMeetingsQueryKey(projectId);
   const actionItemsKey = getListProjectActionItemsQueryKey(projectId);
+  const decisionsKey = getListProjectDecisionsQueryKey(projectId);
+  const openQuestionsKey = getListProjectOpenQuestionsQueryKey(projectId);
   const correspondenceKey = getListProjectCorrespondenceQueryKey(projectId);
   const summaryKey = getGetAgendaSummaryQueryKey(projectId);
 
@@ -173,6 +257,12 @@ export default function ProjectMeetings() {
   });
   const { data: actionItemsData } = useListProjectActionItems(projectId, {
     query: { enabled: !!projectId, queryKey: actionItemsKey },
+  });
+  const { data: decisionsData } = useListProjectDecisions(projectId, {
+    query: { enabled: !!projectId, queryKey: decisionsKey },
+  });
+  const { data: openQuestionsData } = useListProjectOpenQuestions(projectId, {
+    query: { enabled: !!projectId, queryKey: openQuestionsKey },
   });
   const { data: correspondenceData } = useListProjectCorrespondence(projectId, {
     query: { enabled: !!projectId, queryKey: correspondenceKey },
@@ -183,16 +273,59 @@ export default function ProjectMeetings() {
 
   const meetings = useMemo(() => meetingsData ?? [], [meetingsData]);
   const actionItems = useMemo(() => actionItemsData ?? [], [actionItemsData]);
+  const decisions = useMemo(() => decisionsData ?? [], [decisionsData]);
+  const openQuestions = useMemo(() => openQuestionsData ?? [], [openQuestionsData]);
   const correspondence = useMemo(() => correspondenceData ?? [], [correspondenceData]);
+
+  // Group the three live-capture streams by the meeting they were captured in so
+  // each meeting card shows its own slice.
+  const decisionsByMeeting = useMemo(() => {
+    const map = new Map<number, MeetingDecision[]>();
+    for (const d of decisions) {
+      if (d.meetingId == null) continue;
+      const arr = map.get(d.meetingId) ?? [];
+      arr.push(d);
+      map.set(d.meetingId, arr);
+    }
+    return map;
+  }, [decisions]);
+
+  const questionsByMeeting = useMemo(() => {
+    const map = new Map<number, MeetingOpenQuestion[]>();
+    for (const q of openQuestions) {
+      if (q.meetingId == null) continue;
+      const arr = map.get(q.meetingId) ?? [];
+      arr.push(q);
+      map.set(q.meetingId, arr);
+    }
+    return map;
+  }, [openQuestions]);
+
+  const actionItemsByMeeting = useMemo(() => {
+    const map = new Map<number, ActionItem[]>();
+    for (const a of actionItems) {
+      if (a.sourceMeetingId == null) continue;
+      const arr = map.get(a.sourceMeetingId) ?? [];
+      arr.push(a);
+      map.set(a.sourceMeetingId, arr);
+    }
+    return map;
+  }, [actionItems]);
 
   const createMeeting = useCreateProjectMeeting();
   const updateMeeting = useUpdateMeeting();
   const deleteMeeting = useDeleteMeeting();
   const processNotes = useProcessMeetingNotes();
   const setAgendaChecklist = useSetAgendaChecklist();
+  const setMeetingChecklist = useSetMeetingChecklist();
   const createActionItem = useCreateProjectActionItem();
   const updateActionItem = useUpdateActionItem();
   const deleteActionItem = useDeleteActionItem();
+  const createDecision = useCreateProjectDecision();
+  const deleteDecision = useDeleteDecision();
+  const createQuestion = useCreateProjectOpenQuestion();
+  const updateQuestion = useUpdateOpenQuestion();
+  const deleteQuestion = useDeleteOpenQuestion();
   const createCorrespondence = useCreateProjectCorrespondence();
   const updateCorrespondence = useUpdateCorrespondence();
   const deleteCorrespondence = useDeleteCorrespondence();
@@ -201,63 +334,89 @@ export default function ProjectMeetings() {
     toast({ title: authErrorMessage(err) || fallback, variant: "destructive" });
   const invalidateMeetings = () => queryClient.invalidateQueries({ queryKey: meetingsKey });
   const invalidateActionItems = () => queryClient.invalidateQueries({ queryKey: actionItemsKey });
+  const invalidateDecisions = () => queryClient.invalidateQueries({ queryKey: decisionsKey });
+  const invalidateOpenQuestions = () => queryClient.invalidateQueries({ queryKey: openQuestionsKey });
   const invalidateCorrespondence = () => queryClient.invalidateQueries({ queryKey: correspondenceKey });
   const invalidateSummary = () => queryClient.invalidateQueries({ queryKey: summaryKey });
 
-  // One promise chain per meeting so rapid checkbox toggles apply in order and the
-  // server's read-modify-write of the agenda JSON never races itself. `agendaPending`
-  // tracks toggles that are queued but not yet confirmed, so when a server response
-  // lands we can replay the still-pending toggles over it instead of letting an
-  // earlier response erase a later optimistic change.
-  const agendaChains = useRef(new Map<number, Promise<unknown>>());
-  const agendaPending = useRef(new Map<number, AgendaToggle[]>());
+  // ONE promise chain per meeting so every checklist write for that row is
+  // serialized: at most one PATCH is in flight per meeting, so the server's
+  // read-modify-write of its JSON columns never races itself, regardless of which
+  // section (pre-work / standing agenda / exit criteria) or which blob (the
+  // meeting's own `agendaPlan` vs the proposed next `generatedAgenda`) is toggled.
+  // `pending` holds the still-unconfirmed transforms; when a response lands we
+  // shift the one it confirms and replay ALL remaining pending transforms over the
+  // returned row so an in-flight toggle in any other section is never erased.
+  const toggleChains = useRef(new Map<number, Promise<unknown>>());
+  const togglePending = useRef(new Map<number, ((m: Meeting) => Meeting)[]>());
 
-  function toggleAgenda(
+  function runMeetingToggle(
     meetingId: number,
-    itemIndex: number,
-    promptIndex: number | null,
-    done: boolean,
+    apply: (m: Meeting) => Meeting,
+    call: () => Promise<Meeting>,
   ) {
-    const pending = agendaPending.current.get(meetingId) ?? [];
-    pending.push({ itemIndex, promptIndex, done });
-    agendaPending.current.set(meetingId, pending);
+    const pending = togglePending.current.get(meetingId) ?? [];
+    pending.push(apply);
+    togglePending.current.set(meetingId, pending);
 
     queryClient.setQueryData<Meeting[]>(meetingsKey, (old) =>
-      old?.map((m) =>
-        m.id === meetingId && m.generatedAgenda
-          ? { ...m, generatedAgenda: applyAgendaToggle(m.generatedAgenda, itemIndex, promptIndex, done) }
-          : m,
-      ),
+      old?.map((m) => (m.id === meetingId ? apply(m) : m)),
     );
 
-    const prev = agendaChains.current.get(meetingId) ?? Promise.resolve();
+    const prev = toggleChains.current.get(meetingId) ?? Promise.resolve();
     const next = prev
       .catch(() => {})
-      .then(() => setAgendaChecklist.mutateAsync({ id: meetingId, data: { itemIndex, promptIndex, done } }))
+      .then(() => call())
       .then((updated) => {
-        // Drop this now-confirmed toggle (responses settle in chain order, FIFO),
-        // then replay any toggles still queued so optimistic state survives.
-        const rest = agendaPending.current.get(meetingId) ?? [];
+        const rest = togglePending.current.get(meetingId) ?? [];
         rest.shift();
-        let agenda = updated.generatedAgenda;
-        if (agenda) {
-          for (const t of rest) agenda = applyAgendaToggle(agenda, t.itemIndex, t.promptIndex, t.done);
-        }
-        const merged: Meeting = { ...updated, generatedAgenda: agenda };
+        let merged = updated;
+        for (const fn of rest) merged = fn(merged);
         queryClient.setQueryData<Meeting[]>(meetingsKey, (old) =>
           old?.map((m) => (m.id === merged.id ? merged : m)),
         );
       })
       .catch((err) => {
-        (agendaPending.current.get(meetingId) ?? []).shift();
-        fail(err, "Could not update the agenda");
+        (togglePending.current.get(meetingId) ?? []).shift();
+        fail(err, "Could not update the checklist");
         invalidateMeetings();
       });
-    agendaChains.current.set(meetingId, next);
+    toggleChains.current.set(meetingId, next);
+  }
+
+  function toggleAgenda(meetingId: number, itemIndex: number, promptIndex: number | null, done: boolean) {
+    runMeetingToggle(
+      meetingId,
+      (m) =>
+        m.generatedAgenda
+          ? { ...m, generatedAgenda: applyAgendaToggle(m.generatedAgenda, itemIndex, promptIndex, done) }
+          : m,
+      () => setAgendaChecklist.mutateAsync({ id: meetingId, data: { itemIndex, promptIndex, done } }),
+    );
+  }
+
+  function togglePlan(
+    meetingId: number,
+    section: PlanSection,
+    itemIndex: number,
+    promptIndex: number | null,
+    value: boolean,
+  ) {
+    runMeetingToggle(
+      meetingId,
+      (m) => ({ ...m, agendaPlan: applyPlanToggle(m.agendaPlan, section, itemIndex, promptIndex, value) }),
+      () =>
+        setMeetingChecklist.mutateAsync({
+          id: meetingId,
+          data: { section, itemIndex, promptIndex, value },
+        }),
+    );
   }
 
   // ---- New meeting form ----
   const [newMeetingTitle, setNewMeetingTitle] = useState("");
+  const [newMeetingType, setNewMeetingType] = useState<MeetingType>("working");
+  const [newMeetingFocus, setNewMeetingFocus] = useState("");
   const [newMeetingAt, setNewMeetingAt] = useState("");
 
   function addMeeting() {
@@ -267,12 +426,22 @@ export default function ProjectMeetings() {
       return;
     }
     createMeeting.mutate(
-      { projectId, data: { title, scheduledAt: localInputToIso(newMeetingAt) } },
+      {
+        projectId,
+        data: {
+          title,
+          meetingType: newMeetingType,
+          focus: newMeetingFocus.trim() || undefined,
+          scheduledAt: localInputToIso(newMeetingAt),
+        },
+      },
       {
         onSuccess: () => {
           invalidateMeetings();
           invalidateSummary();
           setNewMeetingTitle("");
+          setNewMeetingType("working");
+          setNewMeetingFocus("");
           setNewMeetingAt("");
           toast({ title: "Meeting added" });
         },
@@ -291,11 +460,92 @@ export default function ProjectMeetings() {
         onSuccess: () => {
           invalidateMeetings();
           invalidateActionItems();
+          invalidateDecisions();
+          invalidateOpenQuestions();
           invalidateSummary();
           setDeletingMeeting(null);
           toast({ title: "Meeting deleted" });
         },
         onError: (err) => fail(err, "Could not delete the meeting"),
+      },
+    );
+  }
+
+  // ---- Mark meeting completed / reopen ----
+  function setMeetingStatus(meeting: Meeting, status: "scheduled" | "completed") {
+    updateMeeting.mutate(
+      { id: meeting.id, data: { status } },
+      {
+        onSuccess: () => {
+          invalidateMeetings();
+          toast({ title: status === "completed" ? "Meeting marked completed" : "Meeting reopened" });
+        },
+        onError: (err) => fail(err, "Could not update the meeting"),
+      },
+    );
+  }
+
+  // ---- Per-meeting live-capture handlers ----
+  function addDecision(meetingId: number, text: string, decidedBy: string, done: () => void) {
+    createDecision.mutate(
+      { projectId, data: { text, decidedBy: decidedBy.trim() || undefined, meetingId } },
+      {
+        onSuccess: () => {
+          invalidateDecisions();
+          toast({ title: "Decision recorded" });
+          done();
+        },
+        onError: (err) => fail(err, "Could not record the decision"),
+      },
+    );
+  }
+
+  function removeDecision(id: number) {
+    deleteDecision.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          invalidateDecisions();
+          toast({ title: "Decision removed" });
+        },
+        onError: (err) => fail(err, "Could not remove the decision"),
+      },
+    );
+  }
+
+  function addQuestion(meetingId: number, text: string, done: () => void) {
+    createQuestion.mutate(
+      { projectId, data: { text, meetingId } },
+      {
+        onSuccess: () => {
+          invalidateOpenQuestions();
+          toast({ title: "Open question captured" });
+          done();
+        },
+        onError: (err) => fail(err, "Could not capture the question"),
+      },
+    );
+  }
+
+  function resolveQuestion(question: MeetingOpenQuestion, resolved: boolean) {
+    updateQuestion.mutate(
+      { id: question.id, data: { status: resolved ? "resolved" : "open" } },
+      {
+        onSuccess: () => invalidateOpenQuestions(),
+        onError: (err) => fail(err, "Could not update the question"),
+      },
+    );
+  }
+
+  function removeQuestion(id: number) {
+    deleteQuestion.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          invalidateOpenQuestions();
+          toast({ title: "Question removed" });
+        },
+        onError: (err) => fail(err, "Could not remove the question"),
       },
     );
   }
@@ -475,7 +725,7 @@ export default function ProjectMeetings() {
   const openCount = summary?.openActionItems ?? actionItems.filter((a) => a.status === "open").length;
 
   return (
-    <ProjectWorkspace subtitle="Run weekly meetings, track action items and correspondence, and see what is due.">
+    <ProjectWorkspace subtitle="Run kickoff, working, and final meetings with type-aware agendas, live capture, and a clear definition of done.">
       {() => (
         <Tabs defaultValue="meetings" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:grid-cols-4">
@@ -504,12 +754,13 @@ export default function ProjectMeetings() {
                   <CalendarClock className="h-5 w-5 text-primary" aria-hidden="true" /> Schedule a meeting
                 </CardTitle>
                 <CardDescription>
-                  Add a meeting, capture notes during it, then generate the next agenda from those notes.
+                  Choose a meeting type to seed its pre-work, standing agenda, and definition of done. Capture
+                  notes during it, then generate the next agenda.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-                  <div className="space-y-1.5">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+                  <div className="space-y-1.5 lg:col-span-2">
                     <Label htmlFor="meeting-title">Title</Label>
                     <Input
                       id="meeting-title"
@@ -520,6 +771,21 @@ export default function ProjectMeetings() {
                     />
                   </div>
                   <div className="space-y-1.5">
+                    <Label htmlFor="meeting-type">Type</Label>
+                    <Select value={newMeetingType} onValueChange={(v) => setNewMeetingType(v as MeetingType)}>
+                      <SelectTrigger id="meeting-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MEETING_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {MEETING_TYPE_LABELS[t]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
                     <Label htmlFor="meeting-at">Date and time (optional)</Label>
                     <Input
                       id="meeting-at"
@@ -528,9 +794,21 @@ export default function ProjectMeetings() {
                       onChange={(e) => setNewMeetingAt(e.target.value)}
                     />
                   </div>
-                  <Button onClick={addMeeting} disabled={createMeeting.isPending}>
-                    <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> Add meeting
-                  </Button>
+                  <div className="space-y-1.5 lg:col-span-3">
+                    <Label htmlFor="meeting-focus">Focus (optional)</Label>
+                    <Input
+                      id="meeting-focus"
+                      value={newMeetingFocus}
+                      maxLength={200}
+                      onChange={(e) => setNewMeetingFocus(e.target.value)}
+                      placeholder="What is this meeting mainly about?"
+                    />
+                  </div>
+                  <div className="lg:flex lg:items-end">
+                    <Button onClick={addMeeting} disabled={createMeeting.isPending} className="w-full sm:w-auto">
+                      <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> Add meeting
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -539,7 +817,7 @@ export default function ProjectMeetings() {
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
                   <CalendarClock className="mb-4 h-12 w-12 text-muted" aria-hidden="true" />
-                  <p>No meetings yet. Add one above to start the weekly cycle.</p>
+                  <p>No meetings yet. Add one above to start the cycle.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -548,8 +826,13 @@ export default function ProjectMeetings() {
                   <MeetingCard
                     key={meeting.id}
                     meeting={meeting}
+                    decisions={decisionsByMeeting.get(meeting.id) ?? []}
+                    questions={questionsByMeeting.get(meeting.id) ?? []}
+                    actionItems={actionItemsByMeeting.get(meeting.id) ?? []}
                     isProcessing={processNotes.isPending}
                     isSavingNotes={updateMeeting.isPending}
+                    isSavingDecision={createDecision.isPending}
+                    isSavingQuestion={createQuestion.isPending}
                     onSaveNotes={(notes) =>
                       updateMeeting.mutate(
                         { id: meeting.id, data: { notes } },
@@ -576,19 +859,25 @@ export default function ProjectMeetings() {
                         },
                       )
                     }
-                    onGenerate={() =>
+                    onGenerate={(nextMeetingType) =>
                       processNotes.mutate(
-                        { id: meeting.id },
+                        { id: meeting.id, data: { nextMeetingType } },
                         {
                           onSuccess: (res) => {
                             invalidateMeetings();
                             invalidateActionItems();
+                            invalidateDecisions();
+                            invalidateOpenQuestions();
                             invalidateSummary();
                             toast({
-                              title: "Agenda generated",
+                              title: "Next agenda generated",
                               description: `${res.createdActionItems.length} action item${
                                 res.createdActionItems.length === 1 ? "" : "s"
-                              } extracted (${res.provider === "openai" ? "AI" : "rules"}).`,
+                              }, ${res.createdDecisions.length} decision${
+                                res.createdDecisions.length === 1 ? "" : "s"
+                              }, ${res.createdOpenQuestions.length} open question${
+                                res.createdOpenQuestions.length === 1 ? "" : "s"
+                              } captured (${res.provider === "openai" ? "AI" : "rules"}).`,
                             });
                           },
                           onError: (err) => fail(err, "Could not generate the agenda"),
@@ -596,9 +885,20 @@ export default function ProjectMeetings() {
                       )
                     }
                     onDelete={() => setDeletingMeeting(meeting)}
+                    onSetStatus={(status) => setMeetingStatus(meeting, status)}
+                    onTogglePlan={(section, itemIndex, promptIndex, value) =>
+                      togglePlan(meeting.id, section, itemIndex, promptIndex, value)
+                    }
                     onToggleAgenda={(itemIndex, promptIndex, done) =>
                       toggleAgenda(meeting.id, itemIndex, promptIndex, done)
                     }
+                    onAddDecision={(text, decidedBy, done) => addDecision(meeting.id, text, decidedBy, done)}
+                    onDeleteDecision={removeDecision}
+                    onAddQuestion={(text, done) => addQuestion(meeting.id, text, done)}
+                    onResolveQuestion={resolveQuestion}
+                    onDeleteQuestion={removeQuestion}
+                    onToggleActionItem={toggleActionItem}
+                    onDeleteActionItem={(item) => setDeletingItem(item)}
                   />
                 ))}
               </div>
@@ -929,7 +1229,8 @@ export default function ProjectMeetings() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete this meeting?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This removes the meeting, its notes, and its generated agenda. Action items already created stay.
+                  This removes the meeting, its plan, notes, and generated agenda. Action items, decisions, and open
+                  questions already captured stay.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1050,38 +1351,98 @@ export default function ProjectMeetings() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Meeting card: notes editing, agenda generation, details edit       */
+/* Meeting card: a per-meeting workspace                              */
+/*   type/status, pre-work, standing agenda, notes + generation,     */
+/*   the three live-capture streams, definition of done, next agenda */
 /* ------------------------------------------------------------------ */
 
 function MeetingCard({
   meeting,
+  decisions,
+  questions,
+  actionItems,
   isProcessing,
   isSavingNotes,
+  isSavingDecision,
+  isSavingQuestion,
   onSaveNotes,
   onSaveDetails,
   onGenerate,
   onDelete,
+  onSetStatus,
+  onTogglePlan,
   onToggleAgenda,
+  onAddDecision,
+  onDeleteDecision,
+  onAddQuestion,
+  onResolveQuestion,
+  onDeleteQuestion,
+  onToggleActionItem,
+  onDeleteActionItem,
 }: {
   meeting: Meeting;
+  decisions: MeetingDecision[];
+  questions: MeetingOpenQuestion[];
+  actionItems: ActionItem[];
   isProcessing: boolean;
   isSavingNotes: boolean;
+  isSavingDecision: boolean;
+  isSavingQuestion: boolean;
   onSaveNotes: (notes: string) => void;
-  onSaveDetails: (data: { title: string; scheduledAt: string | null }, done: () => void) => void;
-  onGenerate: () => void;
+  onSaveDetails: (
+    data: { title: string; meetingType: MeetingType; focus: string | null; scheduledAt: string | null },
+    done: () => void,
+  ) => void;
+  onGenerate: (nextMeetingType: MeetingType) => void;
   onDelete: () => void;
+  onSetStatus: (status: "scheduled" | "completed") => void;
+  onTogglePlan: (section: PlanSection, itemIndex: number, promptIndex: number | null, value: boolean) => void;
   onToggleAgenda: (itemIndex: number, promptIndex: number | null, done: boolean) => void;
+  onAddDecision: (text: string, decidedBy: string, done: () => void) => void;
+  onDeleteDecision: (id: number) => void;
+  onAddQuestion: (text: string, done: () => void) => void;
+  onResolveQuestion: (question: MeetingOpenQuestion, resolved: boolean) => void;
+  onDeleteQuestion: (id: number) => void;
+  onToggleActionItem: (item: ActionItem, done: boolean) => void;
+  onDeleteActionItem: (item: ActionItem) => void;
 }) {
   const [notes, setNotes] = useState(meeting.notes);
+  // Adopt server-side note changes (e.g. a transcript inserted via MeetingRecordings)
+  // during render, but only when the local copy is not dirty so we never clobber the
+  // operator's unsaved edits. React's recommended prop->state sync without an effect.
+  const [serverNotes, setServerNotes] = useState(meeting.notes);
+  if (meeting.notes !== serverNotes) {
+    if (notes === serverNotes) setNotes(meeting.notes);
+    setServerNotes(meeting.notes);
+  }
   const [editingDetails, setEditingDetails] = useState(false);
   const [editTitle, setEditTitle] = useState(meeting.title);
+  const [editType, setEditType] = useState<MeetingType>(
+    isMeetingType(meeting.meetingType) ? meeting.meetingType : "working",
+  );
+  const [editFocus, setEditFocus] = useState(meeting.focus ?? "");
   const [editAt, setEditAt] = useState(toLocalInput(meeting.scheduledAt));
 
+  // Live-capture inline add fields.
+  const [decisionText, setDecisionText] = useState("");
+  const [decisionBy, setDecisionBy] = useState("");
+  const [questionText, setQuestionText] = useState("");
+
+  // Preselect the proposed next type from the current type; the user can override.
+  const currentType: MeetingType = isMeetingType(meeting.meetingType) ? meeting.meetingType : "working";
+  const [nextType, setNextType] = useState<MeetingType>(suggestNextType(currentType));
+
   const notesDirty = notes !== meeting.notes;
+  const completed = meeting.status === "completed";
+  const plan = meeting.agendaPlan;
   const agenda = meeting.generatedAgenda ?? null;
 
-  // Checklist progress: each prompt is one item; an item with no prompts counts as
-  // a single checkable line via its own `done` flag.
+  const preworkDone = plan.prework.filter((p) => p.done).length;
+  const exitMet = plan.exitCriteria.filter((c) => c.met).length;
+  const exitUnmet = plan.exitCriteria.length - exitMet;
+
+  // Proposed next-agenda checklist progress: each prompt is one item; an item with
+  // no prompts counts as a single checkable line via its own `done` flag.
   let agendaTotal = 0;
   let agendaDone = 0;
   for (const it of agenda?.items ?? []) {
@@ -1096,8 +1457,25 @@ function MeetingCard({
 
   function openEdit() {
     setEditTitle(meeting.title);
+    setEditType(isMeetingType(meeting.meetingType) ? meeting.meetingType : "working");
+    setEditFocus(meeting.focus ?? "");
     setEditAt(toLocalInput(meeting.scheduledAt));
     setEditingDetails(true);
+  }
+
+  function submitDecision() {
+    const text = decisionText.trim();
+    if (!text) return;
+    onAddDecision(text, decisionBy, () => {
+      setDecisionText("");
+      setDecisionBy("");
+    });
+  }
+
+  function submitQuestion() {
+    const text = questionText.trim();
+    if (!text) return;
+    onAddQuestion(text, () => setQuestionText(""));
   }
 
   return (
@@ -1107,6 +1485,24 @@ function MeetingCard({
           <div className="min-w-0">
             <CardTitle className="flex flex-wrap items-center gap-2">
               {meeting.title}
+              <Badge
+                variant="secondary"
+                className={`shadow-none hover:bg-current/0 ${MEETING_TYPE_STYLES[currentType]}`}
+              >
+                {MEETING_TYPE_LABELS[currentType]}
+              </Badge>
+              {completed ? (
+                <Badge
+                  variant="secondary"
+                  className="bg-emerald-100 text-emerald-800 shadow-none hover:bg-emerald-100"
+                >
+                  <CheckCircle2 className="mr-1 h-3 w-3" aria-hidden="true" /> Completed
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="font-normal">
+                  Scheduled
+                </Badge>
+              )}
               {meeting.aiProvider && (
                 <Badge variant="secondary" className="border-primary/20 bg-primary/10 text-primary shadow-none hover:bg-primary/10">
                   {meeting.aiProvider === "openai" ? "AI agenda" : "Agenda ready"}
@@ -1116,6 +1512,7 @@ function MeetingCard({
             <CardDescription>
               {meeting.scheduledAt ? fmtDateTime(meeting.scheduledAt) : "No date set"}
             </CardDescription>
+            {meeting.focus && <p className="mt-1 text-sm text-muted-foreground">Focus: {meeting.focus}</p>}
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={openEdit} aria-label={`Edit meeting: ${meeting.title}`}>
@@ -1128,6 +1525,107 @@ function MeetingCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Pre-work */}
+        {plan.prework.length > 0 && (
+          <section className="rounded-lg border bg-muted/20 p-4" aria-label="Pre-work">
+            <div className="mb-3 flex items-center justify-between">
+              <h4 className="flex items-center gap-2 font-semibold">
+                <ClipboardList className="h-4 w-4 text-primary" aria-hidden="true" /> Pre-work
+              </h4>
+              <span className="text-xs text-muted-foreground">
+                {preworkDone} of {plan.prework.length} ready
+              </span>
+            </div>
+            <ul className="space-y-1.5">
+              {plan.prework.map((item, i) => {
+                const id = `prework-${meeting.id}-${i}`;
+                return (
+                  <li key={i}>
+                    <label className="flex items-start gap-2 text-sm" htmlFor={id}>
+                      <Checkbox
+                        id={id}
+                        checked={item.done}
+                        onCheckedChange={(v) => onTogglePlan("prework", i, null, v === true)}
+                        className="mt-0.5"
+                      />
+                      <span className={item.done ? "text-muted-foreground line-through" : ""}>{item.text}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
+        {/* Standing agenda */}
+        {plan.agenda.length > 0 && (
+          <section className="rounded-lg border bg-muted/20 p-4" aria-label="Standing agenda">
+            <h4 className="mb-3 flex items-center gap-2 font-semibold">
+              <FileText className="h-4 w-4 text-primary" aria-hidden="true" /> Standing agenda
+            </h4>
+            <ol className="space-y-2">
+              {plan.agenda.map((it, i) => {
+                const hasPrompts = it.prompts.length > 0;
+                const promptsDone = it.promptsDone ?? [];
+                const itemComplete = hasPrompts ? it.prompts.every((_, j) => promptsDone[j]) : Boolean(it.done);
+                return (
+                  <li key={i} className="rounded-md border bg-card p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      {hasPrompts ? (
+                        <span className={`font-medium ${itemComplete ? "text-muted-foreground line-through" : ""}`}>
+                          {it.title}
+                        </span>
+                      ) : (
+                        <label className="flex items-start gap-2" htmlFor={`plan-agenda-${meeting.id}-${i}`}>
+                          <Checkbox
+                            id={`plan-agenda-${meeting.id}-${i}`}
+                            checked={itemComplete}
+                            onCheckedChange={(v) => onTogglePlan("agenda", i, null, v === true)}
+                            className="mt-0.5"
+                          />
+                          <span className={`font-medium ${itemComplete ? "text-muted-foreground line-through" : ""}`}>
+                            {it.title}
+                          </span>
+                        </label>
+                      )}
+                      <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                        {hasPrompts && (
+                          <span>
+                            {it.prompts.filter((_, j) => promptsDone[j]).length}/{it.prompts.length}
+                          </span>
+                        )}
+                        <span>{it.minutes} min</span>
+                      </span>
+                    </div>
+                    {hasPrompts && (
+                      <ul className="mt-2 space-y-1.5 pl-1">
+                        {it.prompts.map((p, j) => {
+                          const checked = Boolean(promptsDone[j]);
+                          const id = `plan-agenda-${meeting.id}-${i}-${j}`;
+                          return (
+                            <li key={j}>
+                              <label className="flex items-start gap-2 text-sm" htmlFor={id}>
+                                <Checkbox
+                                  id={id}
+                                  checked={checked}
+                                  onCheckedChange={(v) => onTogglePlan("agenda", i, j, v === true)}
+                                  className="mt-0.5"
+                                />
+                                <span className={checked ? "text-muted-foreground line-through" : ""}>{p}</span>
+                              </label>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        )}
+
+        {/* Notes + next agenda generation */}
         <div className="space-y-1.5">
           <Label htmlFor={`notes-${meeting.id}`}>Meeting notes</Label>
           <Textarea
@@ -1136,24 +1634,268 @@ function MeetingCard({
             maxLength={20000}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Capture decisions, blockers, and follow-ups. The agenda generator reads these."
+            placeholder="Capture decisions, action items, and open questions. The generator reads these."
           />
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-end gap-2">
             <Button size="sm" variant="outline" onClick={() => onSaveNotes(notes)} disabled={!notesDirty || isSavingNotes}>
               {isSavingNotes ? "Saving..." : "Save notes"}
             </Button>
-            <Button size="sm" onClick={onGenerate} disabled={isProcessing || notesDirty}>
+            <div className="space-y-1">
+              <Label htmlFor={`next-type-${meeting.id}`} className="text-xs text-muted-foreground">
+                Next meeting type
+              </Label>
+              <Select value={nextType} onValueChange={(v) => setNextType(v as MeetingType)}>
+                <SelectTrigger id={`next-type-${meeting.id}`} className="h-9 w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MEETING_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {MEETING_TYPE_LABELS[t]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button size="sm" onClick={() => onGenerate(nextType)} disabled={isProcessing || notesDirty}>
               {isProcessing ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (
                 <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
               )}
-              Generate agenda from notes
+              Generate next agenda
             </Button>
             {notesDirty && <span className="text-xs text-muted-foreground">Save notes before generating.</span>}
           </div>
         </div>
 
+        {/* Live capture: the three streams for this meeting */}
+        <section className="rounded-lg border bg-muted/20 p-4" aria-label="Live capture">
+          <h4 className="mb-3 font-semibold">Live capture</h4>
+          <div className="grid gap-4 lg:grid-cols-3">
+            {/* Decisions */}
+            <div className="space-y-2">
+              <h5 className="flex items-center gap-2 text-sm font-medium">
+                <Gavel className="h-4 w-4 text-primary" aria-hidden="true" /> Decisions
+              </h5>
+              {decisions.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No decisions recorded yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {decisions.map((d) => (
+                    <li key={d.id} className="flex items-start justify-between gap-2 rounded-md border bg-card p-2">
+                      <div className="min-w-0 text-sm">
+                        <p>{d.text}</p>
+                        {d.decidedBy && <p className="mt-0.5 text-xs text-muted-foreground">By {d.decidedBy}</p>}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => onDeleteDecision(d.id)}
+                        aria-label="Delete decision"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor={`dec-text-${meeting.id}`} className="sr-only">
+                  Decision
+                </Label>
+                <Input
+                  id={`dec-text-${meeting.id}`}
+                  value={decisionText}
+                  maxLength={1000}
+                  onChange={(e) => setDecisionText(e.target.value)}
+                  placeholder="Record a decision"
+                />
+                <Label htmlFor={`dec-by-${meeting.id}`} className="sr-only">
+                  Decided by
+                </Label>
+                <Input
+                  id={`dec-by-${meeting.id}`}
+                  value={decisionBy}
+                  maxLength={200}
+                  onChange={(e) => setDecisionBy(e.target.value)}
+                  placeholder="Decided by (optional)"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  onClick={submitDecision}
+                  disabled={isSavingDecision || !decisionText.trim()}
+                >
+                  <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Record decision
+                </Button>
+              </div>
+            </div>
+
+            {/* Action items */}
+            <div className="space-y-2">
+              <h5 className="flex items-center gap-2 text-sm font-medium">
+                <ListChecks className="h-4 w-4 text-primary" aria-hidden="true" /> Action items
+              </h5>
+              {actionItems.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  None from this meeting yet. Generate the agenda to extract them, or add them under Action items.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {actionItems.map((a) => {
+                    const done = a.status === "done";
+                    return (
+                      <li key={a.id} className="flex items-start justify-between gap-2 rounded-md border bg-card p-2">
+                        <label className="flex min-w-0 items-start gap-2 text-sm" htmlFor={`mi-${meeting.id}-${a.id}`}>
+                          <Checkbox
+                            id={`mi-${meeting.id}-${a.id}`}
+                            checked={done}
+                            onCheckedChange={(v) => onToggleActionItem(a, v === true)}
+                            className="mt-0.5"
+                          />
+                          <span className="min-w-0">
+                            <span className={done ? "text-muted-foreground line-through" : ""}>{a.title}</span>
+                            {(a.ownerName || a.dueAt) && (
+                              <span className="mt-0.5 block text-xs text-muted-foreground">
+                                {a.ownerName}
+                                {a.ownerName && a.dueAt ? " - " : ""}
+                                {a.dueAt ? `Due ${fmtDate(a.dueAt)}` : ""}
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          onClick={() => onDeleteActionItem(a)}
+                          aria-label={`Delete action item: ${a.title}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            {/* Open questions */}
+            <div className="space-y-2">
+              <h5 className="flex items-center gap-2 text-sm font-medium">
+                <HelpCircle className="h-4 w-4 text-primary" aria-hidden="true" /> Open questions
+              </h5>
+              {questions.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No open questions yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {questions.map((q) => {
+                    const resolved = q.status === "resolved";
+                    return (
+                      <li key={q.id} className="flex items-start justify-between gap-2 rounded-md border bg-card p-2">
+                        <label className="flex min-w-0 items-start gap-2 text-sm" htmlFor={`oq-${meeting.id}-${q.id}`}>
+                          <Checkbox
+                            id={`oq-${meeting.id}-${q.id}`}
+                            checked={resolved}
+                            onCheckedChange={(v) => onResolveQuestion(q, v === true)}
+                            aria-label={resolved ? "Mark question open" : "Mark question resolved"}
+                            className="mt-0.5"
+                          />
+                          <span className={resolved ? "text-muted-foreground line-through" : ""}>{q.text}</span>
+                        </label>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          onClick={() => onDeleteQuestion(q.id)}
+                          aria-label="Delete open question"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor={`q-text-${meeting.id}`} className="sr-only">
+                  Open question
+                </Label>
+                <Input
+                  id={`q-text-${meeting.id}`}
+                  value={questionText}
+                  maxLength={1000}
+                  onChange={(e) => setQuestionText(e.target.value)}
+                  placeholder="Capture an open question"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  onClick={submitQuestion}
+                  disabled={isSavingQuestion || !questionText.trim()}
+                >
+                  <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Add question
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Definition of done (exit criteria) */}
+        {plan.exitCriteria.length > 0 && (
+          <section className="rounded-lg border bg-muted/20 p-4" aria-label="Definition of done">
+            <div className="mb-3 flex items-center justify-between">
+              <h4 className="flex items-center gap-2 font-semibold">
+                <Target className="h-4 w-4 text-primary" aria-hidden="true" /> Definition of done
+              </h4>
+              <span className="text-xs text-muted-foreground">
+                {exitMet} of {plan.exitCriteria.length} met
+              </span>
+            </div>
+            <ul className="space-y-1.5">
+              {plan.exitCriteria.map((c, i) => {
+                const id = `exit-${meeting.id}-${i}`;
+                return (
+                  <li key={i}>
+                    <label className="flex items-start gap-2 text-sm" htmlFor={id}>
+                      <Checkbox
+                        id={id}
+                        checked={c.met}
+                        onCheckedChange={(v) => onTogglePlan("exitCriteria", i, null, v === true)}
+                        className="mt-0.5"
+                      />
+                      <span className={c.met ? "text-muted-foreground line-through" : ""}>{c.text}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
+        {/* Complete / reopen */}
+        <div className="flex flex-wrap items-center gap-2">
+          {completed ? (
+            <Button size="sm" variant="outline" onClick={() => onSetStatus("scheduled")}>
+              <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" /> Reopen meeting
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => onSetStatus("completed")}>
+              <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden="true" /> Mark completed
+            </Button>
+          )}
+          {!completed && exitUnmet > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {exitUnmet} of {plan.exitCriteria.length} exit criteria not yet met. You can still complete.
+            </span>
+          )}
+        </div>
+
+        {/* Proposed next agenda */}
         {agenda && (
           <div className="rounded-lg border bg-muted/20 p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -1161,13 +1903,23 @@ function MeetingCard({
                 <FileText className="h-4 w-4 text-primary" aria-hidden="true" /> Proposed next agenda
               </h4>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {agenda.nextMeetingType && isMeetingType(agenda.nextMeetingType) && (
+                  <Badge
+                    variant="secondary"
+                    className={`shadow-none hover:bg-current/0 ${MEETING_TYPE_STYLES[agenda.nextMeetingType]}`}
+                  >
+                    {MEETING_TYPE_LABELS[agenda.nextMeetingType]}
+                  </Badge>
+                )}
                 {agenda.proposedDate && (
                   <Badge variant="outline" className="font-normal">
                     {fmtDate(agenda.proposedDate)}
                     {agenda.proposedTime ? ` at ${agenda.proposedTime}` : ""}
                   </Badge>
                 )}
-                <span>{agenda.openActionCount} open action item{agenda.openActionCount === 1 ? "" : "s"}</span>
+                <span>
+                  {agenda.openActionCount} open action item{agenda.openActionCount === 1 ? "" : "s"}
+                </span>
               </div>
             </div>
             {agenda.summary.length > 0 && (
@@ -1195,16 +1947,12 @@ function MeetingCard({
               {agenda.items.map((it, i) => {
                 const hasPrompts = it.prompts.length > 0;
                 const promptsDone = it.promptsDone ?? [];
-                const itemComplete = hasPrompts
-                  ? it.prompts.every((_, j) => promptsDone[j])
-                  : Boolean(it.done);
+                const itemComplete = hasPrompts ? it.prompts.every((_, j) => promptsDone[j]) : Boolean(it.done);
                 return (
                   <li key={i} className="rounded-md border bg-card p-3">
                     <div className="flex items-start justify-between gap-2">
                       {hasPrompts ? (
-                        <span
-                          className={`font-medium ${itemComplete ? "text-muted-foreground line-through" : ""}`}
-                        >
+                        <span className={`font-medium ${itemComplete ? "text-muted-foreground line-through" : ""}`}>
                           {it.title}
                         </span>
                       ) : (
@@ -1212,14 +1960,10 @@ function MeetingCard({
                           <Checkbox
                             id={`agenda-${meeting.id}-${i}`}
                             checked={itemComplete}
-                            onCheckedChange={(checked) =>
-                              onToggleAgenda(i, null, checked === true)
-                            }
+                            onCheckedChange={(checked) => onToggleAgenda(i, null, checked === true)}
                             className="mt-0.5"
                           />
-                          <span
-                            className={`font-medium ${itemComplete ? "text-muted-foreground line-through" : ""}`}
-                          >
+                          <span className={`font-medium ${itemComplete ? "text-muted-foreground line-through" : ""}`}>
                             {it.title}
                           </span>
                         </label>
@@ -1247,11 +1991,7 @@ function MeetingCard({
                                   onCheckedChange={(value) => onToggleAgenda(i, j, value === true)}
                                   className="mt-0.5"
                                 />
-                                <span
-                                  className={checked ? "text-muted-foreground line-through" : ""}
-                                >
-                                  {p}
-                                </span>
+                                <span className={checked ? "text-muted-foreground line-through" : ""}>{p}</span>
                               </label>
                             </li>
                           );
@@ -1270,7 +2010,9 @@ function MeetingCard({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit meeting</DialogTitle>
-            <DialogDescription>Update the title or scheduled time.</DialogDescription>
+            <DialogDescription>
+              Update the title, type, focus, or scheduled time. Changing the type does not reset checklist progress.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
@@ -1282,13 +2024,39 @@ function MeetingCard({
                 onChange={(e) => setEditTitle(e.target.value)}
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor={`edit-type-${meeting.id}`}>Type</Label>
+                <Select value={editType} onValueChange={(v) => setEditType(v as MeetingType)}>
+                  <SelectTrigger id={`edit-type-${meeting.id}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MEETING_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {MEETING_TYPE_LABELS[t]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor={`edit-at-${meeting.id}`}>Date and time</Label>
+                <Input
+                  id={`edit-at-${meeting.id}`}
+                  type="datetime-local"
+                  value={editAt}
+                  onChange={(e) => setEditAt(e.target.value)}
+                />
+              </div>
+            </div>
             <div className="space-y-1.5">
-              <Label htmlFor={`edit-at-${meeting.id}`}>Date and time</Label>
+              <Label htmlFor={`edit-focus-${meeting.id}`}>Focus (optional)</Label>
               <Input
-                id={`edit-at-${meeting.id}`}
-                type="datetime-local"
-                value={editAt}
-                onChange={(e) => setEditAt(e.target.value)}
+                id={`edit-focus-${meeting.id}`}
+                value={editFocus}
+                maxLength={200}
+                onChange={(e) => setEditFocus(e.target.value)}
               />
             </div>
           </div>
@@ -1300,7 +2068,15 @@ function MeetingCard({
               onClick={() => {
                 const title = editTitle.trim();
                 if (!title) return;
-                onSaveDetails({ title, scheduledAt: localInputToIso(editAt) ?? null }, () => setEditingDetails(false));
+                onSaveDetails(
+                  {
+                    title,
+                    meetingType: editType,
+                    focus: editFocus.trim() ? editFocus.trim() : null,
+                    scheduledAt: localInputToIso(editAt) ?? null,
+                  },
+                  () => setEditingDetails(false),
+                );
               }}
               disabled={isSavingNotes}
             >

@@ -16,6 +16,8 @@ import {
   meetingRecordingsTable,
   projectMeetingsTable,
   meetingActionItemsTable,
+  meetingDecisionsTable,
+  meetingOpenQuestionsTable,
   projectCorrespondenceTable,
   projectTimeEntriesTable,
   type AllocationScopeType,
@@ -387,6 +389,28 @@ export async function resolveCorrespondenceScope(correspondenceId: number): Prom
     .innerJoin(projectsTable, eq(projectCorrespondenceTable.projectId, projectsTable.id))
     .innerJoin(clientsTable, eq(projectsTable.clientId, clientsTable.id))
     .where(eq(projectCorrespondenceTable.id, correspondenceId));
+  if (!row) return null;
+  return { orgId: row.orgId, level: "project", projectId: row.projectId, courseId: null, classId: null };
+}
+
+export async function resolveDecisionScope(decisionId: number): Promise<ScopeRef | null> {
+  const [row] = await db
+    .select({ orgId: clientsTable.organizationId, projectId: projectsTable.id })
+    .from(meetingDecisionsTable)
+    .innerJoin(projectsTable, eq(meetingDecisionsTable.projectId, projectsTable.id))
+    .innerJoin(clientsTable, eq(projectsTable.clientId, clientsTable.id))
+    .where(eq(meetingDecisionsTable.id, decisionId));
+  if (!row) return null;
+  return { orgId: row.orgId, level: "project", projectId: row.projectId, courseId: null, classId: null };
+}
+
+export async function resolveOpenQuestionScope(questionId: number): Promise<ScopeRef | null> {
+  const [row] = await db
+    .select({ orgId: clientsTable.organizationId, projectId: projectsTable.id })
+    .from(meetingOpenQuestionsTable)
+    .innerJoin(projectsTable, eq(meetingOpenQuestionsTable.projectId, projectsTable.id))
+    .innerJoin(clientsTable, eq(projectsTable.clientId, clientsTable.id))
+    .where(eq(meetingOpenQuestionsTable.id, questionId));
   if (!row) return null;
   return { orgId: row.orgId, level: "project", projectId: row.projectId, courseId: null, classId: null };
 }

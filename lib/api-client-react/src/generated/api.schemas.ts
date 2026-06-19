@@ -373,6 +373,15 @@ export interface AgendaChecklistToggle {
   done: boolean;
 }
 
+export type AgendaPlanNextMeetingType = typeof AgendaPlanNextMeetingType[keyof typeof AgendaPlanNextMeetingType];
+
+
+export const AgendaPlanNextMeetingType = {
+  kickoff: 'kickoff',
+  working: 'working',
+  final: 'final',
+} as const;
+
 export interface AgendaPlan {
   generatedAt: string;
   /** @nullable */
@@ -382,15 +391,180 @@ export interface AgendaPlan {
   summary: string[];
   items: AgendaPlanItem[];
   openActionCount: number;
+  nextMeetingType?: AgendaPlanNextMeetingType;
+  openQuestionCount?: number;
+  unmetExitCriteriaCount?: number;
 }
+
+export interface MeetingPlanChecklistItem {
+  text: string;
+  done: boolean;
+}
+
+export interface MeetingPlanExitCriterion {
+  text: string;
+  met: boolean;
+}
+
+export interface MeetingPlan {
+  prework: MeetingPlanChecklistItem[];
+  agenda: AgendaPlanItem[];
+  exitCriteria: MeetingPlanExitCriterion[];
+}
+
+export type MeetingChecklistToggleSection = typeof MeetingChecklistToggleSection[keyof typeof MeetingChecklistToggleSection];
+
+
+export const MeetingChecklistToggleSection = {
+  prework: 'prework',
+  agenda: 'agenda',
+  exitCriteria: 'exitCriteria',
+} as const;
+
+export interface MeetingChecklistToggle {
+  section: MeetingChecklistToggleSection;
+  /** @minimum 0 */
+  itemIndex: number;
+  /**
+     * Only valid when section is agenda; toggles a single prompt within the item.
+     * @minimum 0
+     * @nullable
+     */
+  promptIndex?: number | null;
+  value: boolean;
+}
+
+export interface MeetingDecision {
+  id: number;
+  projectId: number;
+  /** @nullable */
+  meetingId?: number | null;
+  text: string;
+  /** @nullable */
+  decidedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MeetingDecisionInput {
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  text: string;
+  /** @maxLength 200 */
+  decidedBy?: string;
+  /** Optional meeting this decision was captured in; must belong to the same project. */
+  meetingId?: number;
+}
+
+export interface MeetingDecisionUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  text?: string;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  decidedBy?: string | null;
+}
+
+export type MeetingOpenQuestionStatus = typeof MeetingOpenQuestionStatus[keyof typeof MeetingOpenQuestionStatus];
+
+
+export const MeetingOpenQuestionStatus = {
+  open: 'open',
+  resolved: 'resolved',
+} as const;
+
+export interface MeetingOpenQuestion {
+  id: number;
+  projectId: number;
+  /** @nullable */
+  meetingId?: number | null;
+  text: string;
+  status: MeetingOpenQuestionStatus;
+  /** @nullable */
+  resolvedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MeetingOpenQuestionInput {
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  text: string;
+  /** Optional meeting this question was captured in; must belong to the same project. */
+  meetingId?: number;
+}
+
+export type MeetingOpenQuestionUpdateStatus = typeof MeetingOpenQuestionUpdateStatus[keyof typeof MeetingOpenQuestionUpdateStatus];
+
+
+export const MeetingOpenQuestionUpdateStatus = {
+  open: 'open',
+  resolved: 'resolved',
+} as const;
+
+export interface MeetingOpenQuestionUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  text?: string;
+  status?: MeetingOpenQuestionUpdateStatus;
+}
+
+/**
+ * Type of the next meeting to propose an agenda for. Defaults to a sensible follow-up type.
+ */
+export type ProcessNotesInputNextMeetingType = typeof ProcessNotesInputNextMeetingType[keyof typeof ProcessNotesInputNextMeetingType];
+
+
+export const ProcessNotesInputNextMeetingType = {
+  kickoff: 'kickoff',
+  working: 'working',
+  final: 'final',
+} as const;
+
+export interface ProcessNotesInput {
+  /** Type of the next meeting to propose an agenda for. Defaults to a sensible follow-up type. */
+  nextMeetingType?: ProcessNotesInputNextMeetingType;
+}
+
+export type MeetingMeetingType = typeof MeetingMeetingType[keyof typeof MeetingMeetingType];
+
+
+export const MeetingMeetingType = {
+  kickoff: 'kickoff',
+  working: 'working',
+  final: 'final',
+} as const;
+
+export type MeetingStatus = typeof MeetingStatus[keyof typeof MeetingStatus];
+
+
+export const MeetingStatus = {
+  scheduled: 'scheduled',
+  completed: 'completed',
+} as const;
 
 export interface Meeting {
   id: number;
   projectId: number;
   title: string;
+  meetingType: MeetingMeetingType;
+  /** @nullable */
+  focus?: string | null;
+  status: MeetingStatus;
   /** @nullable */
   scheduledAt?: string | null;
   notes: string;
+  agendaPlan: MeetingPlan;
   /** @nullable */
   nextMeetingAt?: string | null;
   generatedAgenda?: AgendaPlan | null;
@@ -400,16 +574,49 @@ export interface Meeting {
   updatedAt: string;
 }
 
+/**
+ * Defaults to working when omitted. Seeds the standing template.
+ */
+export type MeetingInputMeetingType = typeof MeetingInputMeetingType[keyof typeof MeetingInputMeetingType];
+
+
+export const MeetingInputMeetingType = {
+  kickoff: 'kickoff',
+  working: 'working',
+  final: 'final',
+} as const;
+
 export interface MeetingInput {
   /**
      * @minLength 1
      * @maxLength 200
      */
   title: string;
+  /** Defaults to working when omitted. Seeds the standing template. */
+  meetingType?: MeetingInputMeetingType;
+  /** @maxLength 200 */
+  focus?: string;
   scheduledAt?: string;
   /** @maxLength 20000 */
   notes?: string;
 }
+
+export type MeetingUpdateMeetingType = typeof MeetingUpdateMeetingType[keyof typeof MeetingUpdateMeetingType];
+
+
+export const MeetingUpdateMeetingType = {
+  kickoff: 'kickoff',
+  working: 'working',
+  final: 'final',
+} as const;
+
+export type MeetingUpdateStatus = typeof MeetingUpdateStatus[keyof typeof MeetingUpdateStatus];
+
+
+export const MeetingUpdateStatus = {
+  scheduled: 'scheduled',
+  completed: 'completed',
+} as const;
 
 export interface MeetingUpdate {
   /**
@@ -417,6 +624,13 @@ export interface MeetingUpdate {
      * @maxLength 200
      */
   title?: string;
+  meetingType?: MeetingUpdateMeetingType;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  focus?: string | null;
+  status?: MeetingUpdateStatus;
   /** @nullable */
   scheduledAt?: string | null;
   /** @maxLength 20000 */
@@ -551,6 +765,8 @@ export interface ProcessNotesResult {
   provider: ProcessNotesResultProvider;
   meeting: Meeting;
   createdActionItems: ActionItem[];
+  createdDecisions: MeetingDecision[];
+  createdOpenQuestions: MeetingOpenQuestion[];
   agenda: AgendaPlan;
 }
 

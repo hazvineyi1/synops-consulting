@@ -76,7 +76,14 @@ import type {
   ListBuildersParams,
   LoginInput,
   Meeting,
+  MeetingChecklistToggle,
+  MeetingDecision,
+  MeetingDecisionInput,
+  MeetingDecisionUpdate,
   MeetingInput,
+  MeetingOpenQuestion,
+  MeetingOpenQuestionInput,
+  MeetingOpenQuestionUpdate,
   MeetingRecording,
   MeetingRecordingInput,
   MeetingUpdate,
@@ -91,6 +98,7 @@ import type {
   OrganizationBranding,
   PlatformOverview,
   PlatformUser,
+  ProcessNotesInput,
   ProcessNotesResult,
   Project,
   ProjectInput,
@@ -4854,17 +4862,19 @@ export const getProcessMeetingNotesUrl = (id: number,) => {
 }
 
 /**
- * Uses the built-in AI when configured and falls back to a deterministic rules-based extractor otherwise. Returns the created action items and the proposed agenda, and records which provider was used.
- * @summary Turn a meeting's notes into action items and a proposed next-meeting agenda
+ * Extracts decisions, action items, and open questions from the meeting's notes (built-in AI when configured, deterministic rules otherwise). New entries are added idempotently: anything matching an existing project entry by normalized text is skipped, so re-running does not duplicate. Also builds the proposed agenda for the next meeting from its standing template plus everything carried forward (open action items, open questions, and unmet exit criteria from this meeting).
+ * @summary Extract the three live-capture streams from a meeting's notes and propose the next agenda
  */
-export const processMeetingNotes = async (id: number, options?: RequestInit): Promise<ProcessNotesResult> => {
+export const processMeetingNotes = async (id: number,
+    processNotesInput?: ProcessNotesInput, options?: RequestInit): Promise<ProcessNotesResult> => {
 
   return customFetch<ProcessNotesResult>(getProcessMeetingNotesUrl(id),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      processNotesInput,)
   }
 );}
 
@@ -4872,8 +4882,8 @@ export const processMeetingNotes = async (id: number, options?: RequestInit): Pr
 
 
 export const getProcessMeetingNotesMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof processMeetingNotes>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof processMeetingNotes>>, TError,{id: number}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof processMeetingNotes>>, TError,{id: number;data?: BodyType<ProcessNotesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof processMeetingNotes>>, TError,{id: number;data?: BodyType<ProcessNotesInput>}, TContext> => {
 
 const mutationKey = ['processMeetingNotes'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -4885,10 +4895,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof processMeetingNotes>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof processMeetingNotes>>, {id: number;data?: BodyType<ProcessNotesInput>}> = (props) => {
+          const {id,data} = props ?? {};
 
-          return  processMeetingNotes(id,requestOptions)
+          return  processMeetingNotes(id,data,requestOptions)
         }
 
 
@@ -4899,18 +4909,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ProcessMeetingNotesMutationResult = NonNullable<Awaited<ReturnType<typeof processMeetingNotes>>>
-
+    export type ProcessMeetingNotesMutationBody = BodyType<ProcessNotesInput> | undefined
     export type ProcessMeetingNotesMutationError = ErrorType<unknown>
 
     /**
- * @summary Turn a meeting's notes into action items and a proposed next-meeting agenda
+ * @summary Extract the three live-capture streams from a meeting's notes and propose the next agenda
  */
 export const useProcessMeetingNotes = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof processMeetingNotes>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof processMeetingNotes>>, TError,{id: number;data?: BodyType<ProcessNotesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof processMeetingNotes>>,
         TError,
-        {id: number},
+        {id: number;data?: BodyType<ProcessNotesInput>},
         TContext
       > => {
       return useMutation(getProcessMeetingNotesMutationOptions(options));
@@ -5356,6 +5366,661 @@ export function useGetAgendaSummary<TData = Awaited<ReturnType<typeof getAgendaS
 
 
 
+
+export const getSetMeetingChecklistUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/meetings/${id}/checklist`
+}
+
+/**
+ * Toggles one item on the meeting's own structured plan: a pre-work checklist item, a standing-agenda item (or a single prompt within it via promptIndex), or an exit criterion. Applied under a row lock so concurrent toggles never lose each other. Exit criteria are advisory only; marking them does not gate any server action and completion is allowed with unmet criteria.
+ * @summary Toggle a pre-work, standing-agenda, or exit-criteria item on a meeting's plan
+ */
+export const setMeetingChecklist = async (id: number,
+    meetingChecklistToggle: MeetingChecklistToggle, options?: RequestInit): Promise<Meeting> => {
+
+  return customFetch<Meeting>(getSetMeetingChecklistUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      meetingChecklistToggle,)
+  }
+);}
+
+
+
+
+export const getSetMeetingChecklistMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setMeetingChecklist>>, TError,{id: number;data: BodyType<MeetingChecklistToggle>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setMeetingChecklist>>, TError,{id: number;data: BodyType<MeetingChecklistToggle>}, TContext> => {
+
+const mutationKey = ['setMeetingChecklist'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setMeetingChecklist>>, {id: number;data: BodyType<MeetingChecklistToggle>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setMeetingChecklist(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetMeetingChecklistMutationResult = NonNullable<Awaited<ReturnType<typeof setMeetingChecklist>>>
+    export type SetMeetingChecklistMutationBody = BodyType<MeetingChecklistToggle>
+    export type SetMeetingChecklistMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toggle a pre-work, standing-agenda, or exit-criteria item on a meeting's plan
+ */
+export const useSetMeetingChecklist = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setMeetingChecklist>>, TError,{id: number;data: BodyType<MeetingChecklistToggle>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setMeetingChecklist>>,
+        TError,
+        {id: number;data: BodyType<MeetingChecklistToggle>},
+        TContext
+      > => {
+      return useMutation(getSetMeetingChecklistMutationOptions(options));
+    }
+
+export const getListProjectDecisionsUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/compass/projects/${projectId}/decisions`
+}
+
+/**
+ * @summary List decisions recorded for a project (newest first)
+ */
+export const listProjectDecisions = async (projectId: number, options?: RequestInit): Promise<MeetingDecision[]> => {
+
+  return customFetch<MeetingDecision[]>(getListProjectDecisionsUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProjectDecisionsQueryKey = (projectId: number,) => {
+    return [
+    `/api/compass/projects/${projectId}/decisions`
+    ] as const;
+    }
+
+
+export const getListProjectDecisionsQueryOptions = <TData = Awaited<ReturnType<typeof listProjectDecisions>>, TError = ErrorType<unknown>>(projectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectDecisions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProjectDecisionsQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectDecisions>>> = ({ signal }) => listProjectDecisions(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(projectId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProjectDecisions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProjectDecisionsQueryResult = NonNullable<Awaited<ReturnType<typeof listProjectDecisions>>>
+export type ListProjectDecisionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List decisions recorded for a project (newest first)
+ */
+
+export function useListProjectDecisions<TData = Awaited<ReturnType<typeof listProjectDecisions>>, TError = ErrorType<unknown>>(
+ projectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectDecisions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProjectDecisionsQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateProjectDecisionUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/compass/projects/${projectId}/decisions`
+}
+
+/**
+ * @summary Record a decision for a project
+ */
+export const createProjectDecision = async (projectId: number,
+    meetingDecisionInput: MeetingDecisionInput, options?: RequestInit): Promise<MeetingDecision> => {
+
+  return customFetch<MeetingDecision>(getCreateProjectDecisionUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      meetingDecisionInput,)
+  }
+);}
+
+
+
+
+export const getCreateProjectDecisionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProjectDecision>>, TError,{projectId: number;data: BodyType<MeetingDecisionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProjectDecision>>, TError,{projectId: number;data: BodyType<MeetingDecisionInput>}, TContext> => {
+
+const mutationKey = ['createProjectDecision'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProjectDecision>>, {projectId: number;data: BodyType<MeetingDecisionInput>}> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  createProjectDecision(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProjectDecisionMutationResult = NonNullable<Awaited<ReturnType<typeof createProjectDecision>>>
+    export type CreateProjectDecisionMutationBody = BodyType<MeetingDecisionInput>
+    export type CreateProjectDecisionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Record a decision for a project
+ */
+export const useCreateProjectDecision = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProjectDecision>>, TError,{projectId: number;data: BodyType<MeetingDecisionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createProjectDecision>>,
+        TError,
+        {projectId: number;data: BodyType<MeetingDecisionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateProjectDecisionMutationOptions(options));
+    }
+
+export const getUpdateDecisionUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/decisions/${id}`
+}
+
+/**
+ * @summary Edit a recorded decision
+ */
+export const updateDecision = async (id: number,
+    meetingDecisionUpdate: MeetingDecisionUpdate, options?: RequestInit): Promise<MeetingDecision> => {
+
+  return customFetch<MeetingDecision>(getUpdateDecisionUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      meetingDecisionUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateDecisionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDecision>>, TError,{id: number;data: BodyType<MeetingDecisionUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDecision>>, TError,{id: number;data: BodyType<MeetingDecisionUpdate>}, TContext> => {
+
+const mutationKey = ['updateDecision'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDecision>>, {id: number;data: BodyType<MeetingDecisionUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateDecision(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDecisionMutationResult = NonNullable<Awaited<ReturnType<typeof updateDecision>>>
+    export type UpdateDecisionMutationBody = BodyType<MeetingDecisionUpdate>
+    export type UpdateDecisionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Edit a recorded decision
+ */
+export const useUpdateDecision = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDecision>>, TError,{id: number;data: BodyType<MeetingDecisionUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDecision>>,
+        TError,
+        {id: number;data: BodyType<MeetingDecisionUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateDecisionMutationOptions(options));
+    }
+
+export const getDeleteDecisionUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/decisions/${id}`
+}
+
+/**
+ * @summary Delete a recorded decision
+ */
+export const deleteDecision = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteDecisionUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteDecisionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDecision>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteDecision>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteDecision'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDecision>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteDecision(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteDecisionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDecision>>>
+
+    export type DeleteDecisionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a recorded decision
+ */
+export const useDeleteDecision = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDecision>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteDecision>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteDecisionMutationOptions(options));
+    }
+
+export const getListProjectOpenQuestionsUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/compass/projects/${projectId}/open-questions`
+}
+
+/**
+ * @summary List open questions for a project (unresolved first, newest first)
+ */
+export const listProjectOpenQuestions = async (projectId: number, options?: RequestInit): Promise<MeetingOpenQuestion[]> => {
+
+  return customFetch<MeetingOpenQuestion[]>(getListProjectOpenQuestionsUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProjectOpenQuestionsQueryKey = (projectId: number,) => {
+    return [
+    `/api/compass/projects/${projectId}/open-questions`
+    ] as const;
+    }
+
+
+export const getListProjectOpenQuestionsQueryOptions = <TData = Awaited<ReturnType<typeof listProjectOpenQuestions>>, TError = ErrorType<unknown>>(projectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectOpenQuestions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProjectOpenQuestionsQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectOpenQuestions>>> = ({ signal }) => listProjectOpenQuestions(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(projectId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProjectOpenQuestions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProjectOpenQuestionsQueryResult = NonNullable<Awaited<ReturnType<typeof listProjectOpenQuestions>>>
+export type ListProjectOpenQuestionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List open questions for a project (unresolved first, newest first)
+ */
+
+export function useListProjectOpenQuestions<TData = Awaited<ReturnType<typeof listProjectOpenQuestions>>, TError = ErrorType<unknown>>(
+ projectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectOpenQuestions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProjectOpenQuestionsQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateProjectOpenQuestionUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/compass/projects/${projectId}/open-questions`
+}
+
+/**
+ * @summary Record an open question for a project
+ */
+export const createProjectOpenQuestion = async (projectId: number,
+    meetingOpenQuestionInput: MeetingOpenQuestionInput, options?: RequestInit): Promise<MeetingOpenQuestion> => {
+
+  return customFetch<MeetingOpenQuestion>(getCreateProjectOpenQuestionUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      meetingOpenQuestionInput,)
+  }
+);}
+
+
+
+
+export const getCreateProjectOpenQuestionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProjectOpenQuestion>>, TError,{projectId: number;data: BodyType<MeetingOpenQuestionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProjectOpenQuestion>>, TError,{projectId: number;data: BodyType<MeetingOpenQuestionInput>}, TContext> => {
+
+const mutationKey = ['createProjectOpenQuestion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProjectOpenQuestion>>, {projectId: number;data: BodyType<MeetingOpenQuestionInput>}> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  createProjectOpenQuestion(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProjectOpenQuestionMutationResult = NonNullable<Awaited<ReturnType<typeof createProjectOpenQuestion>>>
+    export type CreateProjectOpenQuestionMutationBody = BodyType<MeetingOpenQuestionInput>
+    export type CreateProjectOpenQuestionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Record an open question for a project
+ */
+export const useCreateProjectOpenQuestion = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProjectOpenQuestion>>, TError,{projectId: number;data: BodyType<MeetingOpenQuestionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createProjectOpenQuestion>>,
+        TError,
+        {projectId: number;data: BodyType<MeetingOpenQuestionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateProjectOpenQuestionMutationOptions(options));
+    }
+
+export const getUpdateOpenQuestionUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/open-questions/${id}`
+}
+
+/**
+ * @summary Edit or resolve an open question
+ */
+export const updateOpenQuestion = async (id: number,
+    meetingOpenQuestionUpdate: MeetingOpenQuestionUpdate, options?: RequestInit): Promise<MeetingOpenQuestion> => {
+
+  return customFetch<MeetingOpenQuestion>(getUpdateOpenQuestionUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      meetingOpenQuestionUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateOpenQuestionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOpenQuestion>>, TError,{id: number;data: BodyType<MeetingOpenQuestionUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOpenQuestion>>, TError,{id: number;data: BodyType<MeetingOpenQuestionUpdate>}, TContext> => {
+
+const mutationKey = ['updateOpenQuestion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOpenQuestion>>, {id: number;data: BodyType<MeetingOpenQuestionUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateOpenQuestion(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOpenQuestionMutationResult = NonNullable<Awaited<ReturnType<typeof updateOpenQuestion>>>
+    export type UpdateOpenQuestionMutationBody = BodyType<MeetingOpenQuestionUpdate>
+    export type UpdateOpenQuestionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Edit or resolve an open question
+ */
+export const useUpdateOpenQuestion = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOpenQuestion>>, TError,{id: number;data: BodyType<MeetingOpenQuestionUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOpenQuestion>>,
+        TError,
+        {id: number;data: BodyType<MeetingOpenQuestionUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateOpenQuestionMutationOptions(options));
+    }
+
+export const getDeleteOpenQuestionUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/open-questions/${id}`
+}
+
+/**
+ * @summary Delete an open question
+ */
+export const deleteOpenQuestion = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOpenQuestionUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOpenQuestionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOpenQuestion>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOpenQuestion>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteOpenQuestion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOpenQuestion>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteOpenQuestion(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOpenQuestionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOpenQuestion>>>
+
+    export type DeleteOpenQuestionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete an open question
+ */
+export const useDeleteOpenQuestion = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOpenQuestion>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOpenQuestion>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOpenQuestionMutationOptions(options));
+    }
 
 export const getListProjectCorrespondenceUrl = (projectId: number,) => {
 

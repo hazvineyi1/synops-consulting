@@ -8,11 +8,15 @@
 import type { ActionItem } from './actionItem';
 import type { AgendaPlan } from './agendaPlan';
 import type { Meeting } from './meeting';
+import type { MeetingDecision } from './meetingDecision';
+import type { MeetingOpenQuestion } from './meetingOpenQuestion';
 import type { ProcessNotesResultProvider } from './processNotesResultProvider';
 
 export interface ProcessNotesResult {
   provider: ProcessNotesResultProvider;
   meeting: Meeting;
   createdActionItems: ActionItem[];
+  createdDecisions: MeetingDecision[];
+  createdOpenQuestions: MeetingOpenQuestion[];
   agenda: AgendaPlan;
 }

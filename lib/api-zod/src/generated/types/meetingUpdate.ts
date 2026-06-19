@@ -5,6 +5,8 @@
  * UVA Production Engine API
  * OpenAPI spec version: 0.1.0
  */
+import type { MeetingUpdateMeetingType } from './meetingUpdateMeetingType';
+import type { MeetingUpdateStatus } from './meetingUpdateStatus';
 
 export interface MeetingUpdate {
   /**
@@ -12,6 +14,13 @@ export interface MeetingUpdate {
      * @maxLength 200
      */
   title?: string;
+  meetingType?: MeetingUpdateMeetingType;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  focus?: string | null;
+  status?: MeetingUpdateStatus;
   /** @nullable */
   scheduledAt?: Date | null;
   /** @maxLength 20000 */

@@ -6,14 +6,22 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AgendaPlan } from './agendaPlan';
+import type { MeetingMeetingType } from './meetingMeetingType';
+import type { MeetingPlan } from './meetingPlan';
+import type { MeetingStatus } from './meetingStatus';
 
 export interface Meeting {
   id: number;
   projectId: number;
   title: string;
+  meetingType: MeetingMeetingType;
+  /** @nullable */
+  focus?: string | null;
+  status: MeetingStatus;
   /** @nullable */
   scheduledAt?: Date | null;
   notes: string;
+  agendaPlan: MeetingPlan;
   /** @nullable */
   nextMeetingAt?: Date | null;
   generatedAgenda?: AgendaPlan | null;

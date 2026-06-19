@@ -1,25 +1,31 @@
 import { z } from "zod";
+import {
+  getMeetingTemplate,
+  type MeetingType,
+  type TemplateAgendaItem,
+} from "./meetingTemplates";
 
 /**
- * Agenda extraction: turn a meeting's free-text notes into (1) tracked action
- * items and (2) a proposed agenda for the NEXT meeting.
+ * Agenda intelligence. Two responsibilities, both AI-optional:
  *
- * Two providers, same output shape:
- *   - "openai": the built-in AI integration (Replit OpenAI proxy), used only when
- *     AI_INTEGRATIONS_OPENAI_BASE_URL + AI_INTEGRATIONS_OPENAI_API_KEY are set.
- *     The client is imported dynamically so a missing integration never throws at
- *     module load; any AI error falls through to the rules path.
- *   - "rules": a deterministic, dependency-free extractor that scans the notes for
- *     action-like lines and builds a standard four-part agenda. The product works
- *     fully without any AI configured.
+ *  1. extractStreamsFromNotes: turn a meeting's free-text notes into THREE
+ *     live-capture streams - decisions, action items (owner + due date), and open
+ *     questions. Tries the built-in AI integration first and always falls back to
+ *     a deterministic, dependency-free rules extractor, so the product works fully
+ *     with no AI configured. Empty notes short-circuit to empty streams.
+ *
+ *  2. buildNextAgenda: assemble the proposed agenda for the NEXT meeting
+ *     DETERMINISTICALLY from the next meeting type's standing template plus
+ *     carried-forward open action items, open questions, and unmet exit criteria.
+ *     The agenda STRUCTURE never depends on AI, only the stream extraction does.
  *
  * All generated text is sanitized to honor the project's copy rules: no em dashes
- * and no emojis, in the product UI or in exported content.
+ * and no emojis.
  */
 
 const AGENDA_MODEL = "gpt-5.4";
 const NOTES_AI_LIMIT = 16000;
-const MAX_ACTION_ITEMS = 40;
+const MAX_ITEMS = 40;
 
 export type ActionCategory = "general" | "content" | "review" | "accessibility";
 
@@ -32,33 +38,56 @@ export interface ExtractedActionItem {
   dueAt: string | null;
 }
 
+export interface ExtractedDecision {
+  text: string;
+  decidedBy: string | null;
+}
+
+export interface ExtractedOpenQuestion {
+  text: string;
+}
+
+export interface ExtractedStreams {
+  provider: "openai" | "rules";
+  decisions: ExtractedDecision[];
+  actionItems: ExtractedActionItem[];
+  openQuestions: ExtractedOpenQuestion[];
+}
+
+export interface StreamsInput {
+  notes: string;
+  projectTitle: string;
+  courseTitle: string | null;
+  termWeeks: number | null;
+  meetingTitle: string;
+}
+
+// A single agenda item in the generated NEXT-meeting agenda.
 export interface ExtractedAgendaItem {
   title: string;
   minutes: number;
   prompts: string[];
 }
 
-export interface ExtractedAgenda {
+// What carries forward from the just-closed meeting into the next agenda.
+export interface CarryForward {
+  openActionItems: { title: string; ownerName: string | null }[];
+  openQuestions: string[];
+  unmetExitCriteria: string[];
+  newDecisionCount: number;
+  newActionItemCount: number;
+  newOpenQuestionCount: number;
+}
+
+export interface NextAgenda {
+  nextMeetingType: MeetingType;
   proposedDate: string | null;
   proposedTime: string | null;
   summary: string[];
   items: ExtractedAgendaItem[];
-}
-
-export interface AgendaExtraction {
-  provider: "openai" | "rules";
-  actionItems: ExtractedActionItem[];
-  agenda: ExtractedAgenda;
-}
-
-export interface AgendaAiInput {
-  notes: string;
-  projectTitle: string;
-  courseTitle: string | null;
-  termWeeks: number | null;
-  meetingTitle: string;
-  meetingDate: Date | null;
-  openActionItems: { title: string; status: string }[];
+  openActionCount: number;
+  openQuestionCount: number;
+  unmetExitCriteriaCount: number;
 }
 
 // ── Text hygiene ───────────────────────────────────────────────
@@ -70,6 +99,10 @@ export function sanitizeText(value: string): string {
     .replace(/\p{Extended_Pictographic}/gu, "")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
+}
+
+function pluralize(count: number, singular: string, plural?: string): string {
+  return `${count} ${count === 1 ? singular : (plural ?? `${singular}s`)}`;
 }
 
 function clampWeek(week: number, termWeeks: number | null): number | null {
@@ -109,6 +142,12 @@ function normalizeTime(value: string | null | undefined): string | null {
   return HHMM.test(v) ? v : null;
 }
 
+function normalizeAiDueAt(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value.trim());
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 // The default cadence: the next meeting is proposed one week after this one, at
 // the same time of day (or 10:00 when this meeting had no recorded time).
 function defaultNextSlot(meetingDate: Date | null): { proposedDate: string | null; proposedTime: string | null } {
@@ -123,9 +162,9 @@ function defaultNextSlot(meetingDate: Date | null): { proposedDate: string | nul
   return { proposedDate, proposedTime: proposedTime === "00:00" ? "10:00" : proposedTime };
 }
 
-// ── Rules-based extraction (always available) ──────────────────
+// ── Rules-based stream extraction (always available) ───────────
 
-function rulesExtractActionItems(input: AgendaAiInput): ExtractedActionItem[] {
+function rulesExtractActionItems(input: StreamsInput): ExtractedActionItem[] {
   const lines = input.notes.split(/\r?\n/);
   const items: ExtractedActionItem[] = [];
   const seen = new Set<string>();
@@ -142,12 +181,14 @@ function rulesExtractActionItems(input: AgendaAiInput): ExtractedActionItem[] {
       );
     if (!isAction) continue;
 
-    let text = line
+    const text = line
       .replace(/^[-*•]\s*/, "")
       .replace(/^\[\s?\]\s*/, "")
       .replace(/^(action item|action|todo|to-do|next step|follow[\s-]?up)\s*[:-]\s*/i, "")
       .trim();
     if (text.length < 3) continue;
+    // A bare question is an open question, not an action item.
+    if (text.endsWith("?")) continue;
 
     let ownerName: string | null = null;
     const ownerMatch =
@@ -172,61 +213,81 @@ function rulesExtractActionItems(input: AgendaAiInput): ExtractedActionItem[] {
       weekIndex,
       dueAt: null,
     });
-    if (items.length >= MAX_ACTION_ITEMS) break;
+    if (items.length >= MAX_ITEMS) break;
   }
 
   return items;
 }
 
-function buildAgenda(
-  input: AgendaAiInput,
-  newItems: ExtractedActionItem[],
-  slot: { proposedDate: string | null; proposedTime: string | null },
-): ExtractedAgenda {
-  const openTitles = input.openActionItems
-    .filter((a) => a.status !== "done")
-    .map((a) => sanitizeText(a.title));
+function rulesExtractDecisions(notes: string): ExtractedDecision[] {
+  const lines = notes.split(/\r?\n/);
+  const out: ExtractedDecision[] = [];
+  const seen = new Set<string>();
 
-  const summary: string[] = [`Recap of ${sanitizeText(input.meetingTitle)}.`];
-  if (newItems.length > 0) {
-    summary.push(`${newItems.length} new action item${newItems.length === 1 ? "" : "s"} captured from the notes.`);
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line.length < 3) continue;
+
+    let text: string | null = null;
+    const labelled = line.match(/^(?:[-*•]\s*)?(?:decision|decided|agreed|resolved)\s*[:-]\s*(.+)$/i);
+    if (labelled && labelled[1].trim().length >= 3) {
+      text = labelled[1].trim();
+    } else if (/\b(decided to|agreed to|we will|we'll|going with|chose to|will go with)\b/i.test(line)) {
+      text = line.replace(/^[-*•]\s*/, "").trim();
+    }
+    if (!text || text.length < 3) continue;
+
+    const clean = sanitizeText(text).slice(0, 500);
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    out.push({ text: clean, decidedBy: null });
+    if (out.length >= MAX_ITEMS) break;
   }
-  if (openTitles.length > 0) {
-    summary.push(`${openTitles.length} open action item${openTitles.length === 1 ? "" : "s"} still in progress.`);
-  }
 
-  const progressPrompts: string[] = ["Confirm what was completed since the last meeting."];
-  for (const t of openTitles.slice(0, 5)) progressPrompts.push(`Status check: ${t}`);
-
-  const workPrompts: string[] =
-    newItems.length > 0
-      ? newItems.slice(0, 6).map((i) => `Plan: ${i.title}`)
-      : ["Identify the next set of action items and assign owners."];
-
-  const accessibilityItems = [...newItems.filter((i) => i.category === "accessibility")];
-  const accessibilityPrompts: string[] =
-    accessibilityItems.length > 0
-      ? accessibilityItems.slice(0, 5).map((i) => `Verify: ${i.title}`)
-      : ["Confirm WCAG 2.1 AA requirements are tracked for new content."];
-
-  const items: ExtractedAgendaItem[] = [
-    { title: "Review progress since last meeting", minutes: 10, prompts: progressPrompts },
-    { title: "Work through action items", minutes: 15, prompts: workPrompts },
-    { title: "Accessibility check (WCAG 2.1 AA)", minutes: 10, prompts: accessibilityPrompts },
-    {
-      title: "Confirm next steps and owners",
-      minutes: 10,
-      prompts: ["Assign an owner to each open action.", "Agree the date and goal for the next meeting."],
-    },
-  ];
-
-  return { proposedDate: slot.proposedDate, proposedTime: slot.proposedTime, summary, items };
+  return out;
 }
 
-function rulesExtract(input: AgendaAiInput): AgendaExtraction {
-  const actionItems = rulesExtractActionItems(input);
-  const slot = defaultNextSlot(input.meetingDate);
-  return { provider: "rules", actionItems, agenda: buildAgenda(input, actionItems, slot) };
+function rulesExtractOpenQuestions(notes: string): ExtractedOpenQuestion[] {
+  const lines = notes.split(/\r?\n/);
+  const out: ExtractedOpenQuestion[] = [];
+  const seen = new Set<string>();
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line.length < 3) continue;
+
+    let text: string | null = null;
+    const labelled = line.match(/^(?:[-*•]\s*)?(?:open question|question|q)\s*[:-]\s*(.+)$/i);
+    if (labelled && labelled[1].trim().length >= 3) {
+      text = labelled[1].trim();
+    } else if (line.endsWith("?") && line.length >= 8) {
+      text = line.replace(/^[-*•]\s*/, "").trim();
+    } else if (/\b(tbd|to be decided|to be confirmed|unresolved|need to confirm|unclear|to discuss)\b/i.test(line)) {
+      text = line.replace(/^[-*•]\s*/, "").trim();
+    }
+    if (!text || text.length < 3) continue;
+
+    const clean = sanitizeText(text).slice(0, 500);
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    out.push({ text: clean });
+    if (out.length >= MAX_ITEMS) break;
+  }
+
+  return out;
+}
+
+function rulesExtractStreams(input: StreamsInput): ExtractedStreams {
+  return {
+    provider: "rules",
+    decisions: rulesExtractDecisions(input.notes),
+    actionItems: rulesExtractActionItems(input),
+    openQuestions: rulesExtractOpenQuestions(input.notes),
+  };
 }
 
 // ── AI extraction (optional, behind env fallback) ──────────────
@@ -240,22 +301,19 @@ const AiActionItem = z.object({
   dueAt: z.string().nullable().optional(),
 });
 
-const AiAgendaItem = z.object({
-  title: z.string().min(1),
-  minutes: z.number().optional(),
-  prompts: z.array(z.string()).optional(),
+const AiDecision = z.object({
+  text: z.string().min(1),
+  decidedBy: z.string().nullable().optional(),
+});
+
+const AiOpenQuestion = z.object({
+  text: z.string().min(1),
 });
 
 const AiResult = z.object({
+  decisions: z.array(AiDecision).optional(),
   actionItems: z.array(AiActionItem).optional(),
-  agenda: z
-    .object({
-      proposedDate: z.string().nullable().optional(),
-      proposedTime: z.string().nullable().optional(),
-      summary: z.array(z.string()).optional(),
-      items: z.array(AiAgendaItem).optional(),
-    })
-    .optional(),
+  openQuestions: z.array(AiOpenQuestion).optional(),
 });
 
 async function getOpenAI() {
@@ -270,15 +328,15 @@ async function getOpenAI() {
   }
 }
 
-function normalizeAi(data: z.infer<typeof AiResult>, input: AgendaAiInput): AgendaExtraction {
+function normalizeAiStreams(data: z.infer<typeof AiResult>, input: StreamsInput): ExtractedStreams {
   const actionItems: ExtractedActionItem[] = [];
-  const seen = new Set<string>();
+  const seenAction = new Set<string>();
   for (const raw of data.actionItems ?? []) {
     const title = sanitizeText(raw.title).slice(0, 280);
     if (title.length < 3) continue;
     const key = title.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
+    if (seenAction.has(key)) continue;
+    seenAction.add(key);
     actionItems.push({
       title,
       description: raw.description ? sanitizeText(raw.description).slice(0, 2000) : null,
@@ -287,86 +345,60 @@ function normalizeAi(data: z.infer<typeof AiResult>, input: AgendaAiInput): Agen
       weekIndex: raw.weekIndex == null ? null : clampWeek(Math.trunc(raw.weekIndex), input.termWeeks),
       dueAt: normalizeAiDueAt(raw.dueAt),
     });
-    if (actionItems.length >= MAX_ACTION_ITEMS) break;
+    if (actionItems.length >= MAX_ITEMS) break;
   }
 
-  const slotFallback = defaultNextSlot(input.meetingDate);
-  const proposedDate = normalizeDate(data.agenda?.proposedDate) ?? slotFallback.proposedDate;
-  const proposedTime = normalizeTime(data.agenda?.proposedTime) ?? slotFallback.proposedTime;
-
-  const aiItems = (data.agenda?.items ?? [])
-    .map((i) => ({
-      title: sanitizeText(i.title).slice(0, 200),
-      minutes: i.minutes && i.minutes > 0 ? Math.min(Math.trunc(i.minutes), 240) : 10,
-      prompts: (i.prompts ?? []).map((p) => sanitizeText(p)).filter((p) => p.length > 0).slice(0, 8),
-    }))
-    .filter((i) => i.title.length > 0)
-    .slice(0, 8);
-
-  if (aiItems.length === 0) {
-    // The model returned action items but no usable agenda; build one from the
-    // extracted items so the response is always actionable.
-    return {
-      provider: "openai",
-      actionItems,
-      agenda: buildAgenda(input, actionItems, { proposedDate, proposedTime }),
-    };
+  const decisions: ExtractedDecision[] = [];
+  const seenDecision = new Set<string>();
+  for (const raw of data.decisions ?? []) {
+    const text = sanitizeText(raw.text).slice(0, 500);
+    if (text.length < 3) continue;
+    const key = text.toLowerCase();
+    if (seenDecision.has(key)) continue;
+    seenDecision.add(key);
+    decisions.push({ text, decidedBy: raw.decidedBy ? sanitizeText(raw.decidedBy).slice(0, 200) : null });
+    if (decisions.length >= MAX_ITEMS) break;
   }
 
-  const summary = (data.agenda?.summary ?? [])
-    .map((s) => sanitizeText(s))
-    .filter((s) => s.length > 0)
-    .slice(0, 8);
+  const openQuestions: ExtractedOpenQuestion[] = [];
+  const seenQuestion = new Set<string>();
+  for (const raw of data.openQuestions ?? []) {
+    const text = sanitizeText(raw.text).slice(0, 500);
+    if (text.length < 3) continue;
+    const key = text.toLowerCase();
+    if (seenQuestion.has(key)) continue;
+    seenQuestion.add(key);
+    openQuestions.push({ text });
+    if (openQuestions.length >= MAX_ITEMS) break;
+  }
 
-  return {
-    provider: "openai",
-    actionItems,
-    agenda: {
-      proposedDate,
-      proposedTime,
-      summary: summary.length > 0 ? summary : [`Recap of ${sanitizeText(input.meetingTitle)}.`],
-      items: aiItems,
-    },
-  };
+  return { provider: "openai", decisions, actionItems, openQuestions };
 }
 
-function normalizeAiDueAt(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const d = new Date(value.trim());
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
-}
-
-async function aiExtract(input: AgendaAiInput): Promise<AgendaExtraction | null> {
+async function aiExtractStreams(input: StreamsInput): Promise<ExtractedStreams | null> {
   const client = await getOpenAI();
   if (!client) return null;
 
   const weeksUpper = input.termWeeks && input.termWeeks > 0 ? input.termWeeks : 52;
   const clamped = input.notes.slice(0, NOTES_AI_LIMIT);
-  const openList =
-    input.openActionItems.length > 0
-      ? input.openActionItems
-          .slice(0, 30)
-          .map((a) => `- [${a.status}] ${a.title}`)
-          .join("\n")
-      : "(none)";
 
   const system =
     "You convert consulting meeting notes for an instructional-design project into structured JSON. " +
     "Respond with a single JSON object and nothing else. Do not use em dashes. Do not use emojis. " +
-    'Schema: {"actionItems":[{"title":string,"description":string|null,"ownerName":string|null,' +
+    'Schema: {"decisions":[{"text":string,"decidedBy":string|null}],' +
+    '"actionItems":[{"title":string,"description":string|null,"ownerName":string|null,' +
     '"category":"general"|"content"|"review"|"accessibility","weekIndex":integer|null,"dueAt":string|null}],' +
-    '"agenda":{"proposedDate":"YYYY-MM-DD"|null,"proposedTime":"HH:MM"|null,"summary":string[],' +
-    '"items":[{"title":string,"minutes":integer,"prompts":string[]}]}}. ' +
+    '"openQuestions":[{"text":string}]}. ' +
+    "Decisions are settled choices the group made. Action items are tasks with an owner to do later. " +
+    "Open questions are things still unresolved or needing a decision. " +
     `weekIndex is zero-based and only set when the notes name a specific week (0 to ${weeksUpper - 1}). ` +
-    "Use category accessibility for WCAG or accessibility tasks. Keep titles concise and action oriented. " +
-    "The agenda is for the NEXT meeting and should fold in any still-open action items.";
+    "Use category accessibility for WCAG or accessibility tasks. Keep titles concise and action oriented.";
 
   const user =
     `Project: ${input.projectTitle}\n` +
     `Course: ${input.courseTitle ?? "none"}\n` +
     `Term weeks: ${input.termWeeks ?? "unknown"}\n` +
-    `This meeting: ${input.meetingTitle}${input.meetingDate ? ` on ${input.meetingDate.toISOString()}` : ""}\n` +
-    `Currently open action items:\n${openList}\n\n` +
+    `This meeting: ${input.meetingTitle}\n\n` +
     `Meeting notes:\n${clamped}`;
 
   try {
@@ -383,23 +415,100 @@ async function aiExtract(input: AgendaAiInput): Promise<AgendaExtraction | null>
     if (!content) return null;
     const parsed = AiResult.safeParse(JSON.parse(content));
     if (!parsed.success) return null;
-    return normalizeAi(parsed.data, input);
+    return normalizeAiStreams(parsed.data, input);
   } catch {
     return null;
   }
 }
 
 /**
- * Public entry point. Tries the built-in AI first (when configured) and always
- * falls back to the deterministic rules extractor, so a caller never has to know
- * whether AI is available. Empty notes short-circuit to a rules agenda with no
- * new action items.
+ * Public entry point for stream extraction. Tries the built-in AI first (when
+ * configured) and always falls back to the deterministic rules extractor. Empty
+ * notes short-circuit to empty streams.
  */
-export async function extractAgendaFromNotes(input: AgendaAiInput): Promise<AgendaExtraction> {
+export async function extractStreamsFromNotes(input: StreamsInput): Promise<ExtractedStreams> {
   if (input.notes.trim().length === 0) {
-    return rulesExtract({ ...input, notes: "" });
+    return { provider: "rules", decisions: [], actionItems: [], openQuestions: [] };
   }
-  const ai = await aiExtract(input);
+  const ai = await aiExtractStreams(input);
   if (ai) return ai;
-  return rulesExtract(input);
+  return rulesExtractStreams(input);
+}
+
+// ── Deterministic next-agenda assembly (no AI) ─────────────────
+
+function cloneTemplateItems(items: readonly TemplateAgendaItem[]): ExtractedAgendaItem[] {
+  return items.map((i) => ({ title: i.title, minutes: i.minutes, prompts: [...i.prompts] }));
+}
+
+/**
+ * Build the proposed agenda for the NEXT meeting from its type's standing
+ * template, folding in everything that carries forward from the meeting just
+ * closed: open action items and unmet exit criteria become prompts on the opening
+ * review item, and open questions become a dedicated "Open questions to resolve"
+ * item. The structure is fully deterministic, so it is identical with or without
+ * AI configured.
+ */
+export function buildNextAgenda(args: {
+  nextMeetingType: MeetingType;
+  meetingDate: Date | null;
+  projectTitle: string;
+  carry: CarryForward;
+}): NextAgenda {
+  const { nextMeetingType, meetingDate, projectTitle, carry } = args;
+  const template = getMeetingTemplate(nextMeetingType);
+  const slot = defaultNextSlot(meetingDate);
+  const items = cloneTemplateItems(template.agenda);
+
+  // Fold open actions and unmet exit criteria into the opening review item.
+  if (items.length > 0) {
+    const extra: string[] = [];
+    for (const a of carry.openActionItems.slice(0, 8)) {
+      const owner = a.ownerName ? ` (owner: ${sanitizeText(a.ownerName)})` : "";
+      extra.push(`Status check: ${sanitizeText(a.title)}${owner}`);
+    }
+    for (const c of carry.unmetExitCriteria.slice(0, 8)) {
+      extra.push(`Carry forward: ${sanitizeText(c)}`);
+    }
+    items[0].prompts.push(...extra);
+  }
+
+  // Open questions become a dedicated agenda item so they are not lost.
+  if (carry.openQuestions.length > 0) {
+    items.push({
+      title: "Open questions to resolve",
+      minutes: 10,
+      prompts: carry.openQuestions.slice(0, 12).map((q) => `Resolve: ${sanitizeText(q)}`),
+    });
+  }
+
+  const summary: string[] = [`Proposed ${template.label} agenda for ${sanitizeText(projectTitle)}.`];
+  if (carry.newDecisionCount > 0) {
+    summary.push(`${pluralize(carry.newDecisionCount, "decision")} recorded in the last meeting.`);
+  }
+  if (carry.newActionItemCount > 0) {
+    summary.push(`${pluralize(carry.newActionItemCount, "new action item")} captured.`);
+  }
+  if (carry.openActionItems.length > 0) {
+    summary.push(`${pluralize(carry.openActionItems.length, "open action item")} carried forward.`);
+  }
+  if (carry.openQuestions.length > 0) {
+    summary.push(`${pluralize(carry.openQuestions.length, "open question")} carried forward.`);
+  }
+  if (carry.unmetExitCriteria.length > 0) {
+    summary.push(
+      `${pluralize(carry.unmetExitCriteria.length, "exit criterion", "exit criteria")} from the last meeting still unmet.`,
+    );
+  }
+
+  return {
+    nextMeetingType,
+    proposedDate: slot.proposedDate,
+    proposedTime: slot.proposedTime,
+    summary,
+    items,
+    openActionCount: carry.openActionItems.length,
+    openQuestionCount: carry.openQuestions.length,
+    unmetExitCriteriaCount: carry.unmetExitCriteria.length,
+  };
 }

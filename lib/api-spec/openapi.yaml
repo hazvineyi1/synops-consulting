@@ -1347,17 +1347,27 @@ paths:
     post:
       operationId: processMeetingNotes
       tags: [agenda]
-      summary: Turn a meeting's notes into action items and a proposed next-meeting agenda
+      summary: Extract the three live-capture streams from a meeting's notes and propose the next agenda
       description: >-
-        Uses the built-in AI when configured and falls back to a deterministic
-        rules-based extractor otherwise. Returns the created action items and the
-        proposed agenda, and records which provider was used.
+        Extracts decisions, action items, and open questions from the meeting's
+        notes (built-in AI when configured, deterministic rules otherwise). New
+        entries are added idempotently: anything matching an existing project
+        entry by normalized text is skipped, so re-running does not duplicate.
+        Also builds the proposed agenda for the next meeting from its standing
+        template plus everything carried forward (open action items, open
+        questions, and unmet exit criteria from this meeting).
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProcessNotesInput"
       responses:
         "200":
           description: Processed
@@ -1495,6 +1505,202 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AgendaSummary"
+
+  /compass/meetings/{id}/checklist:
+    patch:
+      operationId: setMeetingChecklist
+      tags: [agenda]
+      summary: Toggle a pre-work, standing-agenda, or exit-criteria item on a meeting's plan
+      description: >-
+        Toggles one item on the meeting's own structured plan: a pre-work
+        checklist item, a standing-agenda item (or a single prompt within it via
+        promptIndex), or an exit criterion. Applied under a row lock so concurrent
+        toggles never lose each other. Exit criteria are advisory only; marking
+        them does not gate any server action and completion is allowed with unmet
+        criteria.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingChecklistToggle"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meeting"
+
+  /compass/projects/{projectId}/decisions:
+    get:
+      operationId: listProjectDecisions
+      tags: [agenda]
+      summary: List decisions recorded for a project (newest first)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Decisions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MeetingDecision"
+    post:
+      operationId: createProjectDecision
+      tags: [agenda]
+      summary: Record a decision for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingDecisionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingDecision"
+
+  /compass/decisions/{id}:
+    patch:
+      operationId: updateDecision
+      tags: [agenda]
+      summary: Edit a recorded decision
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingDecisionUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingDecision"
+    delete:
+      operationId: deleteDecision
+      tags: [agenda]
+      summary: Delete a recorded decision
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /compass/projects/{projectId}/open-questions:
+    get:
+      operationId: listProjectOpenQuestions
+      tags: [agenda]
+      summary: List open questions for a project (unresolved first, newest first)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Open questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MeetingOpenQuestion"
+    post:
+      operationId: createProjectOpenQuestion
+      tags: [agenda]
+      summary: Record an open question for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingOpenQuestionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingOpenQuestion"
+
+  /compass/open-questions/{id}:
+    patch:
+      operationId: updateOpenQuestion
+      tags: [agenda]
+      summary: Edit or resolve an open question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingOpenQuestionUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingOpenQuestion"
+    delete:
+      operationId: deleteOpenQuestion
+      tags: [agenda]
+      summary: Delete an open question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
 
   # ── Correspondence (email/message repository) ────────────────
   /compass/projects/{projectId}/correspondence:
@@ -2789,10 +2995,172 @@ components:
             $ref: "#/components/schemas/AgendaPlanItem"
         openActionCount:
           type: integer
+        nextMeetingType:
+          type: string
+          enum: [kickoff, working, final]
+        openQuestionCount:
+          type: integer
+        unmetExitCriteriaCount:
+          type: integer
+
+    MeetingPlanChecklistItem:
+      type: object
+      required: [text, done]
+      properties:
+        text:
+          type: string
+        done:
+          type: boolean
+
+    MeetingPlanExitCriterion:
+      type: object
+      required: [text, met]
+      properties:
+        text:
+          type: string
+        met:
+          type: boolean
+
+    MeetingPlan:
+      type: object
+      required: [prework, agenda, exitCriteria]
+      properties:
+        prework:
+          type: array
+          items:
+            $ref: "#/components/schemas/MeetingPlanChecklistItem"
+        agenda:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgendaPlanItem"
+        exitCriteria:
+          type: array
+          items:
+            $ref: "#/components/schemas/MeetingPlanExitCriterion"
+
+    MeetingChecklistToggle:
+      type: object
+      required: [section, itemIndex, value]
+      properties:
+        section:
+          type: string
+          enum: [prework, agenda, exitCriteria]
+        itemIndex:
+          type: integer
+          minimum: 0
+        promptIndex:
+          type: ["integer", "null"]
+          minimum: 0
+          description: Only valid when section is agenda; toggles a single prompt within the item.
+        value:
+          type: boolean
+
+    MeetingDecision:
+      type: object
+      required: [id, projectId, text, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        meetingId:
+          type: ["integer", "null"]
+        text:
+          type: string
+        decidedBy:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MeetingDecisionInput:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        decidedBy:
+          type: string
+          maxLength: 200
+        meetingId:
+          type: integer
+          description: Optional meeting this decision was captured in; must belong to the same project.
+
+    MeetingDecisionUpdate:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        decidedBy:
+          type: ["string", "null"]
+          maxLength: 200
+
+    MeetingOpenQuestion:
+      type: object
+      required: [id, projectId, text, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        meetingId:
+          type: ["integer", "null"]
+        text:
+          type: string
+        status:
+          type: string
+          enum: [open, resolved]
+        resolvedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MeetingOpenQuestionInput:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        meetingId:
+          type: integer
+          description: Optional meeting this question was captured in; must belong to the same project.
+
+    MeetingOpenQuestionUpdate:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        status:
+          type: string
+          enum: [open, resolved]
+
+    ProcessNotesInput:
+      type: object
+      properties:
+        nextMeetingType:
+          type: string
+          enum: [kickoff, working, final]
+          description: Type of the next meeting to propose an agenda for. Defaults to a sensible follow-up type.
 
     Meeting:
       type: object
-      required: [id, projectId, title, notes, createdAt, updatedAt]
+      required: [id, projectId, title, meetingType, status, notes, agendaPlan, createdAt, updatedAt]
       properties:
         id:
           type: integer
@@ -2800,11 +3168,21 @@ components:
           type: integer
         title:
           type: string
+        meetingType:
+          type: string
+          enum: [kickoff, working, final]
+        focus:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [scheduled, completed]
         scheduledAt:
           type: ["string", "null"]
           format: date-time
         notes:
           type: string
+        agendaPlan:
+          $ref: "#/components/schemas/MeetingPlan"
         nextMeetingAt:
           type: ["string", "null"]
           format: date-time
@@ -2829,6 +3207,13 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+        meetingType:
+          type: string
+          enum: [kickoff, working, final]
+          description: Defaults to working when omitted. Seeds the standing template.
+        focus:
+          type: string
+          maxLength: 200
         scheduledAt:
           type: string
           format: date-time
@@ -2843,6 +3228,15 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+        meetingType:
+          type: string
+          enum: [kickoff, working, final]
+        focus:
+          type: ["string", "null"]
+          maxLength: 200
+        status:
+          type: string
+          enum: [scheduled, completed]
         scheduledAt:
           type: ["string", "null"]
           format: date-time
@@ -2946,7 +3340,7 @@ components:
 
     ProcessNotesResult:
       type: object
-      required: [provider, meeting, createdActionItems, agenda]
+      required: [provider, meeting, createdActionItems, createdDecisions, createdOpenQuestions, agenda]
       properties:
         provider:
           type: string
@@ -2957,6 +3351,14 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ActionItem"
+        createdDecisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/MeetingDecision"
+        createdOpenQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/MeetingOpenQuestion"
         agenda:
           $ref: "#/components/schemas/AgendaPlan"
 

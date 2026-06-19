@@ -5,6 +5,7 @@
  * UVA Production Engine API
  * OpenAPI spec version: 0.1.0
  */
+import type { MeetingInputMeetingType } from './meetingInputMeetingType';
 
 export interface MeetingInput {
   /**
@@ -12,6 +13,10 @@ export interface MeetingInput {
      * @maxLength 200
      */
   title: string;
+  /** Defaults to working when omitted. Seeds the standing template. */
+  meetingType?: MeetingInputMeetingType;
+  /** @maxLength 200 */
+  focus?: string;
   scheduledAt?: Date;
   /** @maxLength 20000 */
   notes?: string;

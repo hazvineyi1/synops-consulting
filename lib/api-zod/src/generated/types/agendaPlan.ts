@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AgendaPlanItem } from './agendaPlanItem';
+import type { AgendaPlanNextMeetingType } from './agendaPlanNextMeetingType';
 
 export interface AgendaPlan {
   generatedAt: Date;
@@ -16,4 +17,7 @@ export interface AgendaPlan {
   summary: string[];
   items: AgendaPlanItem[];
   openActionCount: number;
+  nextMeetingType?: AgendaPlanNextMeetingType;
+  openQuestionCount?: number;
+  unmetExitCriteriaCount?: number;
 }

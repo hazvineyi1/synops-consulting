@@ -1366,8 +1366,28 @@ export const ListProjectMeetingsResponseItem = zod.object({
   "id": zod.number(),
   "projectId": zod.number(),
   "title": zod.string(),
+  "meetingType": zod.enum(['kickoff', 'working', 'final']),
+  "focus": zod.string().nullish(),
+  "status": zod.enum(['scheduled', 'completed']),
   "scheduledAt": zod.coerce.date().nullish(),
   "notes": zod.string(),
+  "agendaPlan": zod.object({
+  "prework": zod.array(zod.object({
+  "text": zod.string(),
+  "done": zod.boolean()
+})),
+  "agenda": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
+})),
+  "exitCriteria": zod.array(zod.object({
+  "text": zod.string(),
+  "met": zod.boolean()
+}))
+}),
   "nextMeetingAt": zod.coerce.date().nullish(),
   "generatedAgenda": zod.union([zod.object({
   "generatedAt": zod.coerce.date(),
@@ -1381,7 +1401,10 @@ export const ListProjectMeetingsResponseItem = zod.object({
   "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
   "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
-  "openActionCount": zod.number()
+  "openActionCount": zod.number(),
+  "nextMeetingType": zod.enum(['kickoff', 'working', 'final']).optional(),
+  "openQuestionCount": zod.number().optional(),
+  "unmetExitCriteriaCount": zod.number().optional()
 }),zod.null()]).optional(),
   "aiProvider": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
@@ -1399,12 +1422,16 @@ export const CreateProjectMeetingParams = zod.object({
 
 export const createProjectMeetingBodyTitleMax = 200;
 
+export const createProjectMeetingBodyFocusMax = 200;
+
 export const createProjectMeetingBodyNotesMax = 20000;
 
 
 
 export const CreateProjectMeetingBody = zod.object({
   "title": zod.string().min(1).max(createProjectMeetingBodyTitleMax),
+  "meetingType": zod.enum(['kickoff', 'working', 'final']).optional().describe('Defaults to working when omitted. Seeds the standing template.'),
+  "focus": zod.string().max(createProjectMeetingBodyFocusMax).optional(),
   "scheduledAt": zod.coerce.date().optional(),
   "notes": zod.string().max(createProjectMeetingBodyNotesMax).optional()
 })
@@ -1421,8 +1448,28 @@ export const GetMeetingResponse = zod.object({
   "id": zod.number(),
   "projectId": zod.number(),
   "title": zod.string(),
+  "meetingType": zod.enum(['kickoff', 'working', 'final']),
+  "focus": zod.string().nullish(),
+  "status": zod.enum(['scheduled', 'completed']),
   "scheduledAt": zod.coerce.date().nullish(),
   "notes": zod.string(),
+  "agendaPlan": zod.object({
+  "prework": zod.array(zod.object({
+  "text": zod.string(),
+  "done": zod.boolean()
+})),
+  "agenda": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
+})),
+  "exitCriteria": zod.array(zod.object({
+  "text": zod.string(),
+  "met": zod.boolean()
+}))
+}),
   "nextMeetingAt": zod.coerce.date().nullish(),
   "generatedAgenda": zod.union([zod.object({
   "generatedAt": zod.coerce.date(),
@@ -1436,7 +1483,10 @@ export const GetMeetingResponse = zod.object({
   "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
   "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
-  "openActionCount": zod.number()
+  "openActionCount": zod.number(),
+  "nextMeetingType": zod.enum(['kickoff', 'working', 'final']).optional(),
+  "openQuestionCount": zod.number().optional(),
+  "unmetExitCriteriaCount": zod.number().optional()
 }),zod.null()]).optional(),
   "aiProvider": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
@@ -1453,12 +1503,17 @@ export const UpdateMeetingParams = zod.object({
 
 export const updateMeetingBodyTitleMax = 200;
 
+export const updateMeetingBodyFocusMax = 200;
+
 export const updateMeetingBodyNotesMax = 20000;
 
 
 
 export const UpdateMeetingBody = zod.object({
   "title": zod.string().min(1).max(updateMeetingBodyTitleMax).optional(),
+  "meetingType": zod.enum(['kickoff', 'working', 'final']).optional(),
+  "focus": zod.string().max(updateMeetingBodyFocusMax).nullish(),
+  "status": zod.enum(['scheduled', 'completed']).optional(),
   "scheduledAt": zod.coerce.date().nullish(),
   "notes": zod.string().max(updateMeetingBodyNotesMax).optional(),
   "nextMeetingAt": zod.coerce.date().nullish()
@@ -1468,8 +1523,28 @@ export const UpdateMeetingResponse = zod.object({
   "id": zod.number(),
   "projectId": zod.number(),
   "title": zod.string(),
+  "meetingType": zod.enum(['kickoff', 'working', 'final']),
+  "focus": zod.string().nullish(),
+  "status": zod.enum(['scheduled', 'completed']),
   "scheduledAt": zod.coerce.date().nullish(),
   "notes": zod.string(),
+  "agendaPlan": zod.object({
+  "prework": zod.array(zod.object({
+  "text": zod.string(),
+  "done": zod.boolean()
+})),
+  "agenda": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
+})),
+  "exitCriteria": zod.array(zod.object({
+  "text": zod.string(),
+  "met": zod.boolean()
+}))
+}),
   "nextMeetingAt": zod.coerce.date().nullish(),
   "generatedAgenda": zod.union([zod.object({
   "generatedAt": zod.coerce.date(),
@@ -1483,7 +1558,10 @@ export const UpdateMeetingResponse = zod.object({
   "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
   "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
-  "openActionCount": zod.number()
+  "openActionCount": zod.number(),
+  "nextMeetingType": zod.enum(['kickoff', 'working', 'final']).optional(),
+  "openQuestionCount": zod.number().optional(),
+  "unmetExitCriteriaCount": zod.number().optional()
 }),zod.null()]).optional(),
   "aiProvider": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
@@ -1500,11 +1578,15 @@ export const DeleteMeetingParams = zod.object({
 
 
 /**
- * Uses the built-in AI when configured and falls back to a deterministic rules-based extractor otherwise. Returns the created action items and the proposed agenda, and records which provider was used.
- * @summary Turn a meeting's notes into action items and a proposed next-meeting agenda
+ * Extracts decisions, action items, and open questions from the meeting's notes (built-in AI when configured, deterministic rules otherwise). New entries are added idempotently: anything matching an existing project entry by normalized text is skipped, so re-running does not duplicate. Also builds the proposed agenda for the next meeting from its standing template plus everything carried forward (open action items, open questions, and unmet exit criteria from this meeting).
+ * @summary Extract the three live-capture streams from a meeting's notes and propose the next agenda
  */
 export const ProcessMeetingNotesParams = zod.object({
   "id": zod.coerce.number()
+})
+
+export const ProcessMeetingNotesBody = zod.object({
+  "nextMeetingType": zod.enum(['kickoff', 'working', 'final']).optional().describe('Type of the next meeting to propose an agenda for. Defaults to a sensible follow-up type.')
 })
 
 export const ProcessMeetingNotesResponse = zod.object({
@@ -1513,8 +1595,28 @@ export const ProcessMeetingNotesResponse = zod.object({
   "id": zod.number(),
   "projectId": zod.number(),
   "title": zod.string(),
+  "meetingType": zod.enum(['kickoff', 'working', 'final']),
+  "focus": zod.string().nullish(),
+  "status": zod.enum(['scheduled', 'completed']),
   "scheduledAt": zod.coerce.date().nullish(),
   "notes": zod.string(),
+  "agendaPlan": zod.object({
+  "prework": zod.array(zod.object({
+  "text": zod.string(),
+  "done": zod.boolean()
+})),
+  "agenda": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
+})),
+  "exitCriteria": zod.array(zod.object({
+  "text": zod.string(),
+  "met": zod.boolean()
+}))
+}),
   "nextMeetingAt": zod.coerce.date().nullish(),
   "generatedAgenda": zod.union([zod.object({
   "generatedAt": zod.coerce.date(),
@@ -1528,7 +1630,10 @@ export const ProcessMeetingNotesResponse = zod.object({
   "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
   "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
-  "openActionCount": zod.number()
+  "openActionCount": zod.number(),
+  "nextMeetingType": zod.enum(['kickoff', 'working', 'final']).optional(),
+  "openQuestionCount": zod.number().optional(),
+  "unmetExitCriteriaCount": zod.number().optional()
 }),zod.null()]).optional(),
   "aiProvider": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
@@ -1550,6 +1655,25 @@ export const ProcessMeetingNotesResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })),
+  "createdDecisions": zod.array(zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "meetingId": zod.number().nullish(),
+  "text": zod.string(),
+  "decidedBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "createdOpenQuestions": zod.array(zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "meetingId": zod.number().nullish(),
+  "text": zod.string(),
+  "status": zod.enum(['open', 'resolved']),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
   "agenda": zod.object({
   "generatedAt": zod.coerce.date(),
   "proposedDate": zod.coerce.date().nullish(),
@@ -1562,7 +1686,10 @@ export const ProcessMeetingNotesResponse = zod.object({
   "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
   "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
-  "openActionCount": zod.number()
+  "openActionCount": zod.number(),
+  "nextMeetingType": zod.enum(['kickoff', 'working', 'final']).optional(),
+  "openQuestionCount": zod.number().optional(),
+  "unmetExitCriteriaCount": zod.number().optional()
 })
 })
 
@@ -1591,8 +1718,28 @@ export const SetAgendaChecklistResponse = zod.object({
   "id": zod.number(),
   "projectId": zod.number(),
   "title": zod.string(),
+  "meetingType": zod.enum(['kickoff', 'working', 'final']),
+  "focus": zod.string().nullish(),
+  "status": zod.enum(['scheduled', 'completed']),
   "scheduledAt": zod.coerce.date().nullish(),
   "notes": zod.string(),
+  "agendaPlan": zod.object({
+  "prework": zod.array(zod.object({
+  "text": zod.string(),
+  "done": zod.boolean()
+})),
+  "agenda": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
+})),
+  "exitCriteria": zod.array(zod.object({
+  "text": zod.string(),
+  "met": zod.boolean()
+}))
+}),
   "nextMeetingAt": zod.coerce.date().nullish(),
   "generatedAgenda": zod.union([zod.object({
   "generatedAt": zod.coerce.date(),
@@ -1606,7 +1753,10 @@ export const SetAgendaChecklistResponse = zod.object({
   "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
   "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
-  "openActionCount": zod.number()
+  "openActionCount": zod.number(),
+  "nextMeetingType": zod.enum(['kickoff', 'working', 'final']).optional(),
+  "openQuestionCount": zod.number().optional(),
+  "unmetExitCriteriaCount": zod.number().optional()
 }),zod.null()]).optional(),
   "aiProvider": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
@@ -1758,9 +1908,232 @@ export const GetAgendaSummaryResponse = zod.object({
   "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
   "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
 })),
-  "openActionCount": zod.number()
+  "openActionCount": zod.number(),
+  "nextMeetingType": zod.enum(['kickoff', 'working', 'final']).optional(),
+  "openQuestionCount": zod.number().optional(),
+  "unmetExitCriteriaCount": zod.number().optional()
 }),zod.null()]),
   "nextMeetingAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * Toggles one item on the meeting's own structured plan: a pre-work checklist item, a standing-agenda item (or a single prompt within it via promptIndex), or an exit criterion. Applied under a row lock so concurrent toggles never lose each other. Exit criteria are advisory only; marking them does not gate any server action and completion is allowed with unmet criteria.
+ * @summary Toggle a pre-work, standing-agenda, or exit-criteria item on a meeting's plan
+ */
+export const SetMeetingChecklistParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const setMeetingChecklistBodyItemIndexMin = 0;
+
+export const setMeetingChecklistBodyPromptIndexMin = 0;
+
+
+
+export const SetMeetingChecklistBody = zod.object({
+  "section": zod.enum(['prework', 'agenda', 'exitCriteria']),
+  "itemIndex": zod.number().min(setMeetingChecklistBodyItemIndexMin),
+  "promptIndex": zod.number().min(setMeetingChecklistBodyPromptIndexMin).nullish().describe('Only valid when section is agenda; toggles a single prompt within the item.'),
+  "value": zod.boolean()
+})
+
+export const SetMeetingChecklistResponse = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "meetingType": zod.enum(['kickoff', 'working', 'final']),
+  "focus": zod.string().nullish(),
+  "status": zod.enum(['scheduled', 'completed']),
+  "scheduledAt": zod.coerce.date().nullish(),
+  "notes": zod.string(),
+  "agendaPlan": zod.object({
+  "prework": zod.array(zod.object({
+  "text": zod.string(),
+  "done": zod.boolean()
+})),
+  "agenda": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
+})),
+  "exitCriteria": zod.array(zod.object({
+  "text": zod.string(),
+  "met": zod.boolean()
+}))
+}),
+  "nextMeetingAt": zod.coerce.date().nullish(),
+  "generatedAgenda": zod.union([zod.object({
+  "generatedAt": zod.coerce.date(),
+  "proposedDate": zod.coerce.date().nullish(),
+  "proposedTime": zod.string().nullish(),
+  "summary": zod.array(zod.string()),
+  "items": zod.array(zod.object({
+  "title": zod.string(),
+  "minutes": zod.number(),
+  "prompts": zod.array(zod.string()),
+  "done": zod.boolean().optional().describe('Whether the whole item is checked off (used for items with no prompts).'),
+  "promptsDone": zod.array(zod.boolean()).optional().describe('Per-prompt completion, aligned by index with prompts.')
+})),
+  "openActionCount": zod.number(),
+  "nextMeetingType": zod.enum(['kickoff', 'working', 'final']).optional(),
+  "openQuestionCount": zod.number().optional(),
+  "unmetExitCriteriaCount": zod.number().optional()
+}),zod.null()]).optional(),
+  "aiProvider": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List decisions recorded for a project (newest first)
+ */
+export const ListProjectDecisionsParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const ListProjectDecisionsResponseItem = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "meetingId": zod.number().nullish(),
+  "text": zod.string(),
+  "decidedBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListProjectDecisionsResponse = zod.array(ListProjectDecisionsResponseItem)
+
+
+/**
+ * @summary Record a decision for a project
+ */
+export const CreateProjectDecisionParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const createProjectDecisionBodyTextMax = 1000;
+
+export const createProjectDecisionBodyDecidedByMax = 200;
+
+
+
+export const CreateProjectDecisionBody = zod.object({
+  "text": zod.string().min(1).max(createProjectDecisionBodyTextMax),
+  "decidedBy": zod.string().max(createProjectDecisionBodyDecidedByMax).optional(),
+  "meetingId": zod.number().optional().describe('Optional meeting this decision was captured in; must belong to the same project.')
+})
+
+
+/**
+ * @summary Edit a recorded decision
+ */
+export const UpdateDecisionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateDecisionBodyTextMax = 1000;
+
+export const updateDecisionBodyDecidedByMax = 200;
+
+
+
+export const UpdateDecisionBody = zod.object({
+  "text": zod.string().min(1).max(updateDecisionBodyTextMax).optional(),
+  "decidedBy": zod.string().max(updateDecisionBodyDecidedByMax).nullish()
+})
+
+export const UpdateDecisionResponse = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "meetingId": zod.number().nullish(),
+  "text": zod.string(),
+  "decidedBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a recorded decision
+ */
+export const DeleteDecisionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List open questions for a project (unresolved first, newest first)
+ */
+export const ListProjectOpenQuestionsParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const ListProjectOpenQuestionsResponseItem = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "meetingId": zod.number().nullish(),
+  "text": zod.string(),
+  "status": zod.enum(['open', 'resolved']),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListProjectOpenQuestionsResponse = zod.array(ListProjectOpenQuestionsResponseItem)
+
+
+/**
+ * @summary Record an open question for a project
+ */
+export const CreateProjectOpenQuestionParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const createProjectOpenQuestionBodyTextMax = 1000;
+
+
+
+export const CreateProjectOpenQuestionBody = zod.object({
+  "text": zod.string().min(1).max(createProjectOpenQuestionBodyTextMax),
+  "meetingId": zod.number().optional().describe('Optional meeting this question was captured in; must belong to the same project.')
+})
+
+
+/**
+ * @summary Edit or resolve an open question
+ */
+export const UpdateOpenQuestionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateOpenQuestionBodyTextMax = 1000;
+
+
+
+export const UpdateOpenQuestionBody = zod.object({
+  "text": zod.string().min(1).max(updateOpenQuestionBodyTextMax).optional(),
+  "status": zod.enum(['open', 'resolved']).optional()
+})
+
+export const UpdateOpenQuestionResponse = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "meetingId": zod.number().nullish(),
+  "text": zod.string(),
+  "status": zod.enum(['open', 'resolved']),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete an open question
+ */
+export const DeleteOpenQuestionParams = zod.object({
+  "id": zod.coerce.number()
 })
 
 
