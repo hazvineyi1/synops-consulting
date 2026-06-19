@@ -196,7 +196,7 @@ export default function ProjectDetail() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Meetings</CardTitle>
+                  <CardTitle className="text-base">Agendas</CardTitle>
                   <CardDescription>
                     Weekly agendas, action items, correspondence, and calendar.
                   </CardDescription>
@@ -205,7 +205,7 @@ export default function ProjectDetail() {
                   <Button asChild variant="outline" className="w-full">
                     <Link href={`/projects/${project.id}/meetings`}>
                       <CalendarClock className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Open meetings
+                      Open agendas
                     </Link>
                   </Button>
                 </CardContent>

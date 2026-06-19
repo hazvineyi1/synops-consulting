@@ -31,18 +31,12 @@ import {
   Trash2,
   User,
   Save,
-  ArrowRight,
-  MessageCircleQuestion,
-  CheckCircle2,
 } from "lucide-react";
 
 interface ProjectStartTabProps {
   projectId: number;
   course: Course | null;
   objectives: Objective[];
-  kickoffSummary: string[];
-  kickoffCompleted: boolean;
-  onGoToKickoff: () => void;
 }
 
 const GOAL_LEVELS: {
@@ -84,9 +78,6 @@ export function ProjectStartTab({
   projectId,
   course,
   objectives,
-  kickoffSummary,
-  kickoffCompleted,
-  onGoToKickoff,
 }: ProjectStartTabProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -185,8 +176,7 @@ export function ProjectStartTab({
     <div className="space-y-6">
       <p className="max-w-[70ch] text-sm text-muted-foreground">
         Capture the essentials that anchor the engagement: the goal hierarchy from institution down
-        to the course, the first course overview and instructor, and the delivery modality. The
-        guided kickoff interview lives on the Meet tab.
+        to the course, the first course overview and instructor, and the delivery modality.
       </p>
 
       {/* Goal hierarchy */}
@@ -364,55 +354,6 @@ export function ProjectStartTab({
                 </Button>
               </div>
             </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Kickoff summary */}
-      <Card className="border-border shadow-sm">
-        <CardHeader className="border-b border-border bg-card px-5 py-4">
-          <CardTitle className="text-lg">Kickoff summary</CardTitle>
-          <CardDescription className="m-0">
-            A snapshot of the guided kickoff interview on the Meet tab.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 p-6">
-          {kickoffCompleted && kickoffSummary.length > 0 ? (
-            <>
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <CheckCircle2 className="h-5 w-5 text-green-600" aria-hidden="true" />
-                Kickoff complete
-              </div>
-              <ul className="space-y-2">
-                {kickoffSummary.map((line, i) => (
-                  <li
-                    key={i}
-                    className="flex items-start gap-2 rounded-lg border border-border bg-muted/20 p-3 text-sm text-foreground"
-                  >
-                    <span
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
-                      aria-hidden="true"
-                    />
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button variant="outline" onClick={onGoToKickoff}>
-                <MessageCircleQuestion className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                Review kickoff
-              </Button>
-            </>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                The kickoff interview has not been completed yet. Run it to frame the engagement and
-                generate a summary here.
-              </p>
-              <Button onClick={onGoToKickoff}>
-                Go to kickoff interview
-                <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden="true" />
-              </Button>
-            </div>
           )}
         </CardContent>
       </Card>

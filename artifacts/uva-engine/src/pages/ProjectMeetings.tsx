@@ -400,7 +400,7 @@ export default function ProjectMeetings() {
       {() => (
         <Tabs defaultValue="meetings" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:grid-cols-4">
-            <TabsTrigger value="meetings">Meetings</TabsTrigger>
+            <TabsTrigger value="meetings">Agendas</TabsTrigger>
             <TabsTrigger value="actions">Action items</TabsTrigger>
             <TabsTrigger value="correspondence">Correspondence</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>

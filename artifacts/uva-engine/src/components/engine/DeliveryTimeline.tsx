@@ -1,11 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
-interface DeliveryTimelineProps {
-  /** Live kickoff completeness, fed from the agenda check progress. */
-  progressPct: number;
-}
-
 interface Gate {
   wk: string;
   label: string;
@@ -24,9 +19,9 @@ interface Goal {
  * straight away without scrolling. Kept short on purpose: one header row, one
  * horizontal gate timeline, and a dense grid of goal chips.
  */
-export function DeliveryTimeline({ progressPct }: DeliveryTimelineProps) {
+export function DeliveryTimeline() {
   const gates: Gate[] = [
-    { wk: "Wk 0", label: "Kickoff and intake", active: true },
+    { wk: "Wk 0", label: "Intake", active: true },
     { wk: "Wk 1 to 3", label: "Backward design, alignment gate" },
     { wk: "Wk 4", label: "Prototype, faculty sign-off" },
     { wk: "Wk 5 to 14", label: "Production" },
@@ -35,7 +30,6 @@ export function DeliveryTimeline({ progressPct }: DeliveryTimelineProps) {
   ];
 
   const goals: Goal[] = [
-    { title: "Kickoff completeness", pct: progressPct },
     { title: "Aligned, measurable outcomes", pct: 0 },
     { title: "Accessibility conformance", pct: 80 },
     { title: "Faculty-approved prototype", pct: 0 },
