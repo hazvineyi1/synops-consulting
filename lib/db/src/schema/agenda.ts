@@ -38,6 +38,7 @@ export const meetingActionItemsTable = pgTable("meeting_action_items", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull(),
   sourceMeetingId: integer("source_meeting_id"),
+  sourceCorrespondenceId: integer("source_correspondence_id"),
   title: text("title").notNull(),
   description: text("description"),
   ownerName: text("owner_name"),
@@ -51,3 +52,28 @@ export const meetingActionItemsTable = pgTable("meeting_action_items", {
 });
 
 export type MeetingActionItemRow = typeof meetingActionItemsTable.$inferSelect;
+
+/**
+ * Project correspondence: the per-project repository of email/message threads
+ * logged by hand (manual paste/upload now; email-account sync deferred). Each row
+ * is one piece of correspondence with a `direction` ("inbound" | "outbound"), a
+ * counterparty `party` (name/address, nullable), a `subject`, free-text `body`,
+ * and an `occurredAt` (when it happened, nullable). Actionable follow-ups are
+ * promoted into `meeting_action_items` via `sourceCorrespondenceId`, so they flow
+ * into the same agenda summary as meeting-derived items. Project-scoped: tenancy
+ * resolves through the owning project's client organization (see tenancy.ts).
+ */
+export const projectCorrespondenceTable = pgTable("project_correspondence", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  direction: text("direction").notNull().default("inbound"),
+  subject: text("subject").notNull(),
+  party: text("party"),
+  body: text("body").notNull().default(""),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }),
+  createdByUserId: integer("created_by_user_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export type ProjectCorrespondenceRow = typeof projectCorrespondenceTable.$inferSelect;

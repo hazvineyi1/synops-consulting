@@ -42,6 +42,9 @@ import type {
   ClientInput,
   ClientUpdate,
   ContactInput,
+  Correspondence,
+  CorrespondenceInput,
+  CorrespondenceUpdate,
   Course,
   CourseInput,
   CourseUpdate,
@@ -5207,6 +5210,297 @@ export function useGetAgendaSummary<TData = Awaited<ReturnType<typeof getAgendaS
 
 
 
+
+export const getListProjectCorrespondenceUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/compass/projects/${projectId}/correspondence`
+}
+
+/**
+ * @summary List correspondence logged for a project (newest first)
+ */
+export const listProjectCorrespondence = async (projectId: number, options?: RequestInit): Promise<Correspondence[]> => {
+
+  return customFetch<Correspondence[]>(getListProjectCorrespondenceUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProjectCorrespondenceQueryKey = (projectId: number,) => {
+    return [
+    `/api/compass/projects/${projectId}/correspondence`
+    ] as const;
+    }
+
+
+export const getListProjectCorrespondenceQueryOptions = <TData = Awaited<ReturnType<typeof listProjectCorrespondence>>, TError = ErrorType<unknown>>(projectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectCorrespondence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProjectCorrespondenceQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectCorrespondence>>> = ({ signal }) => listProjectCorrespondence(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(projectId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProjectCorrespondence>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProjectCorrespondenceQueryResult = NonNullable<Awaited<ReturnType<typeof listProjectCorrespondence>>>
+export type ListProjectCorrespondenceQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List correspondence logged for a project (newest first)
+ */
+
+export function useListProjectCorrespondence<TData = Awaited<ReturnType<typeof listProjectCorrespondence>>, TError = ErrorType<unknown>>(
+ projectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectCorrespondence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProjectCorrespondenceQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateProjectCorrespondenceUrl = (projectId: number,) => {
+
+
+
+
+  return `/api/compass/projects/${projectId}/correspondence`
+}
+
+/**
+ * @summary Log a piece of correspondence for a project
+ */
+export const createProjectCorrespondence = async (projectId: number,
+    correspondenceInput: CorrespondenceInput, options?: RequestInit): Promise<Correspondence> => {
+
+  return customFetch<Correspondence>(getCreateProjectCorrespondenceUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      correspondenceInput,)
+  }
+);}
+
+
+
+
+export const getCreateProjectCorrespondenceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProjectCorrespondence>>, TError,{projectId: number;data: BodyType<CorrespondenceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProjectCorrespondence>>, TError,{projectId: number;data: BodyType<CorrespondenceInput>}, TContext> => {
+
+const mutationKey = ['createProjectCorrespondence'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProjectCorrespondence>>, {projectId: number;data: BodyType<CorrespondenceInput>}> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  createProjectCorrespondence(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProjectCorrespondenceMutationResult = NonNullable<Awaited<ReturnType<typeof createProjectCorrespondence>>>
+    export type CreateProjectCorrespondenceMutationBody = BodyType<CorrespondenceInput>
+    export type CreateProjectCorrespondenceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Log a piece of correspondence for a project
+ */
+export const useCreateProjectCorrespondence = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProjectCorrespondence>>, TError,{projectId: number;data: BodyType<CorrespondenceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createProjectCorrespondence>>,
+        TError,
+        {projectId: number;data: BodyType<CorrespondenceInput>},
+        TContext
+      > => {
+      return useMutation(getCreateProjectCorrespondenceMutationOptions(options));
+    }
+
+export const getUpdateCorrespondenceUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/correspondence/${id}`
+}
+
+/**
+ * @summary Update a logged piece of correspondence
+ */
+export const updateCorrespondence = async (id: number,
+    correspondenceUpdate: CorrespondenceUpdate, options?: RequestInit): Promise<Correspondence> => {
+
+  return customFetch<Correspondence>(getUpdateCorrespondenceUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      correspondenceUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateCorrespondenceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCorrespondence>>, TError,{id: number;data: BodyType<CorrespondenceUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCorrespondence>>, TError,{id: number;data: BodyType<CorrespondenceUpdate>}, TContext> => {
+
+const mutationKey = ['updateCorrespondence'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCorrespondence>>, {id: number;data: BodyType<CorrespondenceUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateCorrespondence(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCorrespondenceMutationResult = NonNullable<Awaited<ReturnType<typeof updateCorrespondence>>>
+    export type UpdateCorrespondenceMutationBody = BodyType<CorrespondenceUpdate>
+    export type UpdateCorrespondenceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a logged piece of correspondence
+ */
+export const useUpdateCorrespondence = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCorrespondence>>, TError,{id: number;data: BodyType<CorrespondenceUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCorrespondence>>,
+        TError,
+        {id: number;data: BodyType<CorrespondenceUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateCorrespondenceMutationOptions(options));
+    }
+
+export const getDeleteCorrespondenceUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/correspondence/${id}`
+}
+
+/**
+ * @summary Delete a logged piece of correspondence
+ */
+export const deleteCorrespondence = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteCorrespondenceUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteCorrespondenceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCorrespondence>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCorrespondence>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteCorrespondence'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCorrespondence>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteCorrespondence(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCorrespondenceMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCorrespondence>>>
+
+    export type DeleteCorrespondenceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a logged piece of correspondence
+ */
+export const useDeleteCorrespondence = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCorrespondence>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCorrespondence>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteCorrespondenceMutationOptions(options));
+    }
 
 export const getListBuildersUrl = (params?: ListBuildersParams,) => {
   const normalizedParams = new URLSearchParams();

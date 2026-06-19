@@ -13,6 +13,7 @@ import ProjectDesign from "@/pages/ProjectDesign";
 import ProjectQA from "@/pages/ProjectQA";
 import ProjectHandoff from "@/pages/ProjectHandoff";
 import ProjectTime from "@/pages/ProjectTime";
+import ProjectMeetings from "@/pages/ProjectMeetings";
 import Standards from "@/pages/Standards";
 import Builders from "@/pages/compass/Builders";
 import BuilderActivity from "@/pages/compass/BuilderActivity";
@@ -52,6 +53,7 @@ export function EngineApp() {
         <Route path="/projects/:id/qa" component={ProjectQA} />
         <Route path="/projects/:id/handoff" component={ProjectHandoff} />
         <Route path="/projects/:id/time" component={ProjectTime} />
+        <Route path="/projects/:id/meetings" component={ProjectMeetings} />
         <Route path="/standards" component={Standards} />
         <Route path="/builders">{manage ? <Builders /> : <Redirect to="/" />}</Route>
         <Route path="/builders/:id">

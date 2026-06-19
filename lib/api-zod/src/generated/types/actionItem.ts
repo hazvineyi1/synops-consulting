@@ -13,6 +13,8 @@ export interface ActionItem {
   projectId: number;
   /** @nullable */
   sourceMeetingId?: number | null;
+  /** @nullable */
+  sourceCorrespondenceId?: number | null;
   title: string;
   /** @nullable */
   description?: string | null;

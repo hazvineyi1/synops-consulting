@@ -21,4 +21,5 @@ export interface ActionItemInput {
   category?: ActionItemInputCategory;
   /** @minimum 0 */
   weekIndex?: number;
+  sourceCorrespondenceId?: number;
 }

@@ -16,6 +16,7 @@ import {
   meetingRecordingsTable,
   projectMeetingsTable,
   meetingActionItemsTable,
+  projectCorrespondenceTable,
   projectTimeEntriesTable,
   type AllocationScopeType,
 } from "@workspace/db";
@@ -375,6 +376,17 @@ export async function resolveActionItemScope(actionItemId: number): Promise<Scop
     .innerJoin(projectsTable, eq(meetingActionItemsTable.projectId, projectsTable.id))
     .innerJoin(clientsTable, eq(projectsTable.clientId, clientsTable.id))
     .where(eq(meetingActionItemsTable.id, actionItemId));
+  if (!row) return null;
+  return { orgId: row.orgId, level: "project", projectId: row.projectId, courseId: null, classId: null };
+}
+
+export async function resolveCorrespondenceScope(correspondenceId: number): Promise<ScopeRef | null> {
+  const [row] = await db
+    .select({ orgId: clientsTable.organizationId, projectId: projectsTable.id })
+    .from(projectCorrespondenceTable)
+    .innerJoin(projectsTable, eq(projectCorrespondenceTable.projectId, projectsTable.id))
+    .innerJoin(clientsTable, eq(projectsTable.clientId, clientsTable.id))
+    .where(eq(projectCorrespondenceTable.id, correspondenceId));
   if (!row) return null;
   return { orgId: row.orgId, level: "project", projectId: row.projectId, courseId: null, classId: null };
 }

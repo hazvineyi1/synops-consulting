@@ -1501,6 +1501,7 @@ export const ProcessMeetingNotesResponse = zod.object({
   "id": zod.number(),
   "projectId": zod.number(),
   "sourceMeetingId": zod.number().nullish(),
+  "sourceCorrespondenceId": zod.number().nullish(),
   "title": zod.string(),
   "description": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
@@ -1538,6 +1539,7 @@ export const ListProjectActionItemsResponseItem = zod.object({
   "id": zod.number(),
   "projectId": zod.number(),
   "sourceMeetingId": zod.number().nullish(),
+  "sourceCorrespondenceId": zod.number().nullish(),
   "title": zod.string(),
   "description": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
@@ -1575,7 +1577,8 @@ export const CreateProjectActionItemBody = zod.object({
   "ownerName": zod.string().max(createProjectActionItemBodyOwnerNameMax).optional(),
   "dueAt": zod.coerce.date().optional(),
   "category": zod.enum(['general', 'content', 'review', 'accessibility']).optional(),
-  "weekIndex": zod.number().min(createProjectActionItemBodyWeekIndexMin).optional()
+  "weekIndex": zod.number().min(createProjectActionItemBodyWeekIndexMin).optional(),
+  "sourceCorrespondenceId": zod.number().optional()
 })
 
 
@@ -1610,6 +1613,7 @@ export const UpdateActionItemResponse = zod.object({
   "id": zod.number(),
   "projectId": zod.number(),
   "sourceMeetingId": zod.number().nullish(),
+  "sourceCorrespondenceId": zod.number().nullish(),
   "title": zod.string(),
   "description": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
@@ -1669,6 +1673,95 @@ export const GetAgendaSummaryResponse = zod.object({
   "openActionCount": zod.number()
 }),zod.null()]),
   "nextMeetingAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary List correspondence logged for a project (newest first)
+ */
+export const ListProjectCorrespondenceParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const ListProjectCorrespondenceResponseItem = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "direction": zod.enum(['inbound', 'outbound']),
+  "subject": zod.string(),
+  "party": zod.string().nullish(),
+  "body": zod.string(),
+  "occurredAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListProjectCorrespondenceResponse = zod.array(ListProjectCorrespondenceResponseItem)
+
+
+/**
+ * @summary Log a piece of correspondence for a project
+ */
+export const CreateProjectCorrespondenceParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const createProjectCorrespondenceBodySubjectMax = 300;
+
+export const createProjectCorrespondenceBodyPartyMax = 200;
+
+export const createProjectCorrespondenceBodyBodyMax = 20000;
+
+
+
+export const CreateProjectCorrespondenceBody = zod.object({
+  "direction": zod.enum(['inbound', 'outbound']).optional(),
+  "subject": zod.string().min(1).max(createProjectCorrespondenceBodySubjectMax),
+  "party": zod.string().max(createProjectCorrespondenceBodyPartyMax).optional(),
+  "body": zod.string().max(createProjectCorrespondenceBodyBodyMax).optional(),
+  "occurredAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Update a logged piece of correspondence
+ */
+export const UpdateCorrespondenceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateCorrespondenceBodySubjectMax = 300;
+
+export const updateCorrespondenceBodyPartyMax = 200;
+
+export const updateCorrespondenceBodyBodyMax = 20000;
+
+
+
+export const UpdateCorrespondenceBody = zod.object({
+  "direction": zod.enum(['inbound', 'outbound']).optional(),
+  "subject": zod.string().min(1).max(updateCorrespondenceBodySubjectMax).optional(),
+  "party": zod.string().max(updateCorrespondenceBodyPartyMax).nullish(),
+  "body": zod.string().max(updateCorrespondenceBodyBodyMax).optional(),
+  "occurredAt": zod.coerce.date().nullish()
+})
+
+export const UpdateCorrespondenceResponse = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "direction": zod.enum(['inbound', 'outbound']),
+  "subject": zod.string(),
+  "party": zod.string().nullish(),
+  "body": zod.string(),
+  "occurredAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a logged piece of correspondence
+ */
+export const DeleteCorrespondenceParams = zod.object({
+  "id": zod.coerce.number()
 })
 
 

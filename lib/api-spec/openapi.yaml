@@ -1436,6 +1436,89 @@ paths:
               schema:
                 $ref: "#/components/schemas/AgendaSummary"
 
+  # ── Correspondence (email/message repository) ────────────────
+  /compass/projects/{projectId}/correspondence:
+    get:
+      operationId: listProjectCorrespondence
+      tags: [correspondence]
+      summary: List correspondence logged for a project (newest first)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Correspondence
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Correspondence"
+    post:
+      operationId: createProjectCorrespondence
+      tags: [correspondence]
+      summary: Log a piece of correspondence for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrespondenceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Correspondence"
+
+  /compass/correspondence/{id}:
+    patch:
+      operationId: updateCorrespondence
+      tags: [correspondence]
+      summary: Update a logged piece of correspondence
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrespondenceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Correspondence"
+    delete:
+      operationId: deleteCorrespondence
+      tags: [correspondence]
+      summary: Delete a logged piece of correspondence
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
   # ── Builders (school admin management) ───────────────────────
   /compass/builders:
     get:
@@ -2690,6 +2773,8 @@ components:
           type: integer
         sourceMeetingId:
           type: ["integer", "null"]
+        sourceCorrespondenceId:
+          type: ["integer", "null"]
         title:
           type: string
         description:
@@ -2740,6 +2825,8 @@ components:
         weekIndex:
           type: integer
           minimum: 0
+        sourceCorrespondenceId:
+          type: integer
 
     ActionItemUpdate:
       type: object
@@ -2845,6 +2932,75 @@ components:
             - $ref: "#/components/schemas/AgendaPlan"
             - type: "null"
         nextMeetingAt:
+          type: ["string", "null"]
+          format: date-time
+
+    # ── Correspondence ────────────────────────────────────────────
+    Correspondence:
+      type: object
+      required: [id, projectId, direction, subject, body, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        subject:
+          type: string
+        party:
+          type: ["string", "null"]
+        body:
+          type: string
+        occurredAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CorrespondenceInput:
+      type: object
+      required: [subject]
+      properties:
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 300
+        party:
+          type: string
+          maxLength: 200
+        body:
+          type: string
+          maxLength: 20000
+        occurredAt:
+          type: string
+          format: date-time
+
+    CorrespondenceUpdate:
+      type: object
+      properties:
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 300
+        party:
+          type: ["string", "null"]
+          maxLength: 200
+        body:
+          type: string
+          maxLength: 20000
+        occurredAt:
           type: ["string", "null"]
           format: date-time
 

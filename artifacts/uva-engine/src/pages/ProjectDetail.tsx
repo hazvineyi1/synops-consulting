@@ -17,6 +17,7 @@ import {
   ChevronRight,
   ArrowRight,
   Clock,
+  CalendarClock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -190,6 +191,23 @@ export default function ProjectDetail() {
                       <p className="whitespace-pre-wrap">{project.description}</p>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Meetings</CardTitle>
+                  <CardDescription>
+                    Weekly agendas, action items, correspondence, and calendar.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href={`/projects/${project.id}/meetings`}>
+                      <CalendarClock className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Open meetings
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
 

@@ -421,6 +421,8 @@ export interface ActionItem {
   projectId: number;
   /** @nullable */
   sourceMeetingId?: number | null;
+  /** @nullable */
+  sourceCorrespondenceId?: number | null;
   title: string;
   /** @nullable */
   description?: string | null;
@@ -462,6 +464,7 @@ export interface ActionItemInput {
   category?: ActionItemInputCategory;
   /** @minimum 0 */
   weekIndex?: number;
+  sourceCorrespondenceId?: number;
 }
 
 export type ActionItemUpdateStatus = typeof ActionItemUpdateStatus[keyof typeof ActionItemUpdateStatus];
@@ -549,6 +552,76 @@ export interface AgendaSummary {
   latestAgenda: AgendaPlan | null;
   /** @nullable */
   nextMeetingAt: string | null;
+}
+
+export type CorrespondenceDirection = typeof CorrespondenceDirection[keyof typeof CorrespondenceDirection];
+
+
+export const CorrespondenceDirection = {
+  inbound: 'inbound',
+  outbound: 'outbound',
+} as const;
+
+export interface Correspondence {
+  id: number;
+  projectId: number;
+  direction: CorrespondenceDirection;
+  subject: string;
+  /** @nullable */
+  party?: string | null;
+  body: string;
+  /** @nullable */
+  occurredAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CorrespondenceInputDirection = typeof CorrespondenceInputDirection[keyof typeof CorrespondenceInputDirection];
+
+
+export const CorrespondenceInputDirection = {
+  inbound: 'inbound',
+  outbound: 'outbound',
+} as const;
+
+export interface CorrespondenceInput {
+  direction?: CorrespondenceInputDirection;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  subject: string;
+  /** @maxLength 200 */
+  party?: string;
+  /** @maxLength 20000 */
+  body?: string;
+  occurredAt?: string;
+}
+
+export type CorrespondenceUpdateDirection = typeof CorrespondenceUpdateDirection[keyof typeof CorrespondenceUpdateDirection];
+
+
+export const CorrespondenceUpdateDirection = {
+  inbound: 'inbound',
+  outbound: 'outbound',
+} as const;
+
+export interface CorrespondenceUpdate {
+  direction?: CorrespondenceUpdateDirection;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  subject?: string;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  party?: string | null;
+  /** @maxLength 20000 */
+  body?: string;
+  /** @nullable */
+  occurredAt?: string | null;
 }
 
 export interface UploadUrlRequest {
