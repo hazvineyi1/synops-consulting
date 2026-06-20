@@ -8,6 +8,8 @@
 import type { MeetingRecordingInputKind } from './meetingRecordingInputKind';
 
 export interface MeetingRecordingInput {
+  /** Optional meeting to scope this recording to (must belong to the project). */
+  meetingId?: number;
   kind: MeetingRecordingInputKind;
   /**
      * @minLength 1

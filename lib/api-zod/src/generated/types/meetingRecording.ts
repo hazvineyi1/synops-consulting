@@ -10,6 +10,11 @@ import type { MeetingRecordingKind } from './meetingRecordingKind';
 export interface MeetingRecording {
   id: number;
   projectId: number;
+  /**
+     * The meeting this recording belongs to, when scoped to one.
+     * @nullable
+     */
+  meetingId?: number | null;
   kind: MeetingRecordingKind;
   title: string;
   /** @nullable */

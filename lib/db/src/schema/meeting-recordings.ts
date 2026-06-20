@@ -10,6 +10,10 @@ import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
 export const meetingRecordingsTable = pgTable("meeting_recordings", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull(),
+  // Optional meeting this recording belongs to. Nullable so legacy project-level
+  // recordings remain valid; when set it scopes the recording to one meeting in
+  // the focused meetings UI. Validated server-side to belong to the same project.
+  meetingId: integer("meeting_id"),
   kind: text("kind").notNull(), // "upload" | "external"
   title: text("title").notNull(),
   objectPath: text("object_path"),

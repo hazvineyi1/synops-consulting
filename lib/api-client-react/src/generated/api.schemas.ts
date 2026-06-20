@@ -234,6 +234,11 @@ export const MeetingRecordingKind = {
 export interface MeetingRecording {
   id: number;
   projectId: number;
+  /**
+     * The meeting this recording belongs to, when scoped to one.
+     * @nullable
+     */
+  meetingId?: number | null;
   kind: MeetingRecordingKind;
   title: string;
   /** @nullable */
@@ -270,6 +275,8 @@ export const MeetingRecordingInputKind = {
 } as const;
 
 export interface MeetingRecordingInput {
+  /** Optional meeting to scope this recording to (must belong to the project). */
+  meetingId?: number;
   kind: MeetingRecordingInputKind;
   /**
      * @minLength 1

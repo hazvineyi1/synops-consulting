@@ -12,6 +12,7 @@ import {
   denyNoScope,
   resolveProjectScope,
   resolveMeetingRecordingScope,
+  resolveMeetingScope,
 } from "../lib/tenancy";
 import { recordActorAudit } from "../lib/audit";
 import { ObjectStorageService } from "../lib/objectStorage";
@@ -33,6 +34,7 @@ function serialize(row: typeof meetingRecordingsTable.$inferSelect) {
   return {
     id: row.id,
     projectId: row.projectId,
+    meetingId: row.meetingId,
     kind: row.kind,
     title: row.title,
     objectPath: row.objectPath,
@@ -124,11 +126,23 @@ router.post("/projects/:projectId/recordings", async (req, res): Promise<void> =
     return;
   }
 
+  // A scoped recording must belong to a meeting in THIS project (and therefore
+  // this org). Cross-project or cross-org meeting ids return 404, not 403, to
+  // avoid leaking existence.
+  if (parsed.data.meetingId != null) {
+    const meetingScope = await resolveMeetingScope(parsed.data.meetingId);
+    if (!meetingScope || meetingScope.projectId !== params.data.projectId) {
+      res.status(404).json({ error: "Meeting not found" });
+      return;
+    }
+  }
+
   const isUpload = parsed.data.kind === "upload";
   const [row] = await db
     .insert(meetingRecordingsTable)
     .values({
       projectId: params.data.projectId,
+      meetingId: parsed.data.meetingId ?? null,
       kind: parsed.data.kind,
       title: parsed.data.title,
       objectPath: isUpload ? parsed.data.objectPath! : null,

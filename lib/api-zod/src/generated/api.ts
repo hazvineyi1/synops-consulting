@@ -1175,6 +1175,7 @@ export const ListMeetingRecordingsParams = zod.object({
 export const ListMeetingRecordingsResponseItem = zod.object({
   "id": zod.number(),
   "projectId": zod.number(),
+  "meetingId": zod.number().nullish().describe('The meeting this recording belongs to, when scoped to one.'),
   "kind": zod.enum(['upload', 'external']),
   "title": zod.string(),
   "objectPath": zod.string().nullish(),
@@ -1206,6 +1207,7 @@ export const createMeetingRecordingBodySizeBytesMin = 0;
 
 
 export const CreateMeetingRecordingBody = zod.object({
+  "meetingId": zod.number().optional().describe('Optional meeting to scope this recording to (must belong to the project).'),
   "kind": zod.enum(['upload', 'external']),
   "title": zod.string().min(1).max(createMeetingRecordingBodyTitleMax),
   "objectPath": zod.string().optional().describe('Required when kind is \"upload\"; the path returned by the upload endpoint.'),
@@ -1236,6 +1238,7 @@ export const TranscribeMeetingRecordingParams = zod.object({
 export const TranscribeMeetingRecordingResponse = zod.object({
   "id": zod.number(),
   "projectId": zod.number(),
+  "meetingId": zod.number().nullish().describe('The meeting this recording belongs to, when scoped to one.'),
   "kind": zod.enum(['upload', 'external']),
   "title": zod.string(),
   "objectPath": zod.string().nullish(),

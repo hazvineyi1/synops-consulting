@@ -59,6 +59,7 @@ import {
   Target,
   CheckCircle2,
   RotateCcw,
+  ChevronDown,
 } from "lucide-react";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 import { MeetingRecordings } from "@/components/engine/MeetingRecordings";
@@ -71,6 +72,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -170,6 +176,69 @@ const MEETING_TYPE_STYLES: Record<MeetingType, string> = {
 
 function isMeetingType(v: string): v is MeetingType {
   return v === "kickoff" || v === "working" || v === "final";
+}
+
+/** Recency key for a meeting: its scheduled time, else when it was created. */
+function meetingRecency(m: Meeting): number {
+  const t = m.scheduledAt ?? m.createdAt;
+  const ms = t ? new Date(t).getTime() : 0;
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+/** Sort most-recent first; ties broken by id (newest row first). */
+function byRecencyDesc(a: Meeting, b: Meeting): number {
+  return meetingRecency(b) - meetingRecency(a) || b.id - a.id;
+}
+
+/** Compact sidebar row for the master-detail meeting list. */
+function MeetingListRow({
+  meeting,
+  selected,
+  onSelect,
+}: {
+  meeting: Meeting;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const type: MeetingType = isMeetingType(meeting.meetingType) ? meeting.meetingType : "working";
+  const completed = meeting.status === "completed";
+  const when = meeting.scheduledAt ?? meeting.createdAt;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-current={selected ? "true" : undefined}
+      className={`w-full rounded-lg border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+        selected
+          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+          : "border-border bg-card hover:bg-muted/50"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+          {meeting.title}
+        </span>
+        <Badge
+          variant="secondary"
+          className={`shrink-0 shadow-none hover:bg-current/0 ${MEETING_TYPE_STYLES[type]}`}
+        >
+          {MEETING_TYPE_LABELS[type]}
+        </Badge>
+      </div>
+      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+        {completed ? (
+          <span className="inline-flex items-center gap-1 text-emerald-700">
+            <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Completed
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3 w-3" aria-hidden="true" /> Scheduled
+          </span>
+        )}
+        {when ? <span>{fmtDate(when)}</span> : null}
+      </div>
+    </button>
+  );
 }
 
 // Client-side mirror of the server's next-type suggestion (meetingTemplates.ts:
@@ -434,6 +503,39 @@ export default function ProjectMeetings() {
     });
   }, [meetings, meetingSearch]);
 
+  // Active (scheduled) and completed groups, each most-recent first, so the
+  // sidebar can show active meetings up top and collapse completed ones below.
+  const activeMeetings = useMemo(
+    () => filteredMeetings.filter((m) => m.status !== "completed").sort(byRecencyDesc),
+    [filteredMeetings],
+  );
+  const completedMeetings = useMemo(
+    () => filteredMeetings.filter((m) => m.status === "completed").sort(byRecencyDesc),
+    [filteredMeetings],
+  );
+
+  // ---- Master-detail selection ----
+  // The focused meeting. Default lands on the most recent active meeting (else the
+  // most recent overall) so a single meeting fills the detail pane. Selection is
+  // reconciled during render so it can never point at a meeting that no longer
+  // exists (deleted, or filtered out by search).
+  const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null);
+  const [completedOpen, setCompletedOpen] = useState(false);
+  const [newMeetingOpen, setNewMeetingOpen] = useState(false);
+
+  const defaultMeetingId = useMemo(() => {
+    const pool = activeMeetings.length > 0 ? activeMeetings : completedMeetings;
+    return pool[0]?.id ?? null;
+  }, [activeMeetings, completedMeetings]);
+
+  const selectionValid =
+    selectedMeetingId != null && filteredMeetings.some((m) => m.id === selectedMeetingId);
+  const effectiveMeetingId = selectionValid ? selectedMeetingId : defaultMeetingId;
+  const selectedMeeting = useMemo(
+    () => meetings.find((m) => m.id === effectiveMeetingId) ?? null,
+    [meetings, effectiveMeetingId],
+  );
+
   function addMeeting() {
     const title = newMeetingTitle.trim();
     if (!title) {
@@ -451,13 +553,16 @@ export default function ProjectMeetings() {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (created) => {
           invalidateMeetings();
           invalidateSummary();
           setNewMeetingTitle("");
           setNewMeetingType("working");
           setNewMeetingFocus("");
           setNewMeetingAt("");
+          // Focus the new meeting so the page is immediately about it.
+          setSelectedMeetingId(created.id);
+          setNewMeetingOpen(false);
           toast({ title: "Meeting added" });
         },
         onError: (err) => fail(err, "Could not add the meeting"),
@@ -478,6 +583,11 @@ export default function ProjectMeetings() {
           invalidateDecisions();
           invalidateOpenQuestions();
           invalidateSummary();
+          // Drop the selection if the deleted meeting was focused; render-time
+          // reconciliation falls back to the default (most recent active) meeting.
+          if (deletingMeeting && selectedMeetingId === deletingMeeting.id) {
+            setSelectedMeetingId(null);
+          }
           setDeletingMeeting(null);
           toast({ title: "Meeting deleted" });
         },
@@ -773,198 +883,211 @@ export default function ProjectMeetings() {
 
           {/* ============================ MEETINGS ============================ */}
           <TabsContent value="meetings" className="space-y-6">
-            <MeetingRecordings
-              projectId={projectId}
-              meetings={meetings.map((m) => ({ id: m.id, title: m.title, notes: m.notes ?? "" }))}
-              onInsertNotes={(meetingId, notes) =>
-                updateMeeting.mutateAsync({ id: meetingId, data: { notes } }).then(() => {
-                  invalidateMeetings();
-                  invalidateSummary();
-                })
-              }
-            />
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarClock className="h-5 w-5 text-primary" aria-hidden="true" /> Schedule a meeting
-                </CardTitle>
-                <CardDescription>
-                  Choose a meeting type to seed its pre-work, standing agenda, and definition of done. Capture
-                  notes during it, then generate the next agenda.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
-                  <div className="space-y-1.5 lg:col-span-2">
-                    <Label htmlFor="meeting-title">Title</Label>
-                    <Input
-                      id="meeting-title"
-                      value={newMeetingTitle}
-                      maxLength={200}
-                      onChange={(e) => setNewMeetingTitle(e.target.value)}
-                      placeholder="Weekly check-in"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="meeting-type">Type</Label>
-                    <Select value={newMeetingType} onValueChange={(v) => setNewMeetingType(v as MeetingType)}>
-                      <SelectTrigger id="meeting-type">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MEETING_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {MEETING_TYPE_LABELS[t]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="meeting-at">Date and time (optional)</Label>
-                    <Input
-                      id="meeting-at"
-                      type="datetime-local"
-                      value={newMeetingAt}
-                      onChange={(e) => setNewMeetingAt(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5 lg:col-span-3">
-                    <Label htmlFor="meeting-focus">Focus (optional)</Label>
-                    <Input
-                      id="meeting-focus"
-                      value={newMeetingFocus}
-                      maxLength={200}
-                      onChange={(e) => setNewMeetingFocus(e.target.value)}
-                      placeholder="What is this meeting mainly about?"
-                    />
-                  </div>
-                  <div className="lg:flex lg:items-end">
-                    <Button onClick={addMeeting} disabled={createMeeting.isPending} className="w-full sm:w-auto">
-                      <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> Add meeting
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {meetings.length === 0 ? (
               <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                  <CalendarClock className="mb-4 h-12 w-12 text-muted" aria-hidden="true" />
-                  <p>No meetings yet. Add one above to start the cycle.</p>
+                <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center text-muted-foreground">
+                  <CalendarClock className="h-12 w-12 text-muted" aria-hidden="true" />
+                  <p>No meetings yet. Schedule one to start the cycle.</p>
+                  <Button onClick={() => setNewMeetingOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> New meeting
+                  </Button>
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-4">
-                <div className="relative">
-                  <Search
-                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <Label htmlFor="meeting-search" className="sr-only">
-                    Search meetings
-                  </Label>
-                  <Input
-                    id="meeting-search"
-                    type="search"
-                    value={meetingSearch}
-                    onChange={(e) => setMeetingSearch(e.target.value)}
-                    placeholder="Search meetings by title, type, focus, or notes"
-                    className="pl-9"
-                  />
+              <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+                {/* Sidebar: create, search, active rows, collapsible completed */}
+                <aside className="space-y-3 lg:sticky lg:top-4">
+                  <Button onClick={() => setNewMeetingOpen(true)} className="w-full">
+                    <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> New meeting
+                  </Button>
+                  <div className="relative">
+                    <Search
+                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <Label htmlFor="meeting-search" className="sr-only">
+                      Search meetings
+                    </Label>
+                    <Input
+                      id="meeting-search"
+                      type="search"
+                      value={meetingSearch}
+                      onChange={(e) => setMeetingSearch(e.target.value)}
+                      placeholder="Search meetings"
+                      className="pl-9"
+                    />
+                  </div>
+
+                  {filteredMeetings.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+                      No meetings match "{meetingSearch.trim()}".
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between px-1">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            Active
+                          </span>
+                          <span className="text-xs text-muted-foreground">{activeMeetings.length}</span>
+                        </div>
+                        {activeMeetings.length === 0 ? (
+                          <p className="px-1 text-xs text-muted-foreground">No active meetings.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {activeMeetings.map((m) => (
+                              <MeetingListRow
+                                key={m.id}
+                                meeting={m}
+                                selected={m.id === effectiveMeetingId}
+                                onSelect={() => setSelectedMeetingId(m.id)}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {completedMeetings.length > 0 ? (
+                        <Collapsible open={completedOpen} onOpenChange={setCompletedOpen}>
+                          <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            <span className="inline-flex items-center gap-2">
+                              <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+                              Completed
+                              <Badge variant="secondary" className="shadow-none hover:bg-current/0">
+                                {completedMeetings.length}
+                              </Badge>
+                            </span>
+                            <ChevronDown
+                              className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+                              aria-hidden="true"
+                            />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-2 pt-2">
+                            {completedMeetings.map((m) => (
+                              <MeetingListRow
+                                key={m.id}
+                                meeting={m}
+                                selected={m.id === effectiveMeetingId}
+                                onSelect={() => setSelectedMeetingId(m.id)}
+                              />
+                            ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ) : null}
+                    </div>
+                  )}
+                </aside>
+
+                {/* Detail: the single focused meeting, recorder at the end */}
+                <div className="min-w-0 space-y-6">
+                  {selectedMeeting ? (
+                    <>
+                      <MeetingCard
+                        key={selectedMeeting.id}
+                        meeting={selectedMeeting}
+                        decisions={decisionsByMeeting.get(selectedMeeting.id) ?? []}
+                        questions={questionsByMeeting.get(selectedMeeting.id) ?? []}
+                        actionItems={actionItemsByMeeting.get(selectedMeeting.id) ?? []}
+                        isProcessing={processNotes.isPending}
+                        isSavingNotes={updateMeeting.isPending}
+                        isSavingDecision={createDecision.isPending}
+                        isSavingQuestion={createQuestion.isPending}
+                        isSavingActionItem={createActionItem.isPending}
+                        onSaveNotes={(notes) =>
+                          updateMeeting.mutate(
+                            { id: selectedMeeting.id, data: { notes } },
+                            {
+                              onSuccess: () => {
+                                invalidateMeetings();
+                                toast({ title: "Notes saved" });
+                              },
+                              onError: (err) => fail(err, "Could not save the notes"),
+                            },
+                          )
+                        }
+                        onSaveDetails={(data, done) =>
+                          updateMeeting.mutate(
+                            { id: selectedMeeting.id, data },
+                            {
+                              onSuccess: () => {
+                                invalidateMeetings();
+                                invalidateSummary();
+                                toast({ title: "Meeting updated" });
+                                done();
+                              },
+                              onError: (err) => fail(err, "Could not update the meeting"),
+                            },
+                          )
+                        }
+                        onGenerate={(nextMeetingType) =>
+                          processNotes.mutate(
+                            { id: selectedMeeting.id, data: { nextMeetingType } },
+                            {
+                              onSuccess: (res) => {
+                                invalidateMeetings();
+                                invalidateActionItems();
+                                invalidateDecisions();
+                                invalidateOpenQuestions();
+                                invalidateSummary();
+                                toast({
+                                  title: "Next agenda generated",
+                                  description: `${res.createdActionItems.length} action item${
+                                    res.createdActionItems.length === 1 ? "" : "s"
+                                  }, ${res.createdDecisions.length} decision${
+                                    res.createdDecisions.length === 1 ? "" : "s"
+                                  }, ${res.createdOpenQuestions.length} open question${
+                                    res.createdOpenQuestions.length === 1 ? "" : "s"
+                                  } captured (${res.provider === "openai" ? "AI" : "rules"}).`,
+                                });
+                              },
+                              onError: (err) => fail(err, "Could not generate the agenda"),
+                            },
+                          )
+                        }
+                        onDelete={() => setDeletingMeeting(selectedMeeting)}
+                        onSetStatus={(status) => setMeetingStatus(selectedMeeting, status)}
+                        onTogglePlan={(section, itemIndex, promptIndex, value) =>
+                          togglePlan(selectedMeeting.id, section, itemIndex, promptIndex, value)
+                        }
+                        onToggleAgenda={(itemIndex, promptIndex, done) =>
+                          toggleAgenda(selectedMeeting.id, itemIndex, promptIndex, done)
+                        }
+                        onAddDecision={(text, decidedBy, done) =>
+                          addDecision(selectedMeeting.id, text, decidedBy, done)
+                        }
+                        onDeleteDecision={removeDecision}
+                        onAddQuestion={(text, done) => addQuestion(selectedMeeting.id, text, done)}
+                        onResolveQuestion={resolveQuestion}
+                        onDeleteQuestion={removeQuestion}
+                        onToggleActionItem={toggleActionItem}
+                        onDeleteActionItem={(item) => setDeletingItem(item)}
+                        onAddActionItem={(data, done) => addMeetingActionItem(selectedMeeting.id, data, done)}
+                      />
+                      <MeetingRecordings
+                        key={`rec-${selectedMeeting.id}`}
+                        projectId={projectId}
+                        meeting={{
+                          id: selectedMeeting.id,
+                          title: selectedMeeting.title,
+                          notes: selectedMeeting.notes ?? "",
+                        }}
+                        onInsertNotes={(meetingId, notes) =>
+                          updateMeeting.mutateAsync({ id: meetingId, data: { notes } }).then(() => {
+                            invalidateMeetings();
+                            invalidateSummary();
+                          })
+                        }
+                      />
+                    </>
+                  ) : (
+                    <Card>
+                      <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                        <Search className="mb-3 h-8 w-8 text-muted" aria-hidden="true" />
+                        <p>Select a meeting to open it.</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
-                {filteredMeetings.length === 0 ? (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
-                      <Search className="mb-3 h-8 w-8 text-muted" aria-hidden="true" />
-                      <p>No meetings match "{meetingSearch.trim()}".</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  filteredMeetings.map((meeting) => (
-                  <MeetingCard
-                    key={meeting.id}
-                    meeting={meeting}
-                    decisions={decisionsByMeeting.get(meeting.id) ?? []}
-                    questions={questionsByMeeting.get(meeting.id) ?? []}
-                    actionItems={actionItemsByMeeting.get(meeting.id) ?? []}
-                    isProcessing={processNotes.isPending}
-                    isSavingNotes={updateMeeting.isPending}
-                    isSavingDecision={createDecision.isPending}
-                    isSavingQuestion={createQuestion.isPending}
-                    isSavingActionItem={createActionItem.isPending}
-                    onSaveNotes={(notes) =>
-                      updateMeeting.mutate(
-                        { id: meeting.id, data: { notes } },
-                        {
-                          onSuccess: () => {
-                            invalidateMeetings();
-                            toast({ title: "Notes saved" });
-                          },
-                          onError: (err) => fail(err, "Could not save the notes"),
-                        },
-                      )
-                    }
-                    onSaveDetails={(data, done) =>
-                      updateMeeting.mutate(
-                        { id: meeting.id, data },
-                        {
-                          onSuccess: () => {
-                            invalidateMeetings();
-                            invalidateSummary();
-                            toast({ title: "Meeting updated" });
-                            done();
-                          },
-                          onError: (err) => fail(err, "Could not update the meeting"),
-                        },
-                      )
-                    }
-                    onGenerate={(nextMeetingType) =>
-                      processNotes.mutate(
-                        { id: meeting.id, data: { nextMeetingType } },
-                        {
-                          onSuccess: (res) => {
-                            invalidateMeetings();
-                            invalidateActionItems();
-                            invalidateDecisions();
-                            invalidateOpenQuestions();
-                            invalidateSummary();
-                            toast({
-                              title: "Next agenda generated",
-                              description: `${res.createdActionItems.length} action item${
-                                res.createdActionItems.length === 1 ? "" : "s"
-                              }, ${res.createdDecisions.length} decision${
-                                res.createdDecisions.length === 1 ? "" : "s"
-                              }, ${res.createdOpenQuestions.length} open question${
-                                res.createdOpenQuestions.length === 1 ? "" : "s"
-                              } captured (${res.provider === "openai" ? "AI" : "rules"}).`,
-                            });
-                          },
-                          onError: (err) => fail(err, "Could not generate the agenda"),
-                        },
-                      )
-                    }
-                    onDelete={() => setDeletingMeeting(meeting)}
-                    onSetStatus={(status) => setMeetingStatus(meeting, status)}
-                    onTogglePlan={(section, itemIndex, promptIndex, value) =>
-                      togglePlan(meeting.id, section, itemIndex, promptIndex, value)
-                    }
-                    onToggleAgenda={(itemIndex, promptIndex, done) =>
-                      toggleAgenda(meeting.id, itemIndex, promptIndex, done)
-                    }
-                    onAddDecision={(text, decidedBy, done) => addDecision(meeting.id, text, decidedBy, done)}
-                    onDeleteDecision={removeDecision}
-                    onAddQuestion={(text, done) => addQuestion(meeting.id, text, done)}
-                    onResolveQuestion={resolveQuestion}
-                    onDeleteQuestion={removeQuestion}
-                    onToggleActionItem={toggleActionItem}
-                    onDeleteActionItem={(item) => setDeletingItem(item)}
-                    onAddActionItem={(data, done) => addMeetingActionItem(meeting.id, data, done)}
-                  />
-                  ))
-                )}
               </div>
             )}
           </TabsContent>
@@ -1404,6 +1527,78 @@ export default function ProjectMeetings() {
                 </Button>
                 <Button onClick={submitPromote} disabled={createActionItem.isPending}>
                   {createActionItem.isPending ? "Creating..." : "Create action item"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Schedule a meeting */}
+          <Dialog open={newMeetingOpen} onOpenChange={setNewMeetingOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <CalendarClock className="h-5 w-5 text-primary" aria-hidden="true" /> Schedule a meeting
+                </DialogTitle>
+                <DialogDescription>
+                  Choose a meeting type to seed its pre-work, standing agenda, and definition of done. Capture
+                  notes during it, then generate the next agenda.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="meeting-title">Title</Label>
+                  <Input
+                    id="meeting-title"
+                    value={newMeetingTitle}
+                    maxLength={200}
+                    onChange={(e) => setNewMeetingTitle(e.target.value)}
+                    placeholder="Weekly check-in"
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="meeting-type">Type</Label>
+                    <Select value={newMeetingType} onValueChange={(v) => setNewMeetingType(v as MeetingType)}>
+                      <SelectTrigger id="meeting-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MEETING_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {MEETING_TYPE_LABELS[t]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="meeting-at">Date and time (optional)</Label>
+                    <Input
+                      id="meeting-at"
+                      type="datetime-local"
+                      value={newMeetingAt}
+                      onChange={(e) => setNewMeetingAt(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="meeting-focus">Focus (optional)</Label>
+                  <Input
+                    id="meeting-focus"
+                    value={newMeetingFocus}
+                    maxLength={200}
+                    onChange={(e) => setNewMeetingFocus(e.target.value)}
+                    placeholder="What is this meeting mainly about?"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setNewMeetingOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={addMeeting} disabled={createMeeting.isPending}>
+                  <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {createMeeting.isPending ? "Adding..." : "Add meeting"}
                 </Button>
               </DialogFooter>
             </DialogContent>

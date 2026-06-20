@@ -2819,6 +2819,9 @@ components:
           type: integer
         projectId:
           type: integer
+        meetingId:
+          type: ["integer", "null"]
+          description: The meeting this recording belongs to, when scoped to one.
         kind:
           type: string
           enum: [upload, external]
@@ -2851,6 +2854,9 @@ components:
       type: object
       required: [kind, title]
       properties:
+        meetingId:
+          type: integer
+          description: Optional meeting to scope this recording to (must belong to the project).
         kind:
           type: string
           enum: [upload, external]

@@ -51,29 +51,30 @@ function statusCode(err: unknown): number | undefined {
     : undefined;
 }
 
-/** Minimal meeting shape the recordings card needs to offer an insert target. */
+/** Minimal meeting shape this recorder belongs to and inserts notes into. */
 export type RecordingInsertMeeting = { id: number; title: string; notes: string };
 
 type Props = {
   projectId: number;
-  /** Meetings the drafted notes can be inserted into. */
-  meetings?: RecordingInsertMeeting[];
+  /** The meeting this recorder belongs to. Recordings are scoped to it. */
+  meeting: RecordingInsertMeeting;
   /**
-   * Persist drafted notes into the chosen meeting. The parent owns the meeting
+   * Persist drafted notes into this meeting. The parent owns the meeting
    * mutation and cache invalidation; this card only composes the text.
    */
   onInsertNotes?: (meetingId: number, notes: string) => Promise<void>;
 };
 
 /**
- * Self-contained meeting recordings card: capture audio in the browser or attach
- * an external link, then list, play, and remove saved recordings. Uploaded
- * recordings can be transcribed and turned into a clean draft of meeting notes,
- * which the user can insert into any meeting (feeding the agenda generator). All
- * recording state and the MediaRecorder lifecycle live here so the surrounding
- * page stays simple. Recordings are project-scoped on the server.
+ * Self-contained meeting recordings card, scoped to a single meeting: capture
+ * audio in the browser or attach an external link, then list, play, and remove
+ * recordings for THIS meeting. Uploaded recordings can be transcribed and turned
+ * into a clean draft of meeting notes, which the user can insert into the
+ * meeting's notes (feeding the agenda generator). All recording state and the
+ * MediaRecorder lifecycle live here so the surrounding page stays simple.
+ * Recordings carry the meeting id on the server; the list is filtered to it.
  */
-export function MeetingRecordings({ projectId, meetings = [], onInsertNotes }: Props) {
+export function MeetingRecordings({ projectId, meeting, onInsertNotes }: Props) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -97,7 +98,6 @@ export function MeetingRecordings({ projectId, meetings = [], onInsertNotes }: P
   const [transcribingId, setTranscribingId] = useState<number | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [aiUnavailable, setAiUnavailable] = useState(false);
-  const [selectedMeetingId, setSelectedMeetingId] = useState<string>("");
   const [insertMode, setInsertMode] = useState<"append" | "replace">("append");
   const [insertingId, setInsertingId] = useState<number | null>(null);
 
@@ -106,7 +106,9 @@ export function MeetingRecordings({ projectId, meetings = [], onInsertNotes }: P
   const recStartRef = useRef<number>(0);
   const recStreamRef = useRef<MediaStream | null>(null);
 
-  const recordingList = recordings ?? [];
+  // Only this meeting's recordings. Legacy project-level rows (no meetingId) are
+  // not shown here; recordings created through this card always carry the id.
+  const recordingList = (recordings ?? []).filter((r) => r.meetingId === meeting.id);
 
   // Recording elapsed-time ticker
   useEffect(() => {
@@ -212,6 +214,7 @@ export function MeetingRecordings({ projectId, meetings = [], onInsertNotes }: P
       await createRecording.mutateAsync({
         projectId,
         data: {
+          meetingId: meeting.id,
           kind: "upload",
           title: captureTitle.trim() || "Meeting recording",
           objectPath,
@@ -237,7 +240,7 @@ export function MeetingRecordings({ projectId, meetings = [], onInsertNotes }: P
     try {
       await createRecording.mutateAsync({
         projectId,
-        data: { kind: "external", title: externalTitle.trim() || "Meeting link", externalUrl: url },
+        data: { meetingId: meeting.id, kind: "external", title: externalTitle.trim() || "Meeting link", externalUrl: url },
       });
       queryClient.invalidateQueries({ queryKey: getListMeetingRecordingsQueryKey(projectId) });
       setExternalTitle("");
@@ -258,11 +261,10 @@ export function MeetingRecordings({ projectId, meetings = [], onInsertNotes }: P
     }
   };
 
-  // Open a recording's notes panel, defaulting the insert target to the first meeting.
+  // Open a recording's notes panel. The insert target is always this meeting.
   const openPanel = (id: number) => {
     setExpandedId(id);
     setInsertMode("append");
-    if (meetings.length > 0) setSelectedMeetingId(String(meetings[0].id));
   };
 
   const transcribe = async (id: number) => {
@@ -311,12 +313,7 @@ export function MeetingRecordings({ projectId, meetings = [], onInsertNotes }: P
     if (!onInsertNotes) return;
     const source = (recording.draftNotes ?? recording.transcript ?? "").trim();
     if (!source) return;
-    const targetId = Number(selectedMeetingId);
-    const target = meetings.find((m) => m.id === targetId);
-    if (!target) {
-      toast({ title: "Choose a meeting", description: "Pick a meeting to insert these notes into.", variant: "destructive" });
-      return;
-    }
+    const target = meeting;
     const existing = target.notes?.trim() ?? "";
     const newNotes = insertMode === "append" && existing ? `${existing}\n\n${source}` : source;
     setInsertingId(recording.id);
@@ -546,59 +543,34 @@ export function MeetingRecordings({ projectId, meetings = [], onInsertNotes }: P
                       </div>
 
                       {onInsertNotes ? (
-                        meetings.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">
-                            Add a meeting below to insert these notes into it.
-                          </p>
-                        ) : (
-                          <div className="space-y-3 rounded-md border border-border bg-card p-3">
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <div className="space-y-1.5">
-                                <Label htmlFor={`meeting-${r.id}`} className="text-xs font-medium text-muted-foreground">
-                                  Insert into meeting
-                                </Label>
-                                <Select value={selectedMeetingId} onValueChange={setSelectedMeetingId}>
-                                  <SelectTrigger id={`meeting-${r.id}`}>
-                                    <SelectValue placeholder="Choose a meeting" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {meetings.map((m) => (
-                                      <SelectItem key={m.id} value={String(m.id)}>
-                                        {m.title}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label htmlFor={`mode-${r.id}`} className="text-xs font-medium text-muted-foreground">
-                                  How to apply
-                                </Label>
-                                <Select value={insertMode} onValueChange={(v) => setInsertMode(v as "append" | "replace")}>
-                                  <SelectTrigger id={`mode-${r.id}`}>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="append">Add to existing notes</SelectItem>
-                                    <SelectItem value="replace">Replace existing notes</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            <Button
-                              size="sm"
-                              onClick={() => insertNotes(r)}
-                              disabled={insertingId === r.id || !selectedMeetingId}
-                            >
-                              {insertingId === r.id ? (
-                                <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />
-                              ) : (
-                                <ListPlus className="mr-1 h-4 w-4" aria-hidden="true" />
-                              )}
-                              Insert into notes
-                            </Button>
+                        <div className="space-y-3 rounded-md border border-border bg-card p-3">
+                          <div className="space-y-1.5 sm:max-w-xs">
+                            <Label htmlFor={`mode-${r.id}`} className="text-xs font-medium text-muted-foreground">
+                              How to apply to this meeting's notes
+                            </Label>
+                            <Select value={insertMode} onValueChange={(v) => setInsertMode(v as "append" | "replace")}>
+                              <SelectTrigger id={`mode-${r.id}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="append">Add to existing notes</SelectItem>
+                                <SelectItem value="replace">Replace existing notes</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
-                        )
+                          <Button
+                            size="sm"
+                            onClick={() => insertNotes(r)}
+                            disabled={insertingId === r.id}
+                          >
+                            {insertingId === r.id ? (
+                              <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <ListPlus className="mr-1 h-4 w-4" aria-hidden="true" />
+                            )}
+                            Insert into notes
+                          </Button>
+                        </div>
                       ) : null}
                     </div>
                   ) : null}
