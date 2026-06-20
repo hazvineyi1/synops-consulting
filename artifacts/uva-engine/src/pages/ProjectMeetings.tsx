@@ -3,6 +3,8 @@ import { useParams } from "wouter";
 import {
   useListProjectMeetings,
   getListProjectMeetingsQueryKey,
+  useListMeetingRecordings,
+  getListMeetingRecordingsQueryKey,
   useCreateProjectMeeting,
   useUpdateMeeting,
   useDeleteMeeting,
@@ -59,7 +61,9 @@ import {
   Target,
   CheckCircle2,
   RotateCcw,
-  ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Video,
 } from "lucide-react";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 import { MeetingRecordings } from "@/components/engine/MeetingRecordings";
@@ -72,11 +76,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -87,6 +86,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
+import type { ImperativePanelHandle } from "react-resizable-panels";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogContent,
@@ -241,6 +255,422 @@ function MeetingListRow({
   );
 }
 
+/** Main-pane header selector that chooses which meeting is open for editing. */
+function WorkingMeetingPicker({
+  options,
+  value,
+  onChange,
+}: {
+  options: Meeting[];
+  value: number | null;
+  onChange: (id: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Label
+        htmlFor="working-meeting"
+        className="hidden text-xs font-medium uppercase tracking-wide text-muted-foreground sm:block"
+      >
+        Working meeting
+      </Label>
+      <Select
+        value={value != null ? String(value) : undefined}
+        onValueChange={(v) => onChange(Number(v))}
+      >
+        <SelectTrigger
+          id="working-meeting"
+          className="h-9 w-[200px] sm:w-[260px]"
+          aria-label="Working meeting"
+        >
+          <SelectValue placeholder="Select a meeting" />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((m) => {
+            const type: MeetingType = isMeetingType(m.meetingType) ? m.meetingType : "working";
+            return (
+              <SelectItem key={m.id} value={String(m.id)}>
+                <span className="flex items-center gap-2">
+                  <span className="truncate">{m.title}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {MEETING_TYPE_LABELS[type]}
+                    {m.status === "completed" ? " (Completed)" : ""}
+                  </span>
+                </span>
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+/** Read-only summary of a past meeting, shown in the reference drawer so a prior
+ *  week can be read beside the meeting open in the main pane. Never mutates. */
+function PastMeetingReferencePanel({
+  meeting,
+  decisions,
+  questions,
+  actionItems,
+  recordingCount,
+  onOpenInWorkspace,
+}: {
+  meeting: Meeting | null;
+  decisions: MeetingDecision[];
+  questions: MeetingOpenQuestion[];
+  actionItems: ActionItem[];
+  recordingCount: number;
+  onOpenInWorkspace: () => void;
+}) {
+  if (!meeting) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Select a past meeting to read its notes beside the current one.
+      </p>
+    );
+  }
+  const type: MeetingType = isMeetingType(meeting.meetingType) ? meeting.meetingType : "working";
+  const when = meeting.scheduledAt ?? meeting.createdAt;
+  const notes = meeting.notes?.trim() ?? "";
+  const plan = meeting.agendaPlan;
+  const prework = plan?.prework ?? [];
+  const agenda = plan?.agenda ?? [];
+  const exitCriteria = plan?.exitCriteria ?? [];
+  const empty =
+    !notes &&
+    !meeting.focus &&
+    prework.length === 0 &&
+    agenda.length === 0 &&
+    exitCriteria.length === 0 &&
+    decisions.length === 0 &&
+    actionItems.length === 0 &&
+    questions.length === 0;
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <div className="flex items-start justify-between gap-2">
+          <h4 className="text-sm font-semibold leading-snug text-foreground">{meeting.title}</h4>
+          <Badge
+            variant="secondary"
+            className={`shrink-0 shadow-none hover:bg-current/0 ${MEETING_TYPE_STYLES[type]}`}
+          >
+            {MEETING_TYPE_LABELS[type]}
+          </Badge>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <CheckCircle2 className="h-3 w-3 text-emerald-700" aria-hidden="true" />
+            Completed
+            {when ? ` on ${fmtDate(when)}` : ""}
+          </p>
+          {recordingCount > 0 ? (
+            <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <Video className="h-3 w-3" aria-hidden="true" />
+              {recordingCount} {recordingCount === 1 ? "recording" : "recordings"}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      {meeting.focus ? (
+        <section className="space-y-1">
+          <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Focus
+          </h5>
+          <p className="text-sm text-foreground">{meeting.focus}</p>
+        </section>
+      ) : null}
+
+      {prework.length > 0 ? (
+        <section className="space-y-1">
+          <h5 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" /> Pre-work
+          </h5>
+          <ul className="space-y-1 text-sm text-foreground">
+            {prework.map((item, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <CheckCircle2
+                  className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${
+                    item.done ? "text-emerald-700" : "text-muted-foreground/40"
+                  }`}
+                  aria-hidden="true"
+                />
+                <span className="sr-only">{item.done ? "Done:" : "Not done:"}</span>
+                <span className={item.done ? "text-muted-foreground line-through" : ""}>{item.text}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {agenda.length > 0 ? (
+        <section className="space-y-1">
+          <h5 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <FileText className="h-3.5 w-3.5" aria-hidden="true" /> Standing agenda
+          </h5>
+          <ol className="space-y-2 text-sm text-foreground">
+            {agenda.map((it, i) => {
+              const promptsDone = it.promptsDone ?? [];
+              const itemComplete =
+                it.prompts.length > 0 ? it.prompts.every((_, j) => promptsDone[j]) : Boolean(it.done);
+              return (
+                <li key={i} className="rounded-md border border-border bg-card p-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className={`font-medium ${itemComplete ? "text-muted-foreground line-through" : ""}`}>
+                      {it.title}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{it.minutes} min</span>
+                  </div>
+                  {it.prompts.length > 0 ? (
+                    <ul className="mt-1.5 space-y-1 pl-1">
+                      {it.prompts.map((p, j) => {
+                        const checked = Boolean(promptsDone[j]);
+                        return (
+                          <li key={j} className="flex items-start gap-2">
+                            <CheckCircle2
+                              className={`mt-0.5 h-3 w-3 shrink-0 ${
+                                checked ? "text-emerald-700" : "text-muted-foreground/40"
+                              }`}
+                              aria-hidden="true"
+                            />
+                            <span className="sr-only">{checked ? "Done:" : "Not done:"}</span>
+                            <span className={checked ? "text-muted-foreground line-through" : ""}>{p}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ) : null}
+
+      {notes ? (
+        <section className="space-y-1">
+          <h5 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <FileText className="h-3.5 w-3.5" aria-hidden="true" /> Notes
+          </h5>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{notes}</p>
+        </section>
+      ) : null}
+
+      {decisions.length > 0 ? (
+        <section className="space-y-1">
+          <h5 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <Gavel className="h-3.5 w-3.5" aria-hidden="true" /> Decisions
+          </h5>
+          <ul className="space-y-1.5 text-sm text-foreground">
+            {decisions.map((d) => (
+              <li key={d.id}>
+                <p>{d.text}</p>
+                {d.decidedBy ? (
+                  <p className="text-xs text-muted-foreground">By {d.decidedBy}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {actionItems.length > 0 ? (
+        <section className="space-y-1">
+          <h5 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <ListChecks className="h-3.5 w-3.5" aria-hidden="true" /> Action items
+          </h5>
+          <ul className="space-y-1 text-sm text-foreground">
+            {actionItems.map((a) => {
+              const done = a.status === "done";
+              return (
+                <li key={a.id} className="flex items-start gap-2">
+                  <CheckCircle2
+                    className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${
+                      done ? "text-emerald-700" : "text-muted-foreground/40"
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <span className="sr-only">{done ? "Done:" : "Not done:"}</span>
+                  <span className={done ? "text-muted-foreground line-through" : ""}>{a.title}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {questions.length > 0 ? (
+        <section className="space-y-1">
+          <h5 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" /> Open questions
+          </h5>
+          <ul className="space-y-1 text-sm text-foreground">
+            {questions.map((q) => {
+              const resolved = q.status === "resolved";
+              return (
+                <li key={q.id} className={resolved ? "text-muted-foreground line-through" : ""}>
+                  {resolved ? <span className="sr-only">Resolved:</span> : null}
+                  {q.text}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {exitCriteria.length > 0 ? (
+        <section className="space-y-1">
+          <h5 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <Target className="h-3.5 w-3.5" aria-hidden="true" /> Definition of done
+          </h5>
+          <ul className="space-y-1 text-sm text-foreground">
+            {exitCriteria.map((c, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <CheckCircle2
+                  className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${
+                    c.met ? "text-emerald-700" : "text-muted-foreground/40"
+                  }`}
+                  aria-hidden="true"
+                />
+                <span className="sr-only">{c.met ? "Met:" : "Not met:"}</span>
+                <span className={c.met ? "text-muted-foreground line-through" : ""}>{c.text}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {empty ? (
+        <p className="text-sm text-muted-foreground">No notes were captured for this meeting.</p>
+      ) : null}
+
+      <Button variant="outline" size="sm" className="w-full" onClick={onOpenInWorkspace}>
+        <ArrowUpRight className="mr-2 h-4 w-4" aria-hidden="true" /> Open in workspace
+      </Button>
+    </div>
+  );
+}
+
+/** Drawer body shared by the desktop resizable panel and the mobile sheet: a
+ *  search box, the completed-meeting list, and the read-only reference panel. */
+function PastMeetingsDrawerContent({
+  variant,
+  meetings,
+  totalCompleted,
+  search,
+  onSearch,
+  selectedId,
+  onSelect,
+  referenceMeeting,
+  referenceDecisions,
+  referenceQuestions,
+  referenceActionItems,
+  referenceRecordingCount,
+  onOpenInWorkspace,
+  onCollapse,
+}: {
+  variant: "desktop" | "mobile";
+  meetings: Meeting[];
+  totalCompleted: number;
+  search: string;
+  onSearch: (value: string) => void;
+  selectedId: number | null;
+  onSelect: (id: number) => void;
+  referenceMeeting: Meeting | null;
+  referenceDecisions: MeetingDecision[];
+  referenceQuestions: MeetingOpenQuestion[];
+  referenceActionItems: ActionItem[];
+  referenceRecordingCount: number;
+  onOpenInWorkspace: (id: number) => void;
+  onCollapse?: () => void;
+}) {
+  return (
+    <div className="flex h-full flex-col gap-3 overflow-hidden p-3">
+      {variant === "desktop" ? (
+        <div className="flex items-center justify-between gap-2 px-1">
+          <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" /> Past meetings
+          </span>
+          {onCollapse ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={onCollapse}
+              aria-label="Collapse past meetings drawer"
+            >
+              <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Label htmlFor="past-meeting-search" className="sr-only">
+          Search past meetings
+        </Label>
+        <Input
+          id="past-meeting-search"
+          type="search"
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          placeholder="Search past meetings"
+          className="pl-9"
+        />
+      </div>
+
+      {totalCompleted === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+          No past meetings yet. Completed meetings appear here for reference.
+        </div>
+      ) : meetings.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+          No past meetings match "{search.trim()}".
+        </div>
+      ) : (
+        <ScrollArea className="max-h-52 shrink-0 rounded-lg border border-border">
+          <div className="space-y-2 p-2">
+            {meetings.map((m) => (
+              <MeetingListRow
+                key={m.id}
+                meeting={m}
+                selected={m.id === selectedId}
+                onSelect={() => onSelect(m.id)}
+              />
+            ))}
+          </div>
+        </ScrollArea>
+      )}
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-muted/20">
+        <div className="border-b border-border px-3 py-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+            For reference
+          </p>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className="p-3">
+            <PastMeetingReferencePanel
+              meeting={referenceMeeting}
+              decisions={referenceDecisions}
+              questions={referenceQuestions}
+              actionItems={referenceActionItems}
+              recordingCount={referenceRecordingCount}
+              onOpenInWorkspace={() =>
+                referenceMeeting && onOpenInWorkspace(referenceMeeting.id)
+              }
+            />
+          </div>
+        </ScrollArea>
+      </div>
+    </div>
+  );
+}
+
 // Client-side mirror of the server's next-type suggestion (meetingTemplates.ts:
 // every type defaults to a following working session), used only to preselect the
 // "next meeting type" control. The user can override before generating.
@@ -340,6 +770,9 @@ export default function ProjectMeetings() {
   const { data: summary } = useGetAgendaSummary(projectId, {
     query: { enabled: !!projectId, queryKey: summaryKey },
   });
+  const { data: recordingsData } = useListMeetingRecordings(projectId, {
+    query: { enabled: !!projectId, queryKey: getListMeetingRecordingsQueryKey(projectId) },
+  });
 
   const meetings = useMemo(() => meetingsData ?? [], [meetingsData]);
   const actionItems = useMemo(() => actionItemsData ?? [], [actionItemsData]);
@@ -381,6 +814,18 @@ export default function ProjectMeetings() {
     }
     return map;
   }, [actionItems]);
+
+  // Per-meeting recording counts, used only for the read-only reference panel's
+  // "N recordings" indicator. The editable MeetingRecordings panel fetches its
+  // own data; this shares the same project-scoped query (same cache key).
+  const recordingCountByMeeting = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const r of recordingsData ?? []) {
+      if (r.meetingId == null) continue;
+      map.set(r.meetingId, (map.get(r.meetingId) ?? 0) + 1);
+    }
+    return map;
+  }, [recordingsData]);
 
   const createMeeting = useCreateProjectMeeting();
   const updateMeeting = useUpdateMeeting();
@@ -489,52 +934,83 @@ export default function ProjectMeetings() {
   const [newMeetingFocus, setNewMeetingFocus] = useState("");
   const [newMeetingAt, setNewMeetingAt] = useState("");
 
-  // ---- Agenda list search ----
+  // ---- Past-meeting drawer search (scoped to completed meetings only) ----
   const [meetingSearch, setMeetingSearch] = useState("");
-  const filteredMeetings = useMemo(() => {
+
+  // Active (scheduled) meetings drive the main-pane working selector; completed
+  // meetings populate the reference drawer. Both are most-recent first.
+  const activeMeetings = useMemo(
+    () => meetings.filter((m) => m.status !== "completed").sort(byRecencyDesc),
+    [meetings],
+  );
+  const completedMeetings = useMemo(
+    () => meetings.filter((m) => m.status === "completed").sort(byRecencyDesc),
+    [meetings],
+  );
+  // The drawer search narrows only the past (completed) list; it must never
+  // invalidate the working meeting open in the main pane.
+  const filteredCompleted = useMemo(() => {
     const q = meetingSearch.trim().toLowerCase();
-    if (!q) return meetings;
-    return meetings.filter((m) => {
+    if (!q) return completedMeetings;
+    return completedMeetings.filter((m) => {
       const typeLabel = isMeetingType(m.meetingType) ? MEETING_TYPE_LABELS[m.meetingType] : "";
       return [m.title, m.notes ?? "", m.focus ?? "", m.meetingType, typeLabel]
         .join(" ")
         .toLowerCase()
         .includes(q);
     });
-  }, [meetings, meetingSearch]);
+  }, [completedMeetings, meetingSearch]);
 
-  // Active (scheduled) and completed groups, each most-recent first, so the
-  // sidebar can show active meetings up top and collapse completed ones below.
-  const activeMeetings = useMemo(
-    () => filteredMeetings.filter((m) => m.status !== "completed").sort(byRecencyDesc),
-    [filteredMeetings],
-  );
-  const completedMeetings = useMemo(
-    () => filteredMeetings.filter((m) => m.status === "completed").sort(byRecencyDesc),
-    [filteredMeetings],
-  );
-
-  // ---- Master-detail selection ----
-  // The focused meeting. Default lands on the most recent active meeting (else the
-  // most recent overall) so a single meeting fills the detail pane. Selection is
-  // reconciled during render so it can never point at a meeting that no longer
-  // exists (deleted, or filtered out by search).
+  // ---- Working meeting (editable, main pane) ----
+  // Defaults to the most recent active meeting (else the most recent meeting
+  // overall). Reconciled during render so it can never point at a meeting that no
+  // longer exists (deleted).
   const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null);
-  const [completedOpen, setCompletedOpen] = useState(false);
   const [newMeetingOpen, setNewMeetingOpen] = useState(false);
 
   const defaultMeetingId = useMemo(() => {
-    const pool = activeMeetings.length > 0 ? activeMeetings : completedMeetings;
-    return pool[0]?.id ?? null;
+    if (activeMeetings.length > 0) return activeMeetings[0].id;
+    return completedMeetings[0]?.id ?? null;
   }, [activeMeetings, completedMeetings]);
 
   const selectionValid =
-    selectedMeetingId != null && filteredMeetings.some((m) => m.id === selectedMeetingId);
+    selectedMeetingId != null && meetings.some((m) => m.id === selectedMeetingId);
   const effectiveMeetingId = selectionValid ? selectedMeetingId : defaultMeetingId;
   const selectedMeeting = useMemo(
     () => meetings.find((m) => m.id === effectiveMeetingId) ?? null,
     [meetings, effectiveMeetingId],
   );
+
+  // The working picker always includes the current working meeting, even when it
+  // is completed (e.g. reopened from the reference drawer).
+  const workingOptions = useMemo(() => {
+    const list = [...activeMeetings];
+    if (selectedMeeting && !list.some((m) => m.id === selectedMeeting.id)) {
+      list.unshift(selectedMeeting);
+    }
+    return list;
+  }, [activeMeetings, selectedMeeting]);
+
+  // ---- Reference meeting (read-only, side drawer) ----
+  // Independent of the working meeting so a past week can be read alongside the
+  // current one. Defaults to the most recent completed meeting; reconciled so it
+  // can never point at a meeting that no longer exists.
+  const [referenceMeetingId, setReferenceMeetingId] = useState<number | null>(null);
+  const referenceValid =
+    referenceMeetingId != null && completedMeetings.some((m) => m.id === referenceMeetingId);
+  const effectiveReferenceId = referenceValid
+    ? referenceMeetingId
+    : completedMeetings[0]?.id ?? null;
+  const referenceMeeting = useMemo(
+    () => meetings.find((m) => m.id === effectiveReferenceId) ?? null,
+    [meetings, effectiveReferenceId],
+  );
+
+  // ---- Drawer presentation state ----
+  const [drawerCollapsed, setDrawerCollapsed] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const drawerPanelRef = useRef<ImperativePanelHandle>(null);
+  const isMobile = useIsMobile();
 
   function addMeeting() {
     const title = newMeetingTitle.trim();
@@ -870,6 +1346,116 @@ export default function ProjectMeetings() {
 
   const openCount = summary?.openActionItems ?? actionItems.filter((a) => a.status === "open").length;
 
+  // The editable workspace for the working meeting. Built once and reused by both
+  // the desktop resizable layout and the mobile layout so it mounts a single time.
+  const mainPaneNode = selectedMeeting ? (
+    <div className="space-y-6">
+      <MeetingCard
+        key={selectedMeeting.id}
+        meeting={selectedMeeting}
+        decisions={decisionsByMeeting.get(selectedMeeting.id) ?? []}
+        questions={questionsByMeeting.get(selectedMeeting.id) ?? []}
+        actionItems={actionItemsByMeeting.get(selectedMeeting.id) ?? []}
+        isProcessing={processNotes.isPending}
+        isSavingNotes={updateMeeting.isPending}
+        isSavingDecision={createDecision.isPending}
+        isSavingQuestion={createQuestion.isPending}
+        isSavingActionItem={createActionItem.isPending}
+        onSaveNotes={(notes) =>
+          updateMeeting.mutate(
+            { id: selectedMeeting.id, data: { notes } },
+            {
+              onSuccess: () => {
+                invalidateMeetings();
+                toast({ title: "Notes saved" });
+              },
+              onError: (err) => fail(err, "Could not save the notes"),
+            },
+          )
+        }
+        onSaveDetails={(data, done) =>
+          updateMeeting.mutate(
+            { id: selectedMeeting.id, data },
+            {
+              onSuccess: () => {
+                invalidateMeetings();
+                invalidateSummary();
+                toast({ title: "Meeting updated" });
+                done();
+              },
+              onError: (err) => fail(err, "Could not update the meeting"),
+            },
+          )
+        }
+        onGenerate={(nextMeetingType) =>
+          processNotes.mutate(
+            { id: selectedMeeting.id, data: { nextMeetingType } },
+            {
+              onSuccess: (res) => {
+                invalidateMeetings();
+                invalidateActionItems();
+                invalidateDecisions();
+                invalidateOpenQuestions();
+                invalidateSummary();
+                toast({
+                  title: "Next agenda generated",
+                  description: `${res.createdActionItems.length} action item${
+                    res.createdActionItems.length === 1 ? "" : "s"
+                  }, ${res.createdDecisions.length} decision${
+                    res.createdDecisions.length === 1 ? "" : "s"
+                  }, ${res.createdOpenQuestions.length} open question${
+                    res.createdOpenQuestions.length === 1 ? "" : "s"
+                  } captured (${res.provider === "openai" ? "AI" : "rules"}).`,
+                });
+              },
+              onError: (err) => fail(err, "Could not generate the agenda"),
+            },
+          )
+        }
+        onDelete={() => setDeletingMeeting(selectedMeeting)}
+        onSetStatus={(status) => setMeetingStatus(selectedMeeting, status)}
+        onTogglePlan={(section, itemIndex, promptIndex, value) =>
+          togglePlan(selectedMeeting.id, section, itemIndex, promptIndex, value)
+        }
+        onToggleAgenda={(itemIndex, promptIndex, done) =>
+          toggleAgenda(selectedMeeting.id, itemIndex, promptIndex, done)
+        }
+        onAddDecision={(text, decidedBy, done) =>
+          addDecision(selectedMeeting.id, text, decidedBy, done)
+        }
+        onDeleteDecision={removeDecision}
+        onAddQuestion={(text, done) => addQuestion(selectedMeeting.id, text, done)}
+        onResolveQuestion={resolveQuestion}
+        onDeleteQuestion={removeQuestion}
+        onToggleActionItem={toggleActionItem}
+        onDeleteActionItem={(item) => setDeletingItem(item)}
+        onAddActionItem={(data, done) => addMeetingActionItem(selectedMeeting.id, data, done)}
+      />
+      <MeetingRecordings
+        key={`rec-${selectedMeeting.id}`}
+        projectId={projectId}
+        meeting={{
+          id: selectedMeeting.id,
+          title: selectedMeeting.title,
+          notes: selectedMeeting.notes ?? "",
+        }}
+        onInsertNotes={(meetingId, notes) =>
+          updateMeeting.mutateAsync({ id: meetingId, data: { notes } }).then(() => {
+            invalidateMeetings();
+            invalidateSummary();
+          })
+        }
+      />
+    </div>
+  ) : (
+    <Card>
+      <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+        <Search className="mb-3 h-8 w-8 text-muted" aria-hidden="true" />
+        <p>Select a meeting to open it.</p>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <ProjectWorkspace subtitle="Run kickoff, working, and final meetings with type-aware agendas, live capture, and a clear definition of done.">
       {() => (
@@ -893,202 +1479,140 @@ export default function ProjectMeetings() {
                   </Button>
                 </CardContent>
               </Card>
-            ) : (
-              <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
-                {/* Sidebar: create, search, active rows, collapsible completed */}
-                <aside className="space-y-3 lg:sticky lg:top-4">
-                  <Button onClick={() => setNewMeetingOpen(true)} className="w-full">
-                    <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> New meeting
-                  </Button>
-                  <div className="relative">
-                    <Search
-                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                    <Label htmlFor="meeting-search" className="sr-only">
-                      Search meetings
-                    </Label>
-                    <Input
-                      id="meeting-search"
-                      type="search"
-                      value={meetingSearch}
-                      onChange={(e) => setMeetingSearch(e.target.value)}
-                      placeholder="Search meetings"
-                      className="pl-9"
+            ) : isMobile ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Sheet open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <PanelLeftOpen className="mr-2 h-4 w-4" aria-hidden="true" /> Past meetings
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="left" className="w-[88vw] max-w-sm p-0">
+                        <SheetHeader className="border-b border-border p-4 text-left">
+                          <SheetTitle>Past meetings</SheetTitle>
+                        </SheetHeader>
+                        <div className="h-[calc(100%-4.5rem)]">
+                          <PastMeetingsDrawerContent
+                            variant="mobile"
+                            meetings={filteredCompleted}
+                            totalCompleted={completedMeetings.length}
+                            search={meetingSearch}
+                            onSearch={setMeetingSearch}
+                            selectedId={effectiveReferenceId}
+                            onSelect={(id) => setReferenceMeetingId(id)}
+                            referenceMeeting={referenceMeeting}
+                            referenceDecisions={
+                              referenceMeeting ? decisionsByMeeting.get(referenceMeeting.id) ?? [] : []
+                            }
+                            referenceQuestions={
+                              referenceMeeting ? questionsByMeeting.get(referenceMeeting.id) ?? [] : []
+                            }
+                            referenceActionItems={
+                              referenceMeeting
+                                ? actionItemsByMeeting.get(referenceMeeting.id) ?? []
+                                : []
+                            }
+                            referenceRecordingCount={
+                              referenceMeeting
+                                ? recordingCountByMeeting.get(referenceMeeting.id) ?? 0
+                                : 0
+                            }
+                            onOpenInWorkspace={(id) => {
+                              setSelectedMeetingId(id);
+                              setMobileDrawerOpen(false);
+                            }}
+                          />
+                        </div>
+                      </SheetContent>
+                    </Sheet>
+                    <WorkingMeetingPicker
+                      options={workingOptions}
+                      value={effectiveMeetingId}
+                      onChange={(id) => setSelectedMeetingId(id)}
                     />
                   </div>
-
-                  {filteredMeetings.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-                      No meetings match "{meetingSearch.trim()}".
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between px-1">
-                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                            Active
-                          </span>
-                          <span className="text-xs text-muted-foreground">{activeMeetings.length}</span>
-                        </div>
-                        {activeMeetings.length === 0 ? (
-                          <p className="px-1 text-xs text-muted-foreground">No active meetings.</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {activeMeetings.map((m) => (
-                              <MeetingListRow
-                                key={m.id}
-                                meeting={m}
-                                selected={m.id === effectiveMeetingId}
-                                onSelect={() => setSelectedMeetingId(m.id)}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {completedMeetings.length > 0 ? (
-                        <Collapsible open={completedOpen} onOpenChange={setCompletedOpen}>
-                          <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                            <span className="inline-flex items-center gap-2">
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                              Completed
-                              <Badge variant="secondary" className="shadow-none hover:bg-current/0">
-                                {completedMeetings.length}
-                              </Badge>
-                            </span>
-                            <ChevronDown
-                              className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
-                              aria-hidden="true"
-                            />
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="space-y-2 pt-2">
-                            {completedMeetings.map((m) => (
-                              <MeetingListRow
-                                key={m.id}
-                                meeting={m}
-                                selected={m.id === effectiveMeetingId}
-                                onSelect={() => setSelectedMeetingId(m.id)}
-                              />
-                            ))}
-                          </CollapsibleContent>
-                        </Collapsible>
-                      ) : null}
-                    </div>
-                  )}
-                </aside>
-
-                {/* Detail: the single focused meeting, recorder at the end */}
-                <div className="min-w-0 space-y-6">
-                  {selectedMeeting ? (
-                    <>
-                      <MeetingCard
-                        key={selectedMeeting.id}
-                        meeting={selectedMeeting}
-                        decisions={decisionsByMeeting.get(selectedMeeting.id) ?? []}
-                        questions={questionsByMeeting.get(selectedMeeting.id) ?? []}
-                        actionItems={actionItemsByMeeting.get(selectedMeeting.id) ?? []}
-                        isProcessing={processNotes.isPending}
-                        isSavingNotes={updateMeeting.isPending}
-                        isSavingDecision={createDecision.isPending}
-                        isSavingQuestion={createQuestion.isPending}
-                        isSavingActionItem={createActionItem.isPending}
-                        onSaveNotes={(notes) =>
-                          updateMeeting.mutate(
-                            { id: selectedMeeting.id, data: { notes } },
-                            {
-                              onSuccess: () => {
-                                invalidateMeetings();
-                                toast({ title: "Notes saved" });
-                              },
-                              onError: (err) => fail(err, "Could not save the notes"),
-                            },
-                          )
-                        }
-                        onSaveDetails={(data, done) =>
-                          updateMeeting.mutate(
-                            { id: selectedMeeting.id, data },
-                            {
-                              onSuccess: () => {
-                                invalidateMeetings();
-                                invalidateSummary();
-                                toast({ title: "Meeting updated" });
-                                done();
-                              },
-                              onError: (err) => fail(err, "Could not update the meeting"),
-                            },
-                          )
-                        }
-                        onGenerate={(nextMeetingType) =>
-                          processNotes.mutate(
-                            { id: selectedMeeting.id, data: { nextMeetingType } },
-                            {
-                              onSuccess: (res) => {
-                                invalidateMeetings();
-                                invalidateActionItems();
-                                invalidateDecisions();
-                                invalidateOpenQuestions();
-                                invalidateSummary();
-                                toast({
-                                  title: "Next agenda generated",
-                                  description: `${res.createdActionItems.length} action item${
-                                    res.createdActionItems.length === 1 ? "" : "s"
-                                  }, ${res.createdDecisions.length} decision${
-                                    res.createdDecisions.length === 1 ? "" : "s"
-                                  }, ${res.createdOpenQuestions.length} open question${
-                                    res.createdOpenQuestions.length === 1 ? "" : "s"
-                                  } captured (${res.provider === "openai" ? "AI" : "rules"}).`,
-                                });
-                              },
-                              onError: (err) => fail(err, "Could not generate the agenda"),
-                            },
-                          )
-                        }
-                        onDelete={() => setDeletingMeeting(selectedMeeting)}
-                        onSetStatus={(status) => setMeetingStatus(selectedMeeting, status)}
-                        onTogglePlan={(section, itemIndex, promptIndex, value) =>
-                          togglePlan(selectedMeeting.id, section, itemIndex, promptIndex, value)
-                        }
-                        onToggleAgenda={(itemIndex, promptIndex, done) =>
-                          toggleAgenda(selectedMeeting.id, itemIndex, promptIndex, done)
-                        }
-                        onAddDecision={(text, decidedBy, done) =>
-                          addDecision(selectedMeeting.id, text, decidedBy, done)
-                        }
-                        onDeleteDecision={removeDecision}
-                        onAddQuestion={(text, done) => addQuestion(selectedMeeting.id, text, done)}
-                        onResolveQuestion={resolveQuestion}
-                        onDeleteQuestion={removeQuestion}
-                        onToggleActionItem={toggleActionItem}
-                        onDeleteActionItem={(item) => setDeletingItem(item)}
-                        onAddActionItem={(data, done) => addMeetingActionItem(selectedMeeting.id, data, done)}
-                      />
-                      <MeetingRecordings
-                        key={`rec-${selectedMeeting.id}`}
-                        projectId={projectId}
-                        meeting={{
-                          id: selectedMeeting.id,
-                          title: selectedMeeting.title,
-                          notes: selectedMeeting.notes ?? "",
-                        }}
-                        onInsertNotes={(meetingId, notes) =>
-                          updateMeeting.mutateAsync({ id: meetingId, data: { notes } }).then(() => {
-                            invalidateMeetings();
-                            invalidateSummary();
-                          })
-                        }
-                      />
-                    </>
-                  ) : (
-                    <Card>
-                      <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                        <Search className="mb-3 h-8 w-8 text-muted" aria-hidden="true" />
-                        <p>Select a meeting to open it.</p>
-                      </CardContent>
-                    </Card>
-                  )}
+                  <Button onClick={() => setNewMeetingOpen(true)} size="sm">
+                    <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> New meeting
+                  </Button>
                 </div>
+                {mainPaneNode}
               </div>
+            ) : (
+              <ResizablePanelGroup
+                direction="horizontal"
+                autoSaveId="project-meetings-drawer"
+                className="h-[calc(100vh-15rem)] min-h-[34rem] items-stretch"
+              >
+                <ResizablePanel
+                  ref={drawerPanelRef}
+                  collapsible
+                  collapsedSize={0}
+                  defaultSize={30}
+                  minSize={22}
+                  maxSize={46}
+                  onCollapse={() => setDrawerCollapsed(true)}
+                  onExpand={() => setDrawerCollapsed(false)}
+                  className="min-w-0 rounded-lg border border-border bg-card"
+                >
+                  <PastMeetingsDrawerContent
+                    variant="desktop"
+                    meetings={filteredCompleted}
+                    totalCompleted={completedMeetings.length}
+                    search={meetingSearch}
+                    onSearch={setMeetingSearch}
+                    selectedId={effectiveReferenceId}
+                    onSelect={(id) => setReferenceMeetingId(id)}
+                    referenceMeeting={referenceMeeting}
+                    referenceDecisions={
+                      referenceMeeting ? decisionsByMeeting.get(referenceMeeting.id) ?? [] : []
+                    }
+                    referenceQuestions={
+                      referenceMeeting ? questionsByMeeting.get(referenceMeeting.id) ?? [] : []
+                    }
+                    referenceActionItems={
+                      referenceMeeting ? actionItemsByMeeting.get(referenceMeeting.id) ?? [] : []
+                    }
+                    referenceRecordingCount={
+                      referenceMeeting ? recordingCountByMeeting.get(referenceMeeting.id) ?? 0 : 0
+                    }
+                    onOpenInWorkspace={(id) => setSelectedMeetingId(id)}
+                    onCollapse={() => drawerPanelRef.current?.collapse()}
+                  />
+                </ResizablePanel>
+                <ResizableHandle
+                  withHandle
+                  aria-label="Resize past meetings drawer"
+                  className={drawerCollapsed ? "hidden" : "mx-1"}
+                />
+                <ResizablePanel minSize={40} className="min-w-0">
+                  <div className="h-full overflow-y-auto px-1 pb-2">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        {drawerCollapsed ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => drawerPanelRef.current?.expand()}
+                          >
+                            <PanelLeftOpen className="mr-2 h-4 w-4" aria-hidden="true" /> Past meetings
+                          </Button>
+                        ) : null}
+                        <WorkingMeetingPicker
+                          options={workingOptions}
+                          value={effectiveMeetingId}
+                          onChange={(id) => setSelectedMeetingId(id)}
+                        />
+                      </div>
+                      <Button onClick={() => setNewMeetingOpen(true)} size="sm">
+                        <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> New meeting
+                      </Button>
+                    </div>
+                    {mainPaneNode}
+                  </div>
+                </ResizablePanel>
+              </ResizablePanelGroup>
             )}
           </TabsContent>
 
