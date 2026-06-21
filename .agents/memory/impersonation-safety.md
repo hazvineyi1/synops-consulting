@@ -27,8 +27,9 @@ in-place mutation of `session.userId`.
   access; acting AS another user is the uniquely dangerous capability, so only it
   is narrowed to super_admin.
 
-- **Refused targets:** another admin/super_admin, a deactivated user, yourself,
-  and nesting (already impersonating). Encapsulated in the pure
+- **Refused targets:** a deactivated user, yourself, and nesting (already
+  impersonating). Admin and super_admin accounts ARE eligible targets -- a super
+  admin may impersonate any other active account. Encapsulated in the pure
   `decideImpersonationStart` so it is unit-testable without a DB.
 
 - **Every privileged write needs `blockWhileImpersonating`.** Credentials, role

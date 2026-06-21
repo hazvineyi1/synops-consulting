@@ -149,8 +149,9 @@ The four earlier products (Hub, Cadence, Rise, Meridian) were removed entirely
   unset or the send fails.
 - **Impersonation is a session-swap, regenerated both ways.** Start/stop call
   `regenerateSession()` and persist `{ userId: target, impersonatorUserId: real }`.
-  The real operator must be `super_admin`. Refused targets: admin/super_admin,
-  deactivated, self, nesting. While impersonating, every credential/security/branding
+  The real operator must be `super_admin`. Refused targets: deactivated, self,
+  nesting (a super admin may impersonate any other active account including other
+  admins and super admins). While impersonating, every credential/security/branding
   write is refused by `blockWhileImpersonating`; ordinary edits are allowed but
   attributed to the REAL actor. `/auth/login` and `/auth/register` also regenerate the
   session so no stale impersonator marker survives. See

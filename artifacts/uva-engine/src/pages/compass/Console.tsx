@@ -310,16 +310,14 @@ function ImpersonationCard({
   const [selected, setSelected] = useState<string>("");
   const [working, setWorking] = useState(false);
 
-  // Only ordinary, active users in a real organization can be impersonated. The
-  // server enforces this too (no global admins, no self, no deactivated).
+  // Any active account other than the operator themselves is eligible. The server
+  // independently enforces the same rules (no self, no deactivated, no nesting).
   const candidates = useMemo(
     () =>
       (users ?? []).filter(
         (u) =>
           u.id !== selfId &&
-          u.status === "active" &&
-          u.role !== "admin" &&
-          u.role !== "super_admin",
+          u.status === "active",
       ),
     [users, selfId],
   );

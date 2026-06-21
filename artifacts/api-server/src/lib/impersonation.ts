@@ -1,5 +1,3 @@
-import { isGlobalRole } from "./actor";
-
 /**
  * Pure decision logic for whether a super admin may begin impersonating a target
  * user. Kept side-effect free (no DB, no session) so it can be unit tested in
@@ -20,8 +18,7 @@ export type ImpersonationStartOutcome =
   | "not_super_admin" // operator is not a super admin -> 403
   | "target_not_found" // target id does not exist -> 404
   | "self" // operator targeted themselves -> 400
-  | "target_deactivated" // target account is deactivated -> 400
-  | "target_is_admin"; // target is a global admin/super_admin -> 403
+  | "target_deactivated"; // target account is deactivated -> 400
 
 export function decideImpersonationStart(
   operator: ImpersonationParty | null,
@@ -33,8 +30,5 @@ export function decideImpersonationStart(
   if (!target) return "target_not_found";
   if (target.id === operator.id) return "self";
   if (target.status === "deactivated") return "target_deactivated";
-  // Never allow impersonating another global admin: it is unnecessary for support
-  // and would create a lateral privilege path.
-  if (isGlobalRole(target.role)) return "target_is_admin";
   return "allow";
 }

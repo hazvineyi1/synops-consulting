@@ -37,8 +37,9 @@ function saveSession(req: import("express").Request): Promise<void> {
 }
 
 // Begin impersonating a target user. Only a super admin may start, and only when
-// not already impersonating (blockWhileImpersonating prevents nesting). Global
-// admins, the operator themselves, and deactivated accounts cannot be targets.
+// not already impersonating (blockWhileImpersonating prevents nesting). The
+// operator themselves and deactivated accounts cannot be targets; admin and
+// super_admin accounts are eligible.
 router.post("/impersonation/start", blockWhileImpersonating, async (req, res): Promise<void> => {
   const realUserId = req.session.userId;
   if (!realUserId) {
@@ -78,9 +79,6 @@ router.post("/impersonation/start", blockWhileImpersonating, async (req, res): P
       return;
     case "target_deactivated":
       res.status(400).json({ error: "You cannot impersonate a deactivated account." });
-      return;
-    case "target_is_admin":
-      res.status(403).json({ error: "You cannot impersonate an administrator." });
       return;
   }
 

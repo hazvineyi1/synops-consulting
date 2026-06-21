@@ -18,10 +18,15 @@ const builder: ImpersonationParty = { id: 4, role: "builder", status: "active" }
 const hubClient: ImpersonationParty = { id: 5, role: "user", status: "active" };
 
 describe("decideImpersonationStart", () => {
-  it("allows a super admin to impersonate an ordinary org-bound user", () => {
+  it("allows a super admin to impersonate any active account, including admins", () => {
     expect(decideImpersonationStart(superAdmin, schoolAdmin)).toBe("allow");
     expect(decideImpersonationStart(superAdmin, builder)).toBe("allow");
     expect(decideImpersonationStart(superAdmin, hubClient)).toBe("allow");
+    expect(decideImpersonationStart(superAdmin, admin)).toBe("allow");
+    // A different super_admin account (not self) is also eligible.
+    expect(
+      decideImpersonationStart(superAdmin, { id: 9, role: "super_admin", status: "active" }),
+    ).toBe("allow");
   });
 
   it("rejects an operator that is missing or deactivated (treated as unauthenticated)", () => {
@@ -50,12 +55,6 @@ describe("decideImpersonationStart", () => {
     ).toBe("target_deactivated");
   });
 
-  it("never allows impersonating another global admin or super admin", () => {
-    expect(decideImpersonationStart(superAdmin, admin)).toBe("target_is_admin");
-    expect(
-      decideImpersonationStart(superAdmin, { id: 9, role: "super_admin", status: "active" }),
-    ).toBe("target_is_admin");
-  });
 });
 
 function mockRes() {
