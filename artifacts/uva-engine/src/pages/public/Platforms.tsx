@@ -2,13 +2,13 @@ import { usePageMeta } from "@/lib/seo";
 import { Link } from "wouter";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AdaptiveDemo } from "@/components/public/AdaptiveDemo";
+import { QualityAssuranceDemo } from "@/components/public/QualityAssuranceDemo";
 import { Database, MonitorSmartphone, BrainCircuit, Lock } from "lucide-react";
 
 export default function Platforms() {
   usePageMeta(
     "Platforms & SaaS",
-    "Custom web apps, AI-powered learning tools, and an interactive Adaptive Reading & Reasoning demo.",
+    "Custom web apps, AI-powered learning tools, and an interactive curriculum Quality Assurance demo.",
   );
   return (
     <div className="mx-auto max-w-5xl px-4 py-24 space-y-24">
@@ -56,7 +56,7 @@ export default function Platforms() {
         <div className="text-center space-y-4">
           <h2 className="text-3xl font-bold">See It In Action</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            A look at what we build. Watch our Curriculum Builder platform carry a course design project through its full lifecycle, then try our live adaptive assessment engine for yourself.
+            A look at what we build. Watch our Curriculum Builder platform carry a course design project through its full lifecycle, then run a live quality check on a sample course for yourself.
           </p>
         </div>
 
@@ -83,16 +83,16 @@ export default function Platforms() {
           </div>
         </div>
 
-        {/* Adaptive Reading & Reasoning demo */}
+        {/* Quality Assurance demo */}
         <div className="space-y-4">
           <div className="text-center space-y-2">
-            <h3 className="text-2xl font-semibold">Adaptive Reading &amp; Reasoning</h3>
+            <h3 className="text-2xl font-semibold">Quality Assurance</h3>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              One adaptive assessment, every reading skill. The engine adjusts difficulty after each answer and samples across main idea, inference, vocabulary, and argument evaluation, building a live learner profile as you go.
+              Standards and compliance, validated. Step through a sample course and watch each item get checked against its standards alignment and compliance requirements, with statuses moving from pending to pass or fail and an overall QA score building as you go.
             </p>
           </div>
           <div className="bg-background rounded-xl border border-border shadow-sm overflow-hidden">
-            <AdaptiveDemo />
+            <QualityAssuranceDemo />
           </div>
         </div>
 
