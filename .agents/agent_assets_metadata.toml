@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "khMwI-LlR9GcFS9FRLtCw"
+uri = "file://artifacts/curriculum-builder-demo/public/images/grid-bg.png"
+type = "image"
+title = "Abstract curriculum learning grid"
+
+[[generated]]
+id = "6VYb2agzvlurFrUNUufaf"
+uri = "file://artifacts/curriculum-builder-demo/public/images/qa-bg.png"
+type = "image"
+title = "QA accessibility check pattern"
+
+[[generated]]
+id = "jmJvY1QxBK-1SQXhGqCYU"
+uri = "file://artifacts/curriculum-builder-demo/public/images/logo-mark.png"
+type = "image"
+title = "Synops brand logo mark"
