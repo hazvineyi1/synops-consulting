@@ -1574,6 +1574,28 @@ export interface ClassUpdate {
   status?: ClassUpdateStatus;
 }
 
+export interface ClassMember {
+  id: number;
+  classId: number;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  userRole: string;
+  addedAt: string;
+}
+
+export interface AddClassMemberInput {
+  userId: number;
+}
+
+export interface OrgMember {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+}
+
 export interface SchoolReportTotals {
   clients: number;
   projects: number;
@@ -1770,6 +1792,13 @@ organizationId?: number;
 export type ListAllocationsParams = {
 organizationId?: number;
 builderUserId?: number;
+};
+
+export type ListOrgMembersParams = {
+/**
+ * Global admins may specify an org; school_admins always see their own.
+ */
+organizationId?: number;
 };
 
 export type GetSchoolReportParams = {

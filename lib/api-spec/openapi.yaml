@@ -36,6 +36,8 @@ tags:
     description: Per-project meeting agenda, notes, action items, and derived progress
   - name: storage
     description: Object storage upload and serving
+  - name: roster
+    description: Class roster membership
 
 paths:
   /healthz:
@@ -2042,6 +2044,102 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Class"
+
+  # ── Class roster ──────────────────────────────────────────────
+  /compass/classes/{classId}/roster:
+    get:
+      operationId: listClassRoster
+      tags: [roster]
+      summary: List members on a class roster
+      parameters:
+        - name: classId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Roster members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClassMember"
+        "404":
+          description: Not found
+    post:
+      operationId: addClassMember
+      tags: [roster]
+      summary: Add a member to a class roster
+      parameters:
+        - name: classId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddClassMemberInput"
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassMember"
+        "404":
+          description: Not found
+        "409":
+          description: Already a member
+
+  /compass/classes/{classId}/roster/{memberId}:
+    delete:
+      operationId: removeClassMember
+      tags: [roster]
+      summary: Remove a member from a class roster
+      parameters:
+        - name: classId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed
+        "404":
+          description: Not found
+
+  # ── Org members picker ────────────────────────────────────────
+  /compass/org-members:
+    get:
+      operationId: listOrgMembers
+      tags: [roster]
+      summary: List active org staff (school_admin and builder) for pickers
+      parameters:
+        - name: organizationId
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Global admins may specify an org; school_admins always see their own.
+      responses:
+        "200":
+          description: Org members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrgMember"
 
   # ── School report ────────────────────────────────────────────
   /compass/school/report:
@@ -4544,6 +4642,49 @@ components:
         status:
           type: string
           enum: [active, archived]
+
+    # ── Roster ────────────────────────────────────────────────────
+    ClassMember:
+      type: object
+      required: [id, classId, userId, userName, userEmail, userRole, addedAt]
+      properties:
+        id:
+          type: integer
+        classId:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: string
+        userEmail:
+          type: string
+        userRole:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+
+    AddClassMemberInput:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: integer
+
+    OrgMember:
+      type: object
+      required: [id, name, email, role, status]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
 
     SchoolReportTotals:
       type: object

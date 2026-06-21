@@ -2499,6 +2499,63 @@ export const UpdateClassResponse = zod.object({
 
 
 /**
+ * @summary List members on a class roster
+ */
+export const ListClassRosterParams = zod.object({
+  "classId": zod.coerce.number()
+})
+
+export const ListClassRosterResponseItem = zod.object({
+  "id": zod.number(),
+  "classId": zod.number(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "userEmail": zod.string(),
+  "userRole": zod.string(),
+  "addedAt": zod.coerce.date()
+})
+export const ListClassRosterResponse = zod.array(ListClassRosterResponseItem)
+
+
+/**
+ * @summary Add a member to a class roster
+ */
+export const AddClassMemberParams = zod.object({
+  "classId": zod.coerce.number()
+})
+
+export const AddClassMemberBody = zod.object({
+  "userId": zod.number()
+})
+
+
+/**
+ * @summary Remove a member from a class roster
+ */
+export const RemoveClassMemberParams = zod.object({
+  "classId": zod.coerce.number(),
+  "memberId": zod.coerce.number()
+})
+
+
+/**
+ * @summary List active org staff (school_admin and builder) for pickers
+ */
+export const ListOrgMembersQueryParams = zod.object({
+  "organizationId": zod.coerce.number().optional().describe('Global admins may specify an org; school_admins always see their own.')
+})
+
+export const ListOrgMembersResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "status": zod.string()
+})
+export const ListOrgMembersResponse = zod.array(ListOrgMembersResponseItem)
+
+
+/**
  * @summary Organization curriculum and builder rollup
  */
 export const GetSchoolReportQueryParams = zod.object({

@@ -21,6 +21,7 @@ import Allocations from "@/pages/compass/Allocations";
 import SchoolReport from "@/pages/compass/SchoolReport";
 import MyWork from "@/pages/compass/MyWork";
 import Console from "@/pages/compass/Console";
+import ClassDetail from "@/pages/compass/ClassDetail";
 import NotFound from "@/pages/not-found";
 
 /**
@@ -55,6 +56,11 @@ export function EngineApp() {
         <Route path="/projects/:id/time" component={ProjectTime} />
         <Route path="/projects/:id/meetings" component={ProjectMeetings} />
         <Route path="/standards" component={Standards} />
+        <Route path="/courses/:courseId/classes/:classId">
+          {(params) => (
+            <ClassDetail courseId={Number(params.courseId)} classId={Number(params.classId)} />
+          )}
+        </Route>
         <Route path="/builders">{manage ? <Builders /> : <Redirect to="/" />}</Route>
         <Route path="/builders/:id">
           {(params) =>

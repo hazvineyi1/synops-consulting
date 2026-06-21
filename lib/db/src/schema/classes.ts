@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -24,3 +24,29 @@ export const insertClassSchema = createInsertSchema(classesTable).omit({
 });
 export type InsertClass = z.infer<typeof insertClassSchema>;
 export type ClassRow = typeof classesTable.$inferSelect;
+
+/**
+ * Class roster membership: links existing org staff (school_admin or builder)
+ * to a class. Uniqueness on (classId, userId) prevents duplicate entries.
+ * Tenancy is inherited from the class.
+ */
+export const classMembershipsTable = pgTable(
+  "class_memberships",
+  {
+    id: serial("id").primaryKey(),
+    classId: integer("class_id").notNull(),
+    userId: integer("user_id").notNull(),
+    addedByUserId: integer("added_by_user_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("class_memberships_class_user_unique").on(t.classId, t.userId),
+  ],
+);
+
+export const insertClassMembershipSchema = createInsertSchema(classMembershipsTable).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertClassMembership = z.infer<typeof insertClassMembershipSchema>;
+export type ClassMembershipRow = typeof classMembershipsTable.$inferSelect;

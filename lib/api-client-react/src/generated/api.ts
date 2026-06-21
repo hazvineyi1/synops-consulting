@@ -27,6 +27,7 @@ import type {
   ActivityFeedItem,
   ActivityInput,
   ActivityUpdate,
+  AddClassMemberInput,
   AgendaChecklistToggle,
   AgendaSummary,
   Allocation,
@@ -38,6 +39,7 @@ import type {
   Builder,
   Class,
   ClassInput,
+  ClassMember,
   ClassUpdate,
   Client,
   ClientInput,
@@ -74,6 +76,7 @@ import type {
   LedgerReport,
   ListAllocationsParams,
   ListBuildersParams,
+  ListOrgMembersParams,
   LoginInput,
   Meeting,
   MeetingChecklistToggle,
@@ -95,6 +98,7 @@ import type {
   ObjectiveInput,
   ObjectiveUpdate,
   OkResponse,
+  OrgMember,
   OrganizationBranding,
   PlatformOverview,
   PlatformUser,
@@ -7211,6 +7215,311 @@ export const useUpdateClass = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getUpdateClassMutationOptions(options));
     }
+
+export const getListClassRosterUrl = (classId: number,) => {
+
+
+
+
+  return `/api/compass/classes/${classId}/roster`
+}
+
+/**
+ * @summary List members on a class roster
+ */
+export const listClassRoster = async (classId: number, options?: RequestInit): Promise<ClassMember[]> => {
+
+  return customFetch<ClassMember[]>(getListClassRosterUrl(classId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListClassRosterQueryKey = (classId: number,) => {
+    return [
+    `/api/compass/classes/${classId}/roster`
+    ] as const;
+    }
+
+
+export const getListClassRosterQueryOptions = <TData = Awaited<ReturnType<typeof listClassRoster>>, TError = ErrorType<void>>(classId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listClassRoster>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListClassRosterQueryKey(classId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listClassRoster>>> = ({ signal }) => listClassRoster(classId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(classId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listClassRoster>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListClassRosterQueryResult = NonNullable<Awaited<ReturnType<typeof listClassRoster>>>
+export type ListClassRosterQueryError = ErrorType<void>
+
+
+/**
+ * @summary List members on a class roster
+ */
+
+export function useListClassRoster<TData = Awaited<ReturnType<typeof listClassRoster>>, TError = ErrorType<void>>(
+ classId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listClassRoster>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListClassRosterQueryOptions(classId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAddClassMemberUrl = (classId: number,) => {
+
+
+
+
+  return `/api/compass/classes/${classId}/roster`
+}
+
+/**
+ * @summary Add a member to a class roster
+ */
+export const addClassMember = async (classId: number,
+    addClassMemberInput: AddClassMemberInput, options?: RequestInit): Promise<ClassMember> => {
+
+  return customFetch<ClassMember>(getAddClassMemberUrl(classId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      addClassMemberInput,)
+  }
+);}
+
+
+
+
+export const getAddClassMemberMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addClassMember>>, TError,{classId: number;data: BodyType<AddClassMemberInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addClassMember>>, TError,{classId: number;data: BodyType<AddClassMemberInput>}, TContext> => {
+
+const mutationKey = ['addClassMember'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addClassMember>>, {classId: number;data: BodyType<AddClassMemberInput>}> = (props) => {
+          const {classId,data} = props ?? {};
+
+          return  addClassMember(classId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddClassMemberMutationResult = NonNullable<Awaited<ReturnType<typeof addClassMember>>>
+    export type AddClassMemberMutationBody = BodyType<AddClassMemberInput>
+    export type AddClassMemberMutationError = ErrorType<void>
+
+    /**
+ * @summary Add a member to a class roster
+ */
+export const useAddClassMember = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addClassMember>>, TError,{classId: number;data: BodyType<AddClassMemberInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addClassMember>>,
+        TError,
+        {classId: number;data: BodyType<AddClassMemberInput>},
+        TContext
+      > => {
+      return useMutation(getAddClassMemberMutationOptions(options));
+    }
+
+export const getRemoveClassMemberUrl = (classId: number,
+    memberId: number,) => {
+
+
+
+
+  return `/api/compass/classes/${classId}/roster/${memberId}`
+}
+
+/**
+ * @summary Remove a member from a class roster
+ */
+export const removeClassMember = async (classId: number,
+    memberId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRemoveClassMemberUrl(classId,memberId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRemoveClassMemberMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeClassMember>>, TError,{classId: number;memberId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeClassMember>>, TError,{classId: number;memberId: number}, TContext> => {
+
+const mutationKey = ['removeClassMember'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeClassMember>>, {classId: number;memberId: number}> = (props) => {
+          const {classId,memberId} = props ?? {};
+
+          return  removeClassMember(classId,memberId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveClassMemberMutationResult = NonNullable<Awaited<ReturnType<typeof removeClassMember>>>
+
+    export type RemoveClassMemberMutationError = ErrorType<void>
+
+    /**
+ * @summary Remove a member from a class roster
+ */
+export const useRemoveClassMember = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeClassMember>>, TError,{classId: number;memberId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeClassMember>>,
+        TError,
+        {classId: number;memberId: number},
+        TContext
+      > => {
+      return useMutation(getRemoveClassMemberMutationOptions(options));
+    }
+
+export const getListOrgMembersUrl = (params?: ListOrgMembersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/compass/org-members?${stringifiedParams}` : `/api/compass/org-members`
+}
+
+/**
+ * @summary List active org staff (school_admin and builder) for pickers
+ */
+export const listOrgMembers = async (params?: ListOrgMembersParams, options?: RequestInit): Promise<OrgMember[]> => {
+
+  return customFetch<OrgMember[]>(getListOrgMembersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOrgMembersQueryKey = (params?: ListOrgMembersParams,) => {
+    return [
+    `/api/compass/org-members`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListOrgMembersQueryOptions = <TData = Awaited<ReturnType<typeof listOrgMembers>>, TError = ErrorType<unknown>>(params?: ListOrgMembersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgMembersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgMembers>>> = ({ signal }) => listOrgMembers(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOrgMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgMembers>>>
+export type ListOrgMembersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List active org staff (school_admin and builder) for pickers
+ */
+
+export function useListOrgMembers<TData = Awaited<ReturnType<typeof listOrgMembers>>, TError = ErrorType<unknown>>(
+ params?: ListOrgMembersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOrgMembersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetSchoolReportUrl = (params?: GetSchoolReportParams,) => {
   const normalizedParams = new URLSearchParams();
