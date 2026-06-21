@@ -30,10 +30,16 @@ editing routes, then re-verify.
 ### Env
 
 - Required: `DATABASE_URL`, `SESSION_SECRET`.
-- Optional: `CONTACT_EMAIL` (form notifications); `SMTP_URL` / `RESEND_API_KEY` /
-  `SENDGRID_API_KEY` (email transport - if none set, email degrades to logging and
-  forms still persist); `REPLIT_DOMAINS` (prod CSRF allowed origins); `LOG_LEVEL`
-  (pino, default `info`).
+- Optional: `CONTACT_EMAIL` (recipient for contact-form notifications);
+  `CONTACT_FROM_EMAIL` (sender; must be an address on a Resend-verified domain.
+  Defaults to Resend's onboarding sender, which only delivers to the Resend account
+  owner); `REPLIT_DOMAINS` (prod CSRF allowed origins); `LOG_LEVEL` (pino, default
+  `info`).
+- Email transport is the Resend connector (a Replit integration, called via
+  `@workspace/api-server`'s `@replit/connectors-sdk`); there is no API-key env var.
+  If `CONTACT_EMAIL` is unset or the Resend send fails, email degrades to logging and
+  forms still persist. To deliver to an arbitrary address, verify the sending domain
+  at resend.com/domains and set `CONTACT_FROM_EMAIL` to an address on it.
 - No third-party API keys required. Engines are rules-based; any optional LLM use
   must sit behind an env fallback so the product works without it.
 
@@ -138,8 +144,9 @@ The four earlier products (Hub, Cadence, Rise, Meridian) were removed entirely
   `.agents/memory/self-service-registration.md`.
 - **Contract-first.** Routes validate input/output with Zod; the web app consumes
   generated hooks. Regenerate after spec changes; never change `info.title`.
-- **Email never blocks a form.** Submissions persist first; notification email is
-  best-effort and logs when no transport is configured.
+- **Email never blocks a form.** Submissions persist first; the notification email is
+  best-effort via the Resend connector and degrades to logging when `CONTACT_EMAIL` is
+  unset or the send fails.
 - **Impersonation is a session-swap, regenerated both ways.** Start/stop call
   `regenerateSession()` and persist `{ userId: target, impersonatorUserId: real }`.
   The real operator must be `super_admin`. Refused targets: admin/super_admin,
