@@ -52,16 +52,50 @@ export default function Platforms() {
         </Card>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-12">
         <div className="text-center space-y-4">
           <h2 className="text-3xl font-bold">See It In Action</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            One adaptive assessment, every reading skill. The engine adjusts difficulty after each answer and samples across main idea, inference, vocabulary, and argument evaluation, building a live learner profile as you go.
+            A look at what we build. Watch our Curriculum Builder platform carry a course design project through its full lifecycle, then try our live adaptive assessment engine for yourself.
           </p>
         </div>
-        <div className="bg-background rounded-xl border border-border shadow-sm overflow-hidden">
-          <AdaptiveDemo />
+
+        {/* Curriculum Builder animation */}
+        <div className="space-y-4">
+          <div className="text-center space-y-2">
+            <h3 className="text-2xl font-semibold">Curriculum Builder</h3>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Our curriculum design platform takes instructional teams from intake through design, quality assurance, and handoff. This walkthrough shows the projects dashboard, the standards alignment map, and a QA report where accessibility checks pass before delivery.
+            </p>
+          </div>
+          <div className="bg-background rounded-xl border border-border shadow-sm overflow-hidden">
+            <video
+              className="block w-full h-auto"
+              src={`${import.meta.env.BASE_URL}curriculum-builder-animation.mp4`}
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+              preload="metadata"
+              aria-label="Animated walkthrough of the Curriculum Builder platform, showing the projects dashboard, the standards alignment map, and a QA report with accessibility checks passing."
+            />
+          </div>
         </div>
+
+        {/* Adaptive Reading & Reasoning demo */}
+        <div className="space-y-4">
+          <div className="text-center space-y-2">
+            <h3 className="text-2xl font-semibold">Adaptive Reading &amp; Reasoning</h3>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              One adaptive assessment, every reading skill. The engine adjusts difficulty after each answer and samples across main idea, inference, vocabulary, and argument evaluation, building a live learner profile as you go.
+            </p>
+          </div>
+          <div className="bg-background rounded-xl border border-border shadow-sm overflow-hidden">
+            <AdaptiveDemo />
+          </div>
+        </div>
+
         <div className="text-center">
           <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90" asChild>
             <Link href="/contact?area=platforms">Request a tailored build</Link>
