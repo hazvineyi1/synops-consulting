@@ -1,8 +1,10 @@
 import { useGetDashboardSummary, useGetDashboardActivity, useListProjects } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertTriangle, Clock, ArrowRight, CheckCircle2,
-  FolderKanban, ShieldAlert, Users, type LucideIcon,
+  FolderKanban, ShieldAlert, Users, ChevronDown, type LucideIcon,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
@@ -186,35 +188,52 @@ export default function Dashboard() {
         </section>
 
         {/* Recent activity */}
-        <section className="space-y-4" aria-label="Recent activity">
-          <h2 className="text-lg font-semibold tracking-tight">Recent activity</h2>
-          <Card>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {activity?.map((item) => (
-                  <div key={item.id} className="flex items-start gap-3 p-4">
-                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-sm">
-                        <span className="font-medium">{item.action}</span> {item.entityType.toLowerCase()}{" "}
-                        <span className="font-medium">{item.entityTitle}</span>
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Link href={`/projects/${item.projectId}`} className="hover:underline">
-                          {item.projectTitle}
-                        </Link>
-                        <span aria-hidden="true">&middot;</span>
-                        <span>{new Date(item.timestamp).toLocaleDateString()}</span>
+        <section aria-label="Recent activity">
+          <Collapsible defaultOpen className="space-y-4">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-lg font-semibold tracking-tight">Recent activity</h2>
+              <CollapsibleTrigger className="group inline-flex items-center gap-1 rounded text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <span className="group-data-[state=closed]:hidden">Hide</span>
+                <span className="group-data-[state=open]:hidden">Show</span>
+                <ChevronDown
+                  className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180"
+                  aria-hidden="true"
+                />
+              </CollapsibleTrigger>
+            </div>
+            <CollapsibleContent>
+              <Card>
+                <CardContent className="p-0">
+                  {activity && activity.length > 0 ? (
+                    <ScrollArea className="h-96">
+                      <div className="divide-y">
+                        {activity.map((item) => (
+                          <div key={item.id} className="flex items-start gap-3 p-4">
+                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                            <div className="min-w-0 space-y-1">
+                              <p className="text-sm">
+                                <span className="font-medium">{item.action}</span> {item.entityType.toLowerCase()}{" "}
+                                <span className="font-medium">{item.entityTitle}</span>
+                              </p>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Link href={`/projects/${item.projectId}`} className="hover:underline">
+                                  {item.projectTitle}
+                                </Link>
+                                <span aria-hidden="true">&middot;</span>
+                                <span>{new Date(item.timestamp).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  </div>
-                ))}
-                {(!activity || activity.length === 0) && (
-                  <div className="p-8 text-center text-sm text-muted-foreground">No recent activity</div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                    </ScrollArea>
+                  ) : (
+                    <div className="p-8 text-center text-sm text-muted-foreground">No recent activity</div>
+                  )}
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
         </section>
       </div>
     </div>
