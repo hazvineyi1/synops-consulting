@@ -74,10 +74,9 @@ export default function Contact() {
               <Mail className="w-6 h-6 text-primary mt-1" />
               <div>
                 <h3 className="font-medium text-foreground">Email</h3>
-                <a href="mailto:hello@synopsadvisory.com" className="text-muted-foreground hover:text-primary transition-colors">
-                  hello@synopsadvisory.com
+                <a href="mailto:info@synops-consulting.com" className="text-muted-foreground hover:text-primary transition-colors">
+                  info@synops-consulting.com
                 </a>
-                <p className="text-xs text-muted-foreground mt-1 opacity-60">(Placeholder email address)</p>
               </div>
             </div>
             
