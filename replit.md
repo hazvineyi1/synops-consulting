@@ -182,20 +182,14 @@ The four earlier products (Hub, Cadence, Rise, Meridian) were removed entirely
 
 Idempotent seeds run on server start (`src/lib/seed.ts`):
 `ensureOrganizationsSeed` (the internal org, always; adopts pre-existing null-org
-compass users) and `ensureDemoUsers` (skipped when `NODE_ENV=production`).
+compass users into it) and `ensureDemoUsers` (skipped when `NODE_ENV=production`).
 
-- Internal tenant: org slug `synops-internal` (type `internal`) - the firm's own
-  curriculum; all legacy clients and the compass demo user live here.
-- Demo school tenant (dev only): org slug `demo-academy` (type `school`) -
-  demonstrates org isolation.
+Single tenant: org slug `synops-internal` (type `internal`).
 
-Demo users (password for all: `Demo!2345`):
+Example accounts (password for all: `Demo!2345`):
 
-- `admin@demo.synops.test` (role `admin`, global).
-- `compass@demo.synops.test` (role `client`, internal org).
-- `super-admin@demo.synops.test` (role `super_admin`, global, no org).
-- `school-admin@demo.synops.test` (role `school_admin`, demo-academy).
-- `builder@demo.synops.test` (role `builder`, demo-academy).
+- `super-admin@demo.synops.test` (role `super_admin`, global).
+- `builder@demo.synops.test` (role `builder`, synops-internal org).
 
 ## User preferences
 

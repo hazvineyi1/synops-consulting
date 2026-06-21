@@ -1,9 +1,9 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import {
+  pruneDevData,
   ensureOrganizationsSeed,
   ensureDemoUsers,
-  ensureDemoAcademyCurriculum,
 } from "./lib/seed";
 
 const rawPort = process.env["PORT"];
@@ -28,13 +28,15 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 
-  // Seeds run in dependency order: the internal organization must exist (all
-  // envs) before demo users can be bound to it. Demo users and the Demo Academy
-  // curriculum are dev-only (those functions self-skip in production).
+  // Seeds run in dependency order:
+  // 1. pruneDevData (dev only) clears all curriculum content and removes surplus
+  //    accounts/orgs so the product boots clean on every restart.
+  // 2. ensureOrganizationsSeed (all envs) ensures the internal org exists.
+  // 3. ensureDemoUsers (dev only) creates the two example accounts if absent.
   void (async () => {
+    await pruneDevData(logger);
     const { internalOrgId } = await ensureOrganizationsSeed(logger);
     await ensureDemoUsers(logger, internalOrgId);
-    await ensureDemoAcademyCurriculum(logger);
   })().catch((err) => {
     logger.error({ err }, "Failed to run startup seeds");
   });
