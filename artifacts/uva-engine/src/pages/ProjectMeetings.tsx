@@ -18,13 +18,8 @@ import {
   useDeleteActionItem,
   useListProjectDecisions,
   getListProjectDecisionsQueryKey,
-  useCreateProjectDecision,
-  useDeleteDecision,
   useListProjectOpenQuestions,
   getListProjectOpenQuestionsQueryKey,
-  useCreateProjectOpenQuestion,
-  useUpdateOpenQuestion,
-  useDeleteOpenQuestion,
   useListProjectCorrespondence,
   getListProjectCorrespondenceQueryKey,
   useCreateProjectCorrespondence,
@@ -56,6 +51,8 @@ import {
   FileText,
   Gavel,
   HelpCircle,
+  Mic,
+  Square,
   Search,
   ClipboardList,
   Target,
@@ -66,7 +63,7 @@ import {
   Video,
 } from "lucide-react";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
-import { MeetingRecordings } from "@/components/engine/MeetingRecordings";
+import { MeetingRecordings, formatDuration, type RecorderControlsHandle } from "@/components/engine/MeetingRecordings";
 import { MeetingCalendar } from "@/components/engine/MeetingCalendar";
 import { authErrorMessage } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -836,11 +833,6 @@ export default function ProjectMeetings() {
   const createActionItem = useCreateProjectActionItem();
   const updateActionItem = useUpdateActionItem();
   const deleteActionItem = useDeleteActionItem();
-  const createDecision = useCreateProjectDecision();
-  const deleteDecision = useDeleteDecision();
-  const createQuestion = useCreateProjectOpenQuestion();
-  const updateQuestion = useUpdateOpenQuestion();
-  const deleteQuestion = useDeleteOpenQuestion();
   const createCorrespondence = useCreateProjectCorrespondence();
   const updateCorrespondence = useUpdateCorrespondence();
   const deleteCorrespondence = useDeleteCorrespondence();
@@ -1086,71 +1078,6 @@ export default function ProjectMeetings() {
     );
   }
 
-  // ---- Per-meeting live-capture handlers ----
-  function addDecision(meetingId: number, text: string, decidedBy: string, done: () => void) {
-    createDecision.mutate(
-      { projectId, data: { text, decidedBy: decidedBy.trim() || undefined, meetingId } },
-      {
-        onSuccess: () => {
-          invalidateDecisions();
-          toast({ title: "Decision recorded" });
-          done();
-        },
-        onError: (err) => fail(err, "Could not record the decision"),
-      },
-    );
-  }
-
-  function removeDecision(id: number) {
-    deleteDecision.mutate(
-      { id },
-      {
-        onSuccess: () => {
-          invalidateDecisions();
-          toast({ title: "Decision removed" });
-        },
-        onError: (err) => fail(err, "Could not remove the decision"),
-      },
-    );
-  }
-
-  function addQuestion(meetingId: number, text: string, done: () => void) {
-    createQuestion.mutate(
-      { projectId, data: { text, meetingId } },
-      {
-        onSuccess: () => {
-          invalidateOpenQuestions();
-          toast({ title: "Open question captured" });
-          done();
-        },
-        onError: (err) => fail(err, "Could not capture the question"),
-      },
-    );
-  }
-
-  function resolveQuestion(question: MeetingOpenQuestion, resolved: boolean) {
-    updateQuestion.mutate(
-      { id: question.id, data: { status: resolved ? "resolved" : "open" } },
-      {
-        onSuccess: () => invalidateOpenQuestions(),
-        onError: (err) => fail(err, "Could not update the question"),
-      },
-    );
-  }
-
-  function removeQuestion(id: number) {
-    deleteQuestion.mutate(
-      { id },
-      {
-        onSuccess: () => {
-          invalidateOpenQuestions();
-          toast({ title: "Question removed" });
-        },
-        onError: (err) => fail(err, "Could not remove the question"),
-      },
-    );
-  }
-
   // ---- New action item form ----
   const [aiTitle, setAiTitle] = useState("");
   const [aiCategory, setAiCategory] = useState("general");
@@ -1181,27 +1108,6 @@ export default function ProjectMeetings() {
           setAiCategory("general");
           setAiOwner("");
           setAiDue("");
-          toast({ title: "Action item added" });
-        },
-        onError: (err) => fail(err, "Could not add the action item"),
-      },
-    );
-  }
-
-  // Capture an action item directly inside a meeting workspace. It is linked to the
-  // meeting via sourceMeetingId so it joins that meeting's stream and carry-forward.
-  function addMeetingActionItem(
-    meetingId: number,
-    data: { title: string; ownerName?: string; dueAt?: string; category: ActionItem["category"] },
-    done: () => void,
-  ) {
-    createActionItem.mutate(
-      { projectId, data: { ...data, sourceMeetingId: meetingId } },
-      {
-        onSuccess: () => {
-          invalidateActionItems();
-          invalidateSummary();
-          done();
           toast({ title: "Action item added" });
         },
         onError: (err) => fail(err, "Could not add the action item"),
@@ -1346,33 +1252,39 @@ export default function ProjectMeetings() {
 
   const openCount = summary?.openActionItems ?? actionItems.filter((a) => a.status === "open").length;
 
+  // ---- Recorder state for split Record/Stop controls ----
+  // The Record button sits ABOVE the agenda; Stop sits BELOW the recordings list.
+  // MeetingRecordings owns the MediaRecorder lifecycle and notifies us via
+  // onControlsReady (stable handles) + onStateChange (re-render triggers).
+  const [recorderIsRecording, setRecorderIsRecording] = useState(false);
+  const [recorderElapsed, setRecorderElapsed] = useState(0);
+  const [recorderHasPending, setRecorderHasPending] = useState(false);
+  const recorderControlsRef = useRef<RecorderControlsHandle>({
+    start: () => {},
+    stop: () => {},
+  });
+
   // The editable workspace for the working meeting. Built once and reused by both
   // the desktop resizable layout and the mobile layout so it mounts a single time.
   const mainPaneNode = selectedMeeting ? (
     <div className="space-y-6">
+      {/* Record control -- visible only when idle (not recording and no pending review) */}
+      {!recorderIsRecording && !recorderHasPending ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 p-4">
+          <span className="text-sm text-muted-foreground">
+            Capture meeting audio to generate the next agenda.
+          </span>
+          <Button size="sm" onClick={() => recorderControlsRef.current.start()}>
+            <Mic className="mr-1 h-4 w-4" aria-hidden="true" /> Record
+          </Button>
+        </div>
+      ) : null}
+
       <MeetingCard
         key={selectedMeeting.id}
         meeting={selectedMeeting}
-        decisions={decisionsByMeeting.get(selectedMeeting.id) ?? []}
-        questions={questionsByMeeting.get(selectedMeeting.id) ?? []}
-        actionItems={actionItemsByMeeting.get(selectedMeeting.id) ?? []}
         isProcessing={processNotes.isPending}
         isSavingNotes={updateMeeting.isPending}
-        isSavingDecision={createDecision.isPending}
-        isSavingQuestion={createQuestion.isPending}
-        isSavingActionItem={createActionItem.isPending}
-        onSaveNotes={(notes) =>
-          updateMeeting.mutate(
-            { id: selectedMeeting.id, data: { notes } },
-            {
-              onSuccess: () => {
-                invalidateMeetings();
-                toast({ title: "Notes saved" });
-              },
-              onError: (err) => fail(err, "Could not save the notes"),
-            },
-          )
-        }
         onSaveDetails={(data, done) =>
           updateMeeting.mutate(
             { id: selectedMeeting.id, data },
@@ -1420,16 +1332,6 @@ export default function ProjectMeetings() {
         onToggleAgenda={(itemIndex, promptIndex, done) =>
           toggleAgenda(selectedMeeting.id, itemIndex, promptIndex, done)
         }
-        onAddDecision={(text, decidedBy, done) =>
-          addDecision(selectedMeeting.id, text, decidedBy, done)
-        }
-        onDeleteDecision={removeDecision}
-        onAddQuestion={(text, done) => addQuestion(selectedMeeting.id, text, done)}
-        onResolveQuestion={resolveQuestion}
-        onDeleteQuestion={removeQuestion}
-        onToggleActionItem={toggleActionItem}
-        onDeleteActionItem={(item) => setDeletingItem(item)}
-        onAddActionItem={(data, done) => addMeetingActionItem(selectedMeeting.id, data, done)}
       />
       <MeetingRecordings
         key={`rec-${selectedMeeting.id}`}
@@ -1445,7 +1347,32 @@ export default function ProjectMeetings() {
             invalidateSummary();
           })
         }
+        onControlsReady={(controls) => {
+          recorderControlsRef.current = controls;
+        }}
+        onStateChange={(state) => {
+          setRecorderIsRecording(state.isRecording);
+          setRecorderElapsed(state.recElapsed);
+          setRecorderHasPending(state.hasPending);
+        }}
       />
+
+      {/* Stop control -- visible only while recording */}
+      {recorderIsRecording ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-600" aria-hidden="true" />
+          <span className="font-mono text-sm text-foreground">{formatDuration(recorderElapsed)}</span>
+          <span className="text-sm text-muted-foreground">Recording in progress</span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto border-red-600 text-red-700 hover:bg-red-50"
+            onClick={() => recorderControlsRef.current.stop()}
+          >
+            <Square className="mr-1 h-3.5 w-3.5 fill-current" aria-hidden="true" /> Stop
+          </Button>
+        </div>
+      ) : null}
     </div>
   ) : (
     <Card>
@@ -1457,7 +1384,7 @@ export default function ProjectMeetings() {
   );
 
   return (
-    <ProjectWorkspace subtitle="Run kickoff, working, and final meetings with type-aware agendas, live capture, and a clear definition of done.">
+    <ProjectWorkspace subtitle="Run kickoff, working, and final meetings with type-aware agendas. Record audio, transcribe, and generate the next agenda.">
       {() => (
         <Tabs defaultValue="meetings" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:grid-cols-4">
@@ -2135,46 +2062,25 @@ export default function ProjectMeetings() {
 
 /* ------------------------------------------------------------------ */
 /* Meeting card: a per-meeting workspace                              */
-/*   type/status, pre-work, standing agenda, notes + generation,     */
-/*   the three live-capture streams, definition of done, next agenda */
+/*   type/status, pre-work, standing agenda, generate next agenda,   */
+/*   proposed next agenda, mark completed / reopen                   */
 /* ------------------------------------------------------------------ */
 
 function MeetingCard({
   meeting,
-  decisions,
-  questions,
-  actionItems,
   isProcessing,
   isSavingNotes,
-  isSavingDecision,
-  isSavingQuestion,
-  isSavingActionItem,
-  onSaveNotes,
   onSaveDetails,
   onGenerate,
   onDelete,
   onSetStatus,
   onTogglePlan,
   onToggleAgenda,
-  onAddDecision,
-  onDeleteDecision,
-  onAddQuestion,
-  onResolveQuestion,
-  onDeleteQuestion,
-  onToggleActionItem,
-  onDeleteActionItem,
-  onAddActionItem,
 }: {
   meeting: Meeting;
-  decisions: MeetingDecision[];
-  questions: MeetingOpenQuestion[];
-  actionItems: ActionItem[];
   isProcessing: boolean;
+  /** Used for the edit-details dialog save button. */
   isSavingNotes: boolean;
-  isSavingDecision: boolean;
-  isSavingQuestion: boolean;
-  isSavingActionItem: boolean;
-  onSaveNotes: (notes: string) => void;
   onSaveDetails: (
     data: { title: string; meetingType: MeetingType; focus: string | null; scheduledAt: string | null },
     done: () => void,
@@ -2184,27 +2090,7 @@ function MeetingCard({
   onSetStatus: (status: "scheduled" | "completed") => void;
   onTogglePlan: (section: PlanSection, itemIndex: number, promptIndex: number | null, value: boolean) => void;
   onToggleAgenda: (itemIndex: number, promptIndex: number | null, done: boolean) => void;
-  onAddDecision: (text: string, decidedBy: string, done: () => void) => void;
-  onDeleteDecision: (id: number) => void;
-  onAddQuestion: (text: string, done: () => void) => void;
-  onResolveQuestion: (question: MeetingOpenQuestion, resolved: boolean) => void;
-  onDeleteQuestion: (id: number) => void;
-  onToggleActionItem: (item: ActionItem, done: boolean) => void;
-  onDeleteActionItem: (item: ActionItem) => void;
-  onAddActionItem: (
-    data: { title: string; ownerName?: string; dueAt?: string; category: ActionItem["category"] },
-    done: () => void,
-  ) => void;
 }) {
-  const [notes, setNotes] = useState(meeting.notes);
-  // Adopt server-side note changes (e.g. a transcript inserted via MeetingRecordings)
-  // during render, but only when the local copy is not dirty so we never clobber the
-  // operator's unsaved edits. React's recommended prop->state sync without an effect.
-  const [serverNotes, setServerNotes] = useState(meeting.notes);
-  if (meeting.notes !== serverNotes) {
-    if (notes === serverNotes) setNotes(meeting.notes);
-    setServerNotes(meeting.notes);
-  }
   const [editingDetails, setEditingDetails] = useState(false);
   const [editTitle, setEditTitle] = useState(meeting.title);
   const [editType, setEditType] = useState<MeetingType>(
@@ -2213,27 +2099,16 @@ function MeetingCard({
   const [editFocus, setEditFocus] = useState(meeting.focus ?? "");
   const [editAt, setEditAt] = useState(toLocalInput(meeting.scheduledAt));
 
-  // Live-capture inline add fields.
-  const [decisionText, setDecisionText] = useState("");
-  const [decisionBy, setDecisionBy] = useState("");
-  const [questionText, setQuestionText] = useState("");
-  const [itemTitle, setItemTitle] = useState("");
-  const [itemOwner, setItemOwner] = useState("");
-  const [itemDue, setItemDue] = useState("");
-  const [itemCategory, setItemCategory] = useState<ActionItem["category"]>("general");
-
   // Preselect the proposed next type from the current type; the user can override.
   const currentType: MeetingType = isMeetingType(meeting.meetingType) ? meeting.meetingType : "working";
   const [nextType, setNextType] = useState<MeetingType>(suggestNextType(currentType));
 
-  const notesDirty = notes !== meeting.notes;
+  const hasNotes = Boolean(meeting.notes?.trim());
   const completed = meeting.status === "completed";
   const plan = meeting.agendaPlan;
   const agenda = meeting.generatedAgenda ?? null;
 
   const preworkDone = plan.prework.filter((p) => p.done).length;
-  const exitMet = plan.exitCriteria.filter((c) => c.met).length;
-  const exitUnmet = plan.exitCriteria.length - exitMet;
 
   // Proposed next-agenda checklist progress: each prompt is one item; an item with
   // no prompts counts as a single checkable line via its own `done` flag.
@@ -2255,40 +2130,6 @@ function MeetingCard({
     setEditFocus(meeting.focus ?? "");
     setEditAt(toLocalInput(meeting.scheduledAt));
     setEditingDetails(true);
-  }
-
-  function submitDecision() {
-    const text = decisionText.trim();
-    if (!text) return;
-    onAddDecision(text, decisionBy, () => {
-      setDecisionText("");
-      setDecisionBy("");
-    });
-  }
-
-  function submitActionItem() {
-    const title = itemTitle.trim();
-    if (!title) return;
-    onAddActionItem(
-      {
-        title,
-        ownerName: itemOwner.trim() || undefined,
-        dueAt: dateOnlyToIso(itemDue),
-        category: itemCategory,
-      },
-      () => {
-        setItemTitle("");
-        setItemOwner("");
-        setItemDue("");
-        setItemCategory("general");
-      },
-    );
-  }
-
-  function submitQuestion() {
-    const text = questionText.trim();
-    if (!text) return;
-    onAddQuestion(text, () => setQuestionText(""));
   }
 
   return (
@@ -2438,21 +2279,9 @@ function MeetingCard({
           </section>
         )}
 
-        {/* Notes + next agenda generation */}
+        {/* Generate next agenda */}
         <div className="space-y-1.5">
-          <Label htmlFor={`notes-${meeting.id}`}>Meeting notes</Label>
-          <Textarea
-            id={`notes-${meeting.id}`}
-            rows={5}
-            maxLength={20000}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Capture decisions, action items, and open questions. The generator reads these."
-          />
           <div className="flex flex-wrap items-end gap-2">
-            <Button size="sm" variant="outline" onClick={() => onSaveNotes(notes)} disabled={!notesDirty || isSavingNotes}>
-              {isSavingNotes ? "Saving..." : "Save notes"}
-            </Button>
             <div className="space-y-1">
               <Label htmlFor={`next-type-${meeting.id}`} className="text-xs text-muted-foreground">
                 Next meeting type
@@ -2470,7 +2299,7 @@ function MeetingCard({
                 </SelectContent>
               </Select>
             </div>
-            <Button size="sm" onClick={() => onGenerate(nextType)} disabled={isProcessing || notesDirty}>
+            <Button size="sm" onClick={() => onGenerate(nextType)} disabled={isProcessing || !hasNotes}>
               {isProcessing ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (
@@ -2478,281 +2307,11 @@ function MeetingCard({
               )}
               Generate next agenda
             </Button>
-            {notesDirty && <span className="text-xs text-muted-foreground">Save notes before generating.</span>}
+            {!hasNotes && (
+              <span className="text-xs text-muted-foreground">Record and transcribe first.</span>
+            )}
           </div>
         </div>
-
-        {/* Live capture: the three streams for this meeting */}
-        <section className="rounded-lg border bg-muted/20 p-4" aria-label="Live capture">
-          <h4 className="mb-3 font-semibold">Live capture</h4>
-          <div className="grid gap-4 lg:grid-cols-3">
-            {/* Decisions */}
-            <div className="space-y-2">
-              <h5 className="flex items-center gap-2 text-sm font-medium">
-                <Gavel className="h-4 w-4 text-primary" aria-hidden="true" /> Decisions
-              </h5>
-              {decisions.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No decisions recorded yet.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {decisions.map((d) => (
-                    <li key={d.id} className="flex items-start justify-between gap-2 rounded-md border bg-card p-2">
-                      <div className="min-w-0 text-sm">
-                        <p>{d.text}</p>
-                        {d.decidedBy && <p className="mt-0.5 text-xs text-muted-foreground">By {d.decidedBy}</p>}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0"
-                        onClick={() => onDeleteDecision(d.id)}
-                        aria-label="Delete decision"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="space-y-1.5">
-                <Label htmlFor={`dec-text-${meeting.id}`} className="sr-only">
-                  Decision
-                </Label>
-                <Input
-                  id={`dec-text-${meeting.id}`}
-                  value={decisionText}
-                  maxLength={1000}
-                  onChange={(e) => setDecisionText(e.target.value)}
-                  placeholder="Record a decision"
-                />
-                <Label htmlFor={`dec-by-${meeting.id}`} className="sr-only">
-                  Decided by
-                </Label>
-                <Input
-                  id={`dec-by-${meeting.id}`}
-                  value={decisionBy}
-                  maxLength={200}
-                  onChange={(e) => setDecisionBy(e.target.value)}
-                  placeholder="Decided by (optional)"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full"
-                  onClick={submitDecision}
-                  disabled={isSavingDecision || !decisionText.trim()}
-                >
-                  <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Record decision
-                </Button>
-              </div>
-            </div>
-
-            {/* Action items */}
-            <div className="space-y-2">
-              <h5 className="flex items-center gap-2 text-sm font-medium">
-                <ListChecks className="h-4 w-4 text-primary" aria-hidden="true" /> Action items
-              </h5>
-              {actionItems.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  None from this meeting yet. Capture one below, or generate the agenda to extract them from the notes.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {actionItems.map((a) => {
-                    const done = a.status === "done";
-                    return (
-                      <li key={a.id} className="flex items-start justify-between gap-2 rounded-md border bg-card p-2">
-                        <label className="flex min-w-0 items-start gap-2 text-sm" htmlFor={`mi-${meeting.id}-${a.id}`}>
-                          <Checkbox
-                            id={`mi-${meeting.id}-${a.id}`}
-                            checked={done}
-                            onCheckedChange={(v) => onToggleActionItem(a, v === true)}
-                            className="mt-0.5"
-                          />
-                          <span className="min-w-0">
-                            <span className={done ? "text-muted-foreground line-through" : ""}>{a.title}</span>
-                            {(a.ownerName || a.dueAt) && (
-                              <span className="mt-0.5 block text-xs text-muted-foreground">
-                                {a.ownerName}
-                                {a.ownerName && a.dueAt ? " - " : ""}
-                                {a.dueAt ? `Due ${fmtDate(a.dueAt)}` : ""}
-                              </span>
-                            )}
-                          </span>
-                        </label>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 shrink-0"
-                          onClick={() => onDeleteActionItem(a)}
-                          aria-label={`Delete action item: ${a.title}`}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                        </Button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <div className="space-y-1.5">
-                <Label htmlFor={`ai-title-${meeting.id}`} className="sr-only">
-                  Action item
-                </Label>
-                <Input
-                  id={`ai-title-${meeting.id}`}
-                  value={itemTitle}
-                  maxLength={300}
-                  onChange={(e) => setItemTitle(e.target.value)}
-                  placeholder="Capture an action item"
-                />
-                <Label htmlFor={`ai-owner-${meeting.id}`} className="sr-only">
-                  Owner
-                </Label>
-                <Input
-                  id={`ai-owner-${meeting.id}`}
-                  value={itemOwner}
-                  maxLength={200}
-                  onChange={(e) => setItemOwner(e.target.value)}
-                  placeholder="Owner (optional)"
-                />
-                <div className="grid grid-cols-2 gap-1.5">
-                  <div>
-                    <Label htmlFor={`ai-due-${meeting.id}`} className="sr-only">
-                      Due date
-                    </Label>
-                    <Input
-                      id={`ai-due-${meeting.id}`}
-                      type="date"
-                      value={itemDue}
-                      onChange={(e) => setItemDue(e.target.value)}
-                      aria-label="Due date (optional)"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`ai-cat-${meeting.id}`} className="sr-only">
-                      Category
-                    </Label>
-                    <Select
-                      value={itemCategory}
-                      onValueChange={(v) => setItemCategory(v as ActionItem["category"])}
-                    >
-                      <SelectTrigger id={`ai-cat-${meeting.id}`} aria-label="Category">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="content">Content</SelectItem>
-                        <SelectItem value="review">Review</SelectItem>
-                        <SelectItem value="accessibility">Accessibility</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full"
-                  onClick={submitActionItem}
-                  disabled={isSavingActionItem || !itemTitle.trim()}
-                >
-                  <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Add action item
-                </Button>
-              </div>
-            </div>
-
-            {/* Open questions */}
-            <div className="space-y-2">
-              <h5 className="flex items-center gap-2 text-sm font-medium">
-                <HelpCircle className="h-4 w-4 text-primary" aria-hidden="true" /> Open questions
-              </h5>
-              {questions.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No open questions yet.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {questions.map((q) => {
-                    const resolved = q.status === "resolved";
-                    return (
-                      <li key={q.id} className="flex items-start justify-between gap-2 rounded-md border bg-card p-2">
-                        <label className="flex min-w-0 items-start gap-2 text-sm" htmlFor={`oq-${meeting.id}-${q.id}`}>
-                          <Checkbox
-                            id={`oq-${meeting.id}-${q.id}`}
-                            checked={resolved}
-                            onCheckedChange={(v) => onResolveQuestion(q, v === true)}
-                            aria-label={resolved ? "Mark question open" : "Mark question resolved"}
-                            className="mt-0.5"
-                          />
-                          <span className={resolved ? "text-muted-foreground line-through" : ""}>{q.text}</span>
-                        </label>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 shrink-0"
-                          onClick={() => onDeleteQuestion(q.id)}
-                          aria-label="Delete open question"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                        </Button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <div className="space-y-1.5">
-                <Label htmlFor={`q-text-${meeting.id}`} className="sr-only">
-                  Open question
-                </Label>
-                <Input
-                  id={`q-text-${meeting.id}`}
-                  value={questionText}
-                  maxLength={1000}
-                  onChange={(e) => setQuestionText(e.target.value)}
-                  placeholder="Capture an open question"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full"
-                  onClick={submitQuestion}
-                  disabled={isSavingQuestion || !questionText.trim()}
-                >
-                  <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Add question
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Definition of done (exit criteria) */}
-        {plan.exitCriteria.length > 0 && (
-          <section className="rounded-lg border bg-muted/20 p-4" aria-label="Definition of done">
-            <div className="mb-3 flex items-center justify-between">
-              <h4 className="flex items-center gap-2 font-semibold">
-                <Target className="h-4 w-4 text-primary" aria-hidden="true" /> Definition of done
-              </h4>
-              <span className="text-xs text-muted-foreground">
-                {exitMet} of {plan.exitCriteria.length} met
-              </span>
-            </div>
-            <ul className="space-y-1.5">
-              {plan.exitCriteria.map((c, i) => {
-                const id = `exit-${meeting.id}-${i}`;
-                return (
-                  <li key={i}>
-                    <label className="flex items-start gap-2 text-sm" htmlFor={id}>
-                      <Checkbox
-                        id={id}
-                        checked={c.met}
-                        onCheckedChange={(v) => onTogglePlan("exitCriteria", i, null, v === true)}
-                        className="mt-0.5"
-                      />
-                      <span className={c.met ? "text-muted-foreground line-through" : ""}>{c.text}</span>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
 
         {/* Complete / reopen */}
         <div className="flex flex-wrap items-center gap-2">
@@ -2764,11 +2323,6 @@ function MeetingCard({
             <Button size="sm" onClick={() => onSetStatus("completed")}>
               <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden="true" /> Mark completed
             </Button>
-          )}
-          {!completed && exitUnmet > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {exitUnmet} of {plan.exitCriteria.length} exit criteria not yet met. You can still complete.
-            </span>
           )}
         </div>
 

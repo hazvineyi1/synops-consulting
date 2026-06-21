@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   useListMeetingRecordings,
   getListMeetingRecordingsQueryKey,
@@ -38,7 +38,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 
-function formatDuration(sec?: number | null) {
+export function formatDuration(sec?: number | null) {
   if (sec == null) return "";
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -54,6 +54,14 @@ function statusCode(err: unknown): number | undefined {
 /** Minimal meeting shape this recorder belongs to and inserts notes into. */
 export type RecordingInsertMeeting = { id: number; title: string; notes: string };
 
+/** State snapshot the parent receives when in split-controls mode. */
+export type RecorderControlsHandle = { start: () => void; stop: () => void };
+export type RecorderStateSnapshot = {
+  isRecording: boolean;
+  recElapsed: number;
+  hasPending: boolean;
+};
+
 type Props = {
   projectId: number;
   /** The meeting this recorder belongs to. Recordings are scoped to it. */
@@ -63,18 +71,33 @@ type Props = {
    * mutation and cache invalidation; this card only composes the text.
    */
   onInsertNotes?: (meetingId: number, notes: string) => Promise<void>;
+  /**
+   * When provided, the inline Record / Stop controls are hidden from this card.
+   * The callback fires once (after mount) with stable start/stop functions so
+   * the parent can render the controls wherever it likes.
+   */
+  onControlsReady?: (controls: RecorderControlsHandle) => void;
+  /**
+   * Called whenever recording state changes (isRecording, recElapsed,
+   * hasPending). Use together with onControlsReady to drive externally-placed
+   * controls. Fires on mount with initial state so the parent starts in sync.
+   */
+  onStateChange?: (state: RecorderStateSnapshot) => void;
 };
 
 /**
  * Self-contained meeting recordings card, scoped to a single meeting: capture
- * audio in the browser or attach an external link, then list, play, and remove
- * recordings for THIS meeting. Uploaded recordings can be transcribed and turned
- * into a clean draft of meeting notes, which the user can insert into the
- * meeting's notes (feeding the agenda generator). All recording state and the
- * MediaRecorder lifecycle live here so the surrounding page stays simple.
- * Recordings carry the meeting id on the server; the list is filtered to it.
+ * audio in the browser, then list, play, and remove recordings for THIS meeting.
+ * Uploaded recordings can be transcribed and turned into a clean draft of meeting
+ * notes, which the user can insert into the meeting's notes (feeding the agenda
+ * generator). All recording state and the MediaRecorder lifecycle live here so
+ * the surrounding page stays simple. Recordings carry the meeting id on the
+ * server; the list is filtered to it.
+ *
+ * Split mode: provide onControlsReady + onStateChange to move the Record / Stop
+ * controls out of this card so the parent can bracket its content with them.
  */
-export function MeetingRecordings({ projectId, meeting, onInsertNotes }: Props) {
+export function MeetingRecordings({ projectId, meeting, onInsertNotes, onControlsReady, onStateChange }: Props) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -90,8 +113,6 @@ export function MeetingRecordings({ projectId, meeting, onInsertNotes }: Props) 
   const [recElapsed, setRecElapsed] = useState(0);
   const [pendingRec, setPendingRec] = useState<{ blob: Blob; url: string; durationSec: number } | null>(null);
   const [captureTitle, setCaptureTitle] = useState("");
-  const [externalTitle, setExternalTitle] = useState("");
-  const [externalUrl, setExternalUrl] = useState("");
 
   // Transcription / drafting UI state. Only one recording's notes panel is open
   // at a time, so a single set of insert controls is sufficient.
@@ -105,6 +126,11 @@ export function MeetingRecordings({ projectId, meeting, onInsertNotes }: Props) 
   const chunksRef = useRef<Blob[]>([]);
   const recStartRef = useRef<number>(0);
   const recStreamRef = useRef<MediaStream | null>(null);
+
+  // Refs holding the current implementations so stable callbacks (below) always
+  // call the freshest version without needing to be recreated.
+  const startImpl = useRef<() => Promise<void>>(async () => {});
+  const stopImpl = useRef<() => void>(() => {});
 
   // Only this meeting's recordings. Legacy project-level rows (no meetingId) are
   // not shown here; recordings created through this card always carry the id.
@@ -153,7 +179,7 @@ export function MeetingRecordings({ projectId, meeting, onInsertNotes }: Props) 
       setPendingRec(null);
     }
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      toast({ title: "Recording not supported", description: "This browser cannot capture audio. Attach a link instead.", variant: "destructive" });
+      toast({ title: "Recording not supported", description: "This browser cannot capture audio.", variant: "destructive" });
       return;
     }
     try {
@@ -177,11 +203,9 @@ export function MeetingRecordings({ projectId, meeting, onInsertNotes }: Props) 
       recorder.start();
       setIsRecording(true);
     } catch {
-      // getUserMedia may have granted the stream before the recorder failed; make
-      // sure the microphone is released so it does not stay live in the background.
       stopRecordingTracks();
       mediaRecorderRef.current = null;
-      toast({ title: "Microphone blocked", description: "Allow microphone access to record, or attach a link instead.", variant: "destructive" });
+      toast({ title: "Microphone blocked", description: "Allow microphone access to record.", variant: "destructive" });
     }
   };
 
@@ -190,6 +214,30 @@ export function MeetingRecordings({ projectId, meeting, onInsertNotes }: Props) 
     mediaRecorderRef.current = null;
     setIsRecording(false);
   };
+
+  // Keep refs current every render so stable callbacks always delegate to fresh impls.
+  startImpl.current = startRecording;
+  stopImpl.current = stopRecording;
+
+  // Stable callbacks the parent receives via onControlsReady. These never change
+  // identity so the parent can call them from event handlers without stale-closure risk.
+  const stableStart = useCallback(() => { startImpl.current(); }, []);
+  const stableStop = useCallback(() => { stopImpl.current(); }, []);
+
+  const splitMode = !!onControlsReady;
+
+  // Fire onControlsReady once after mount with stable handles.
+  useLayoutEffect(() => {
+    if (!onControlsReady) return;
+    onControlsReady({ start: stableStart, stop: stableStop });
+    // stableStart / stableStop are stable; this intentionally runs once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Notify parent of state changes (and on initial mount so it starts in sync).
+  useEffect(() => {
+    onStateChange?.({ isRecording, recElapsed, hasPending: !!pendingRec });
+  }, [isRecording, recElapsed, pendingRec, onStateChange]);
 
   const discardPending = () => {
     if (pendingRec) URL.revokeObjectURL(pendingRec.url);
@@ -228,26 +276,6 @@ export function MeetingRecordings({ projectId, meeting, onInsertNotes }: Props) 
       toast({ title: "Recording saved" });
     } catch {
       toast({ title: "Couldn't save recording", description: "Please try again.", variant: "destructive" });
-    }
-  };
-
-  const attachExternalLink = async () => {
-    const url = externalUrl.trim();
-    if (!/^https?:\/\//i.test(url)) {
-      toast({ title: "Enter a valid link", description: "The link must start with http:// or https://.", variant: "destructive" });
-      return;
-    }
-    try {
-      await createRecording.mutateAsync({
-        projectId,
-        data: { meetingId: meeting.id, kind: "external", title: externalTitle.trim() || "Meeting link", externalUrl: url },
-      });
-      queryClient.invalidateQueries({ queryKey: getListMeetingRecordingsQueryKey(projectId) });
-      setExternalTitle("");
-      setExternalUrl("");
-      toast({ title: "Link attached" });
-    } catch {
-      toast({ title: "Couldn't attach link", description: "Please try again.", variant: "destructive" });
     }
   };
 
@@ -338,7 +366,7 @@ export function MeetingRecordings({ projectId, meeting, onInsertNotes }: Props) 
           <Mic className="h-5 w-5 text-primary" aria-hidden="true" />
           <div>
             <CardTitle className="text-lg">Meeting recordings</CardTitle>
-            <CardDescription className="m-0">Record or attach a link, then draft notes with AI</CardDescription>
+            <CardDescription className="m-0">Record, then draft notes with AI to feed the agenda generator</CardDescription>
           </div>
         </div>
         <Badge variant="secondary" className="border-primary/20 bg-primary/10 text-primary shadow-none hover:bg-primary/10">
@@ -346,91 +374,73 @@ export function MeetingRecordings({ projectId, meeting, onInsertNotes }: Props) 
         </Badge>
       </CardHeader>
       <CardContent className="space-y-5 p-6">
-        <div className="rounded-lg border border-border bg-muted/20 p-4">
-          {isRecording ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-600" aria-hidden="true" />
-              <span className="font-mono text-sm text-foreground">{formatDuration(recElapsed)}</span>
-              <span className="text-sm text-muted-foreground">Recording in progress</span>
-              <Button size="sm" variant="outline" className="ml-auto border-red-600 text-red-700 hover:bg-red-50" onClick={stopRecording}>
-                <Square className="mr-1 h-3.5 w-3.5 fill-current" aria-hidden="true" /> Stop
-              </Button>
-            </div>
-          ) : pendingRec ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-green-600" aria-hidden="true" />
-                Captured {formatDuration(pendingRec.durationSec)}. Review, then save.
+        {/* Inline record / stop controls -- hidden in split mode */}
+        {!splitMode && (
+          <div className="rounded-lg border border-border bg-muted/20 p-4">
+            {isRecording ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-600" aria-hidden="true" />
+                <span className="font-mono text-sm text-foreground">{formatDuration(recElapsed)}</span>
+                <span className="text-sm text-muted-foreground">Recording in progress</span>
+                <Button size="sm" variant="outline" className="ml-auto border-red-600 text-red-700 hover:bg-red-50" onClick={stopRecording}>
+                  <Square className="mr-1 h-3.5 w-3.5 fill-current" aria-hidden="true" /> Stop
+                </Button>
               </div>
-              <audio controls src={pendingRec.url} className="w-full" />
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  value={captureTitle}
-                  onChange={(e) => setCaptureTitle(e.target.value)}
-                  placeholder="Recording title (optional)"
-                  className="flex-1"
-                  aria-label="Recording title"
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={saveRecording} disabled={createRecording.isPending || requestUploadUrl.isPending}>
-                    {createRecording.isPending || requestUploadUrl.isPending ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />
-                    ) : (
-                      <UploadCloud className="mr-1 h-4 w-4" aria-hidden="true" />
-                    )}
-                    Save
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={discardPending}>Discard</Button>
-                </div>
+            ) : pendingRec ? null : (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Capture meeting audio directly in your browser.</span>
+                <Button size="sm" onClick={startRecording}>
+                  <Mic className="mr-1 h-4 w-4" aria-hidden="true" /> Record
+                </Button>
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="text-sm text-muted-foreground">Capture meeting audio directly in your browser.</span>
-              <Button size="sm" onClick={startRecording}>
-                <Mic className="mr-1 h-4 w-4" aria-hidden="true" /> Record
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Or attach a link</div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              value={externalTitle}
-              onChange={(e) => setExternalTitle(e.target.value)}
-              placeholder="Label (optional)"
-              className="sm:w-40"
-              aria-label="Link label"
-            />
-            <Input
-              value={externalUrl}
-              onChange={(e) => setExternalUrl(e.target.value)}
-              placeholder="https://..."
-              className="flex-1"
-              aria-label="Recording link"
-              inputMode="url"
-            />
-            <Button size="sm" variant="outline" onClick={attachExternalLink} disabled={createRecording.isPending}>
-              <Link2 className="mr-1 h-4 w-4" aria-hidden="true" /> Attach
-            </Button>
+            )}
           </div>
-        </div>
+        )}
+
+        {/* Pending recording review -- always shown regardless of mode */}
+        {pendingRec ? (
+          <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle2 className="h-4 w-4 text-green-600" aria-hidden="true" />
+              Captured {formatDuration(pendingRec.durationSec)}. Review, then save.
+            </div>
+            <audio controls src={pendingRec.url} className="w-full" />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={captureTitle}
+                onChange={(e) => setCaptureTitle(e.target.value)}
+                placeholder="Recording title (optional)"
+                className="flex-1"
+                aria-label="Recording title"
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={saveRecording} disabled={createRecording.isPending || requestUploadUrl.isPending}>
+                  {createRecording.isPending || requestUploadUrl.isPending ? (
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <UploadCloud className="mr-1 h-4 w-4" aria-hidden="true" />
+                  )}
+                  Save
+                </Button>
+                <Button size="sm" variant="ghost" onClick={discardPending}>Discard</Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {aiUnavailable ? (
           <div
             role="status"
             className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
           >
-            AI transcription is not configured for this workspace. Recording, links, and manual notes still work.
+            AI transcription is not configured for this workspace. Recording and manual notes still work.
           </div>
         ) : null}
 
         <div className="space-y-3">
           {recordingList.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-              No recordings yet. Record audio or attach a link to keep meeting context with the project.
+              No recordings yet. Record audio to keep meeting context with the project.
             </div>
           ) : (
             recordingList.map((r) => {
