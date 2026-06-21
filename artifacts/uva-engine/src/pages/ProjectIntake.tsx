@@ -29,6 +29,7 @@ import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 import { DeliveryTimeline } from "@/components/engine/DeliveryTimeline";
 import { DesignApproachCard } from "@/components/engine/DesignApproachCard";
 import { ProjectStartTab } from "@/components/engine/ProjectStartTab";
+import { IntakeMeetTab } from "@/components/engine/IntakeMeetTab";
 
 // Data Definitions
 const INVENTORY = [
@@ -107,7 +108,7 @@ export default function ProjectIntake() {
   const [inventorySelections, setInventorySelections] = useState<Record<number, string>>(
     INVENTORY.reduce((acc, item) => ({ ...acc, [item.id]: item.decision }), {})
   );
-  const [tab, setTab] = useState("start");
+  const [tab, setTab] = useState("meet");
 
   // Course record form
   const [courseForm, setCourseForm] = useState({ title: "", creditHours: "", termWeeks: "", moduleCount: "" });
@@ -304,8 +305,9 @@ export default function ProjectIntake() {
     >
       {() => (
         <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:grid-cols-5">
             <TabsTrigger value="start">Start</TabsTrigger>
+            <TabsTrigger value="meet">Meet</TabsTrigger>
             <TabsTrigger value="prepare">Prepare</TabsTrigger>
             <TabsTrigger value="wrap">Wrap</TabsTrigger>
             <TabsTrigger value="accessibility">Accessibility</TabsTrigger>
@@ -317,6 +319,14 @@ export default function ProjectIntake() {
               projectId={projectId}
               course={course}
               objectives={objectives ?? []}
+            />
+          </TabsContent>
+
+          {/* MEET: kickoff agenda */}
+          <TabsContent value="meet">
+            <IntakeMeetTab
+              projectId={projectId}
+              intakeProgress={intakeProgress}
             />
           </TabsContent>
 
