@@ -118,9 +118,26 @@ function formatDate(iso: string): string {
     : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
+function mdEscape(text: string): string {
+  return String(text)
+    .replace(/\r?\n|\r/g, " ")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\[/g, "\\[")
+    .replace(/\]/g, "\\]")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)")
+    .replace(/!/g, "\\!")
+    .replace(/\|/g, "&#124;")
+    .replace(/`/g, "\\`")
+    .replace(/\*/g, "\\*")
+    .replace(/#/g, "\\#");
+}
+
 function buildReportMarkdown(report: LedgerReport, project: Project): string {
   const lines: string[] = [];
-  lines.push(`# Evidence Ledger: ${project.title}`);
+  lines.push(`# Evidence Ledger: ${mdEscape(project.title)}`);
   lines.push("");
   lines.push(`Generated: ${formatDate(report.generatedAt)}`);
   lines.push("");
@@ -137,10 +154,10 @@ function buildReportMarkdown(report: LedgerReport, project: Project): string {
       lines.push("No entries recorded.");
     } else {
       for (const entry of section.entries) {
-        const author = entry.authorName ? ` (${entry.authorName})` : "";
-        lines.push(`- [${formatDate(entry.createdAt)}]${author} ${entry.content}`);
+        const author = entry.authorName ? ` (${mdEscape(entry.authorName)})` : "";
+        lines.push(`- [${formatDate(entry.createdAt)}]${author} ${mdEscape(entry.content)}`);
         if (entry.aiGenerated && entry.aiDisclosure) {
-          lines.push(`  - AI disclosure: ${entry.aiDisclosure}`);
+          lines.push(`  - AI disclosure: ${mdEscape(entry.aiDisclosure)}`);
         }
       }
     }

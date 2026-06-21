@@ -196,6 +196,23 @@ async function buildPlatformOverview(): Promise<PlatformOverview> {
   };
 }
 
+function mdEscape(text: string): string {
+  return String(text)
+    .replace(/\r?\n|\r/g, " ")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\[/g, "\\[")
+    .replace(/\]/g, "\\]")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)")
+    .replace(/!/g, "\\!")
+    .replace(/\|/g, "&#124;")
+    .replace(/`/g, "\\`")
+    .replace(/\*/g, "\\*")
+    .replace(/#/g, "\\#");
+}
+
 function renderPlatformMarkdown(o: PlatformOverview): string {
   const lines: string[] = [
     "# Platform Overview",
@@ -220,13 +237,13 @@ function renderPlatformMarkdown(o: PlatformOverview): string {
     "",
     "| Role | Count |",
     "| --- | --- |",
-    ...o.usersByRole.map((r) => `| ${r.key} | ${r.count} |`),
+    ...o.usersByRole.map((r) => `| ${mdEscape(r.key)} | ${r.count} |`),
     "",
     "## Users by product",
     "",
     "| Product | Count |",
     "| --- | --- |",
-    ...o.usersByProduct.map((r) => `| ${r.key} | ${r.count} |`),
+    ...o.usersByProduct.map((r) => `| ${mdEscape(r.key)} | ${r.count} |`),
     "",
     "## Organizations",
     "",
@@ -234,7 +251,7 @@ function renderPlatformMarkdown(o: PlatformOverview): string {
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...o.organizations.map(
       (org) =>
-        `| ${org.name} | ${org.type} | ${org.users} | ${org.clients} | ${org.projects} | ${org.activeProjects} | ${org.courses} | ${org.classes} | ${org.builders} | ${org.activeAllocations} |`,
+        `| ${mdEscape(org.name)} | ${mdEscape(org.type)} | ${org.users} | ${org.clients} | ${org.projects} | ${org.activeProjects} | ${org.courses} | ${org.classes} | ${org.builders} | ${org.activeAllocations} |`,
     ),
     "",
   ];

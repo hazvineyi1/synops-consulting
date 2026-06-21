@@ -148,12 +148,33 @@ async function buildSchoolReport(orgId: number): Promise<SchoolReport | null> {
   };
 }
 
+function mdEscape(text: string): string {
+  return String(text)
+    .replace(/\r?\n|\r/g, " ")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\[/g, "\\[")
+    .replace(/\]/g, "\\]")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)")
+    .replace(/!/g, "\\!")
+    .replace(/\|/g, "&#124;")
+    .replace(/`/g, "\\`")
+    .replace(/\*/g, "\\*")
+    .replace(/#/g, "\\#");
+}
+
 function renderMarkdown(r: SchoolReport): string {
+  const orgName = mdEscape(r.organization.name);
+  const orgSlug = mdEscape(r.organization.slug);
+  const orgType = mdEscape(r.organization.type);
+
   const lines: string[] = [
-    `# School Report: ${r.organization.name}`,
+    `# School Report: ${orgName}`,
     "",
     `Generated: ${r.generatedAt}`,
-    `Organization: ${r.organization.name} (${r.organization.slug}, ${r.organization.type})`,
+    `Organization: ${orgName} (${orgSlug}, ${orgType})`,
     "",
     "## Totals",
     "",
@@ -184,7 +205,7 @@ function renderMarkdown(r: SchoolReport): string {
     lines.push("| --- | --- | --- | --- | --- | --- | --- |");
     for (const b of r.builders) {
       lines.push(
-        `| ${b.name} | ${b.email} | ${b.status} | ${b.activeAllocations} | ${b.allocationsByScope.project} | ${b.allocationsByScope.course} | ${b.allocationsByScope.class} |`,
+        `| ${mdEscape(b.name)} | ${mdEscape(b.email)} | ${mdEscape(b.status)} | ${b.activeAllocations} | ${b.allocationsByScope.project} | ${b.allocationsByScope.course} | ${b.allocationsByScope.class} |`,
       );
     }
   }

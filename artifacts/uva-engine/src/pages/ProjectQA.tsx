@@ -228,11 +228,28 @@ export default function ProjectQA() {
     persist(type, { findings: value });
   }
 
+  function mdEscape(text: string): string {
+    return String(text)
+      .replace(/\r?\n|\r/g, " ")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\[/g, "\\[")
+      .replace(/\]/g, "\\]")
+      .replace(/\(/g, "\\(")
+      .replace(/\)/g, "\\)")
+      .replace(/!/g, "\\!")
+      .replace(/\|/g, "&#124;")
+      .replace(/`/g, "\\`")
+      .replace(/\*/g, "\\*")
+      .replace(/#/g, "\\#");
+  }
+
   function exportReport(projectTitle: string) {
     const lines: string[] = [];
     lines.push("# QA and Accessibility Report");
     lines.push("");
-    lines.push(`Project: ${projectTitle}`);
+    lines.push(`Project: ${mdEscape(projectTitle)}`);
     lines.push(`Generated: ${new Date().toLocaleString()}`);
     lines.push("");
     lines.push("## Summary");
@@ -247,8 +264,8 @@ export default function ProjectQA() {
     CHECK_ITEMS.forEach((item, i) => {
       const check = byType[item.value];
       lines.push(`${i + 1}. ${item.label} - ${statusLabel(resolvedStatus(item.value))}`);
-      if (check?.findings) lines.push(`   Findings: ${check.findings}`);
-      if (check?.remediationNotes) lines.push(`   Remediation: ${check.remediationNotes}`);
+      if (check?.findings) lines.push(`   Findings: ${mdEscape(check.findings)}`);
+      if (check?.remediationNotes) lines.push(`   Remediation: ${mdEscape(check.remediationNotes)}`);
     });
     const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
