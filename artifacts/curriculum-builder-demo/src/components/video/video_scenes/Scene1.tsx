@@ -7,7 +7,7 @@ export function Scene1() {
   useEffect(() => {
     const timers = [
       setTimeout(() => setPhase(1), 300),
-      setTimeout(() => setPhase(2), 1200),
+      setTimeout(() => setPhase(2), 1500),
       setTimeout(() => setPhase(3), 3200),
     ];
     return () => timers.forEach(t => clearTimeout(t));
@@ -29,7 +29,7 @@ export function Scene1() {
           animate={{ y: phase >= 1 ? '0%' : '100%' }}
           transition={{ type: 'spring', damping: 20, stiffness: 100 }}
         >
-          Standards-aligned.
+          Building curriculum
         </motion.h1>
       </div>
       
@@ -41,7 +41,7 @@ export function Scene1() {
           animate={{ y: phase >= 2 ? '0%' : '100%' }}
           transition={{ type: 'spring', damping: 20, stiffness: 100 }}
         >
-          Accessibility-built.
+          shouldn't be abstract.
         </motion.h1>
       </div>
 

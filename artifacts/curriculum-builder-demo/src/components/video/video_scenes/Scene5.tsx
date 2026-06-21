@@ -8,7 +8,6 @@ export function Scene5() {
     const timers = [
       setTimeout(() => setPhase(1), 500),
       setTimeout(() => setPhase(2), 1200),
-      setTimeout(() => setPhase(3), 3500),
     ];
     return () => timers.forEach(t => clearTimeout(t));
   }, []);
@@ -30,7 +29,7 @@ export function Scene5() {
         <img 
           src={`${import.meta.env.BASE_URL}images/logo-mark.png`} 
           alt="Synops Logo" 
-          className="w-[12vw] h-[12vw] object-contain mb-8"
+          className="w-[12vw] h-[12vw] object-contain mb-8 filter drop-shadow-2xl"
         />
         
         <div className="overflow-hidden">
@@ -47,7 +46,7 @@ export function Scene5() {
         
         <div className="overflow-hidden mt-4">
           <motion.p 
-            className="text-[2vw] text-white/60 font-medium tracking-wide uppercase"
+            className="text-[1.5vw] text-white/60 font-bold tracking-widest uppercase"
             style={{ fontFamily: 'var(--font-body)' }}
             initial={{ y: '100%' }}
             animate={{ y: phase >= 2 ? '0%' : '100%' }}
