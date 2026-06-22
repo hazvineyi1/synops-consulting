@@ -51,3 +51,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 CONTACT_EMAIL = "info@synops-consulting.com"
+CONTACT_FROM_EMAIL = "Synops Advisory Group <info@synops-consulting.com>"
