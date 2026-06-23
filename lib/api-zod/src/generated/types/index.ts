@@ -133,6 +133,7 @@ export * from './objectiveInput';
 export * from './objectiveUpdate';
 export * from './okResponse';
 export * from './organizationBranding';
+export * from './organizationSummary';
 export * from './orgMember';
 export * from './platformCountByKey';
 export * from './platformOverview';

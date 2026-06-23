@@ -2,13 +2,13 @@ import { usePageMeta } from "@/lib/seo";
 import { Link } from "wouter";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { QualityAssuranceDemo } from "@/components/public/QualityAssuranceDemo";
+import { CurriculumBuilderDemo } from "@/components/public/CurriculumBuilderDemo";
 import { Database, MonitorSmartphone, BrainCircuit, Lock } from "lucide-react";
 
 export default function Platforms() {
   usePageMeta(
     "Platforms & SaaS",
-    "Custom web apps, AI-powered learning tools, and an interactive curriculum Quality Assurance demo.",
+    "Custom web apps, AI-powered learning tools, and a hands-on curriculum builder demo with real rules-based quality assurance.",
   );
   return (
     <div className="mx-auto max-w-5xl px-4 py-24 space-y-24">
@@ -56,7 +56,7 @@ export default function Platforms() {
         <div className="text-center space-y-4">
           <h2 className="text-3xl font-bold">See It In Action</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            A look at what we build. Watch our Curriculum Builder platform carry a course design project through its full lifecycle, then run a live quality check on a sample course for yourself.
+            A look at what we build. Watch our Curriculum Builder platform carry a course design project through its full lifecycle, then build a course yourself and run a live quality check on it.
           </p>
         </div>
 
@@ -83,16 +83,16 @@ export default function Platforms() {
           </div>
         </div>
 
-        {/* Quality Assurance demo */}
+        {/* Interactive curriculum builder demo */}
         <div className="space-y-4">
           <div className="text-center space-y-2">
-            <h3 className="text-2xl font-semibold">Quality Assurance</h3>
+            <h3 className="text-2xl font-semibold">Try the Curriculum Builder</h3>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Standards and compliance, validated. Step through a sample course and watch each item get checked against its standards alignment and compliance requirements, with statuses moving from pending to pass or fail and an overall QA score building as you go.
+              Build a real course right here. Move from intake through backward design, then run the same rules-based quality check our team uses: measurable outcomes, standards alignment, assessment coverage, and accessibility. Fix what it flags and watch the QA score climb, then export the handoff report.
             </p>
           </div>
           <div className="bg-background rounded-xl border border-border shadow-sm overflow-hidden">
-            <QualityAssuranceDemo />
+            <CurriculumBuilderDemo />
           </div>
         </div>
 

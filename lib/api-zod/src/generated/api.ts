@@ -76,7 +76,8 @@ export const CreateClientBody = zod.object({
   "contactName": zod.string().optional(),
   "contactEmail": zod.string().optional(),
   "institution": zod.string().optional(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "organizationId": zod.number().optional().describe('Target organization (tenant) for the new client. Honored ONLY for global administrators, who are not bound to an organization and must choose one. Ignored for organization-bound users, whose own organization is always used by the server.')
 })
 
 
@@ -2691,6 +2692,18 @@ export const GetPlatformUsersResponseItem = zod.object({
   "organizationName": zod.string().nullish()
 })
 export const GetPlatformUsersResponse = zod.array(GetPlatformUsersResponseItem)
+
+
+/**
+ * @summary Organization directory (global roles only)
+ */
+export const ListOrganizationsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "type": zod.string()
+})
+export const ListOrganizationsResponse = zod.array(ListOrganizationsResponseItem)
 
 
 /**

@@ -2247,6 +2247,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/PlatformUser"
 
+  /compass/admin/organizations:
+    get:
+      operationId: listOrganizations
+      tags: [admin]
+      summary: Organization directory (global roles only)
+      responses:
+        "200":
+          description: Organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrganizationSummary"
+
   # ── White-label branding management ──────────────────────────
   /compass/admin/organizations/{id}/branding:
     patch:
@@ -3720,6 +3735,26 @@ components:
         institution:
           type: string
         notes:
+          type: string
+        organizationId:
+          type: integer
+          description: >-
+            Target organization (tenant) for the new client. Honored ONLY for
+            global administrators, who are not bound to an organization and must
+            choose one. Ignored for organization-bound users, whose own
+            organization is always used by the server.
+
+    OrganizationSummary:
+      type: object
+      required: [id, name, slug, type]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        type:
           type: string
 
     ClientUpdate:

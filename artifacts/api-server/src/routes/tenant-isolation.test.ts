@@ -44,12 +44,15 @@ let clientBId: number;
 let projectAId: number;
 let projectBId: number;
 const createdUserIds: number[] = [];
+// Clients created during the create-client tests, cleaned up afterwards.
+const createdClientIds: number[] = [];
 
 // One logged-in agent per role under test.
 let agentSchoolA: Agent;
 let agentSchoolB: Agent;
 let agentAdmin: Agent;
 let agentSuperAdmin: Agent;
+let agentBuilder: Agent;
 let agentWrongProduct: Agent;
 
 async function login(email: string): Promise<Agent> {
@@ -87,6 +90,9 @@ beforeAll(async () => {
     { key: "schoolB", email: `school-b-${SUFFIX}@iso.test`, name: "School Admin B", role: "school_admin", organizationId: orgB.id, productKey: "compass" },
     { key: "admin", email: `admin-${SUFFIX}@iso.test`, name: "Iso Admin", role: "admin", organizationId: null, productKey: "compass" },
     { key: "super", email: `super-${SUFFIX}@iso.test`, name: "Iso Super Admin", role: "super_admin", organizationId: null, productKey: "compass" },
+    // An allocation-limited builder bound to org A. Builders sit below client
+    // creation, so create attempts must be refused regardless of org.
+    { key: "builder", email: `builder-${SUFFIX}@iso.test`, name: "Iso Builder", role: "builder", organizationId: orgA.id, productKey: "compass" },
     // A user bound to a different product. requireProduct("compass") runs before
     // loadActorContext, so this user is rejected at the product gate with 403.
     { key: "wrong", email: `wrong-${SUFFIX}@iso.test`, name: "Wrong Product", role: "client", organizationId: null, productKey: "isolation-test-product" },
@@ -133,8 +139,9 @@ beforeAll(async () => {
   agentSchoolB = await login(accounts[1].email);
   agentAdmin = await login(accounts[2].email);
   agentSuperAdmin = await login(accounts[3].email);
-  agentWrongProduct = await login(accounts[4].email);
-});
+  agentBuilder = await login(accounts[4].email);
+  agentWrongProduct = await login(accounts[5].email);
+}, 30000);
 
 afterAll(async () => {
   // Best-effort teardown in FK-safe order. Each step runs independently so one
@@ -144,6 +151,13 @@ afterAll(async () => {
   const { db, organizationsTable, clientsTable, projectsTable, usersTable } = dbMod;
   const steps: Array<[string, () => Promise<unknown>]> = [
     ["projects", () => db.delete(projectsTable).where(inArray(projectsTable.id, [projectAId, projectBId]))],
+    [
+      "created-clients",
+      () =>
+        createdClientIds.length > 0
+          ? db.delete(clientsTable).where(inArray(clientsTable.id, createdClientIds))
+          : Promise.resolve(),
+    ],
     ["clients", () => db.delete(clientsTable).where(inArray(clientsTable.id, [clientAId, clientBId]))],
     [
       "users",
@@ -170,7 +184,7 @@ afterAll(async () => {
   } catch {
     // Pool may already be closed when files share a module registry.
   }
-});
+}, 30000);
 
 describe("Compass tenant isolation (DB-backed)", () => {
   it("rejects anonymous access to org-scoped routes with 401", async () => {
@@ -266,5 +280,64 @@ describe("Compass tenant isolation (DB-backed)", () => {
       expect(projectIds, `${label} should see School A's project`).toContain(projectAId);
       expect(projectIds, `${label} should see School B's project`).toContain(projectBId);
     }
+  });
+});
+
+describe("Compass client creation (org resolution)", () => {
+  it("exposes the org directory to global roles but not to org-bound users", async () => {
+    for (const [label, agent] of [
+      ["admin", agentAdmin],
+      ["super_admin", agentSuperAdmin],
+    ] as const) {
+      const res = await agent.get("/api/compass/admin/organizations");
+      expect(res.status, `${label} should read the org directory`).toBe(200);
+      const ids = res.body.map((o: { id: number }) => o.id);
+      expect(ids).toContain(orgAId);
+      expect(ids).toContain(orgBId);
+    }
+    // Org-bound and lower roles are refused at the console gate.
+    expect((await agentSchoolA.get("/api/compass/admin/organizations")).status).toBe(403);
+    expect((await agentBuilder.get("/api/compass/admin/organizations")).status).toBe(403);
+  });
+
+  it("lets a global admin create a client in an explicitly chosen organization", async () => {
+    const res = await agentSuperAdmin
+      .post("/api/compass/clients")
+      .send({ name: "Global Created Client", organizationId: orgBId });
+    expect(res.status, JSON.stringify(res.body)).toBe(201);
+    expect(res.body.organizationId).toBe(orgBId);
+    createdClientIds.push(res.body.id);
+  });
+
+  it("rejects a global admin creating a client without an organization (400)", async () => {
+    const res = await agentSuperAdmin.post("/api/compass/clients").send({ name: "No Org Client" });
+    expect(res.status).toBe(400);
+    if (res.body?.id) createdClientIds.push(res.body.id);
+  });
+
+  it("rejects a global admin choosing a non-existent organization (400)", async () => {
+    const res = await agentSuperAdmin
+      .post("/api/compass/clients")
+      .send({ name: "Bad Org Client", organizationId: 2_000_000_000 });
+    expect(res.status).toBe(400);
+    if (res.body?.id) createdClientIds.push(res.body.id);
+  });
+
+  it("ignores a body organizationId for an org-bound user and uses their own org", async () => {
+    // School A tries to plant a client in School B by supplying orgB's id.
+    const res = await agentSchoolA
+      .post("/api/compass/clients")
+      .send({ name: "School A Owned Client", organizationId: orgBId });
+    expect(res.status, JSON.stringify(res.body)).toBe(201);
+    expect(res.body.organizationId, "the body org must be ignored; the actor's org wins").toBe(orgAId);
+    createdClientIds.push(res.body.id);
+  });
+
+  it("refuses client creation by a builder (403)", async () => {
+    const res = await agentBuilder
+      .post("/api/compass/clients")
+      .send({ name: "Builder Client", organizationId: orgAId });
+    expect(res.status).toBe(403);
+    if (res.body?.id) createdClientIds.push(res.body.id);
   });
 });

@@ -29,10 +29,11 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
 
   // Seeds run in dependency order:
-  // 1. pruneDevData (dev only) clears all curriculum content and removes surplus
-  //    accounts/orgs so the product boots clean on every restart.
+  // 1. pruneDevData (dev only, opt-in via COMPASS_DEV_RESET=1) clears all
+  //    curriculum content and surplus accounts/orgs for a clean slate. Skipped
+  //    by default so dev work persists across restarts.
   // 2. ensureOrganizationsSeed (all envs) ensures the internal org exists.
-  // 3. ensureDemoUsers (dev only) creates the two example accounts if absent.
+  // 3. ensureDemoUsers (dev only) creates the example accounts if absent.
   void (async () => {
     await pruneDevData(logger);
     const { internalOrgId } = await ensureOrganizationsSeed(logger);

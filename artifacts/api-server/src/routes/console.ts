@@ -288,6 +288,22 @@ router.get("/admin/users", requireGlobal, async (_req, res): Promise<void> => {
   res.json(rows);
 });
 
+// Organization directory. Global roles only. Lets a global admin (who is not
+// bound to an org) pick a tenant when creating a client. Returns only neutral
+// presentational fields; never grants access.
+router.get("/admin/organizations", requireGlobal, async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      id: organizationsTable.id,
+      name: organizationsTable.name,
+      slug: organizationsTable.slug,
+      type: organizationsTable.type,
+    })
+    .from(organizationsTable)
+    .orderBy(organizationsTable.name);
+  res.json(rows);
+});
+
 // ── Per-scope rollup statistics ─────────────────────────────────────────────
 
 async function countWhere(table: PgTable, where: SQL | undefined): Promise<number> {

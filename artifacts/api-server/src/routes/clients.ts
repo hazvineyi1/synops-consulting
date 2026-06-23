@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, count } from "drizzle-orm";
-import { db, clientsTable, projectsTable } from "@workspace/db";
+import { db, clientsTable, projectsTable, organizationsTable } from "@workspace/db";
 import {
   CreateClientBody,
   UpdateClientBody,
@@ -57,9 +57,29 @@ router.post("/clients", async (req, res): Promise<void> => {
   // Creating a client sits above any allocation; builders cannot.
   if (denyBuilderWrite(res, req.actor!)) return;
 
-  // A client is created inside the actor's organization (the tenant boundary).
-  const organizationId = req.actor!.organizationId;
-  if (organizationId == null) {
+  const actor = req.actor!;
+  // Resolve the owning organization (the tenant boundary). Organization-bound
+  // actors always use their OWN org; any organizationId in the body is ignored
+  // so a tenant cannot plant a client in another org. Global admins are not
+  // bound to an org, so they MUST choose one explicitly and it must exist.
+  let organizationId: number;
+  if (actor.isGlobal) {
+    if (parsed.data.organizationId == null) {
+      res.status(400).json({ error: "Select an organization for the new client." });
+      return;
+    }
+    const [org] = await db
+      .select({ id: organizationsTable.id })
+      .from(organizationsTable)
+      .where(eq(organizationsTable.id, parsed.data.organizationId));
+    if (!org) {
+      res.status(400).json({ error: "The selected organization does not exist." });
+      return;
+    }
+    organizationId = org.id;
+  } else if (actor.organizationId != null) {
+    organizationId = actor.organizationId;
+  } else {
     res.status(400).json({ error: "No organization context for client creation." });
     return;
   }

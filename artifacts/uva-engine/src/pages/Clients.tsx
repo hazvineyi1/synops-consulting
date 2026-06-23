@@ -1,11 +1,23 @@
-import { useState } from "react";
-import { useListClients, useCreateClient, getListClientsQueryKey } from "@workspace/api-client-react";
+import { useMemo, useState } from "react";
+import {
+  useListClients,
+  useCreateClient,
+  useListOrganizations,
+  getListClientsQueryKey,
+  getListOrganizationsQueryKey,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Link } from "wouter";
 import { Users, Plus, ArrowRight, Building2, Mail, User } from "lucide-react";
@@ -14,26 +26,56 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
+import { isGlobalAdmin } from "@/lib/roles";
 
-const clientSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  institution: z.string().optional(),
-  contactName: z.string().optional(),
-  contactEmail: z.string().email("Invalid email").optional().or(z.literal("")),
-  notes: z.string().optional(),
-});
+function serverErrorMessage(error: unknown, fallback: string): string {
+  const e = error as { data?: { error?: unknown }; message?: unknown } | null;
+  const fromBody = e?.data?.error;
+  if (typeof fromBody === "string" && fromBody.trim()) return fromBody;
+  const fromMessage = e?.message;
+  if (typeof fromMessage === "string" && fromMessage.trim()) return fromMessage;
+  return fallback;
+}
 
 export default function Clients() {
+  const { user } = useAuth();
+  const isGlobal = isGlobalAdmin(user?.role);
+
   const { data: clients, isLoading } = useListClients();
+  const { data: organizations } = useListOrganizations({
+    query: { enabled: isGlobal, queryKey: getListOrganizationsQueryKey() },
+  });
   const createClient = useCreateClient();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
 
-  const form = useForm<z.infer<typeof clientSchema>>({
+  // Global admins are not bound to an organization, so they must choose the
+  // owning tenant for a new client. Organization-bound users have no selector;
+  // the server always uses their own organization.
+  const clientSchema = useMemo(
+    () =>
+      z.object({
+        name: z.string().min(1, "Name is required"),
+        organizationId: isGlobal
+          ? z.string().min(1, "Select an organization")
+          : z.string().optional(),
+        institution: z.string().optional(),
+        contactName: z.string().optional(),
+        contactEmail: z.string().email("Invalid email").optional().or(z.literal("")),
+        notes: z.string().optional(),
+      }),
+    [isGlobal],
+  );
+
+  type ClientFormValues = z.infer<typeof clientSchema>;
+
+  const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
       name: "",
+      organizationId: "",
       institution: "",
       contactName: "",
       contactEmail: "",
@@ -41,18 +83,36 @@ export default function Clients() {
     },
   });
 
-  function onSubmit(data: z.infer<typeof clientSchema>) {
-    createClient.mutate({ data }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListClientsQueryKey() });
-        setOpen(false);
-        form.reset();
-        toast({ title: "Client created successfully" });
+  function onSubmit(data: ClientFormValues) {
+    const payload = {
+      name: data.name,
+      institution: data.institution || undefined,
+      contactName: data.contactName || undefined,
+      contactEmail: data.contactEmail || undefined,
+      notes: data.notes || undefined,
+      ...(isGlobal && data.organizationId
+        ? { organizationId: Number(data.organizationId) }
+        : {}),
+    };
+
+    createClient.mutate(
+      { data: payload },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListClientsQueryKey() });
+          setOpen(false);
+          form.reset();
+          toast({ title: "Client created successfully" });
+        },
+        onError: (error) => {
+          toast({
+            title: "Failed to create client",
+            description: serverErrorMessage(error, "Please try again."),
+            variant: "destructive",
+          });
+        },
       },
-      onError: () => {
-        toast({ title: "Failed to create client", variant: "destructive" });
-      }
-    });
+    );
   }
 
   if (isLoading) return <div className="p-8">Loading...</div>;
@@ -64,7 +124,7 @@ export default function Clients() {
           <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
           <p className="text-muted-foreground mt-1">Manage institutional partners and contracts.</p>
         </div>
-        
+
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" /> New Client</Button>
@@ -75,6 +135,32 @@ export default function Clients() {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {isGlobal && (
+                  <FormField
+                    control={form.control}
+                    name="organizationId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Organization</FormLabel>
+                        <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an organization" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {organizations?.map((org) => (
+                              <SelectItem key={org.id} value={String(org.id)}>
+                                {org.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 <FormField
                   control={form.control}
                   name="name"
@@ -166,7 +252,7 @@ export default function Clients() {
                   {client.contactEmail || "No contact email"}
                 </div>
               </div>
-              
+
               <div className="pt-4 border-t flex items-center justify-between mt-auto">
                 <div className="text-sm font-medium">
                   {client.projectCount || 0} Project{(client.projectCount || 0) !== 1 ? 's' : ''}

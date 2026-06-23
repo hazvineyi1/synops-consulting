@@ -28,6 +28,9 @@ admins from things the backend actually authorizes.
 
 **How to apply:** when adding a Compass surface, decide gating with the role
 helpers in `uva-engine/src/lib/roles.ts` (`isGlobalAdmin`/`canManageSchool`/...).
-There is no organization-directory endpoint, so the tenant selector for global
-roles is a raw numeric org-id input (same pattern as builder creation), not a
-dropdown.
+A global-only org-directory endpoint now EXISTS (`GET /compass/admin/organizations`,
+`requireGlobal`, returns id/name/slug/type), so a global-role tenant selector
+should be a real dropdown fed by `useListOrganizations` (gate the query until a
+choice is made), not a raw numeric org-id input. This is how client creation now
+works: globals pick an org and the body `organizationId` is sent; org-bound roles
+get no selector and the server derives ownership from their own org.

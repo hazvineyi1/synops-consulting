@@ -43,9 +43,10 @@ const DEMO_DOMAIN = "demo.synops.test";
 // project README; never used in production (this seed is skipped there).
 const DEMO_PASSWORD = "Demo!2345";
 
-// The two example accounts allowed to exist in dev. Any other account is pruned.
+// The example accounts allowed to exist in dev. Any other account is pruned.
 const EXAMPLE_EMAILS = [
   `super-admin@${DEMO_DOMAIN}`,
+  `school-admin@${DEMO_DOMAIN}`,
   `builder@${DEMO_DOMAIN}`,
 ];
 
@@ -60,6 +61,14 @@ const EXAMPLE_EMAILS = [
  */
 export async function pruneDevData(log: MinimalLogger): Promise<void> {
   if (process.env.NODE_ENV === "production") return;
+
+  // Opt-in only. By default dev curriculum work PERSISTS across restarts so the
+  // builder pipeline can be tested without losing data on every workflow reboot.
+  // Set COMPASS_DEV_RESET=1 to wipe back to a clean slate (e.g. before a demo).
+  if (process.env.COMPASS_DEV_RESET !== "1") {
+    log.info({}, "Dev data prune skipped (set COMPASS_DEV_RESET=1 to reset to a clean slate)");
+    return;
+  }
 
   // 1. Curriculum leaf tables (meeting children, then project/course children)
   await db.delete(meetingRecordingsTable);
@@ -186,6 +195,16 @@ export async function ensureDemoUsers(
       role: "super_admin",
       productKey: "compass",
       organizationId: null,
+    },
+    {
+      // Organization-bound administrator: the primary "builder side" working
+      // account. Unlike a global admin (no org), a school_admin can create
+      // clients/projects directly in its own organization without choosing one.
+      email: `school-admin@${DEMO_DOMAIN}`,
+      name: "School Admin",
+      role: "school_admin",
+      productKey: "compass",
+      organizationId: internalOrgId,
     },
     {
       email: `builder@${DEMO_DOMAIN}`,

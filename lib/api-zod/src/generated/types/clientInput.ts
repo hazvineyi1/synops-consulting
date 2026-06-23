@@ -13,4 +13,6 @@ export interface ClientInput {
   contactEmail?: string;
   institution?: string;
   notes?: string;
+  /** Target organization (tenant) for the new client. Honored ONLY for global administrators, who are not bound to an organization and must choose one. Ignored for organization-bound users, whose own organization is always used by the server. */
+  organizationId?: number;
 }

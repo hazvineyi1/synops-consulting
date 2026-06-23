@@ -100,6 +100,7 @@ import type {
   OkResponse,
   OrgMember,
   OrganizationBranding,
+  OrganizationSummary,
   PlatformOverview,
   PlatformUser,
   ProcessNotesInput,
@@ -7992,6 +7993,83 @@ export function useGetPlatformUsers<TData = Awaited<ReturnType<typeof getPlatfor
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetPlatformUsersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListOrganizationsUrl = () => {
+
+
+
+
+  return `/api/compass/admin/organizations`
+}
+
+/**
+ * @summary Organization directory (global roles only)
+ */
+export const listOrganizations = async ( options?: RequestInit): Promise<OrganizationSummary[]> => {
+
+  return customFetch<OrganizationSummary[]>(getListOrganizationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOrganizationsQueryKey = () => {
+    return [
+    `/api/compass/admin/organizations`
+    ] as const;
+    }
+
+
+export const getListOrganizationsQueryOptions = <TData = Awaited<ReturnType<typeof listOrganizations>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrganizations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrganizationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrganizations>>> = ({ signal }) => listOrganizations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrganizations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOrganizationsQueryResult = NonNullable<Awaited<ReturnType<typeof listOrganizations>>>
+export type ListOrganizationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Organization directory (global roles only)
+ */
+
+export function useListOrganizations<TData = Awaited<ReturnType<typeof listOrganizations>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrganizations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOrganizationsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
