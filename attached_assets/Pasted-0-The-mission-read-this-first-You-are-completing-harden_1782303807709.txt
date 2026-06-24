@@ -1,0 +1,213 @@
+0. The mission (read this first)
+
+You are completing, hardening, and shipping a product that already contains its own differentiator — and is currently hiding it in the wrong place.
+
+The intelligence of this entire system lives in curriculumRules.ts: a deterministic engine that reads an objective's verb to detect its Bloom's level, flags vague or unmeasurable outcomes, checks standards alignment, scores assessment coverage, and produces a weighted 5-category QA report with a Bloom distribution. It is real, it is good, and right now it runs client-side, inside the free marketing demo — where it generates leads but never persists into a paying customer's project.
+
+Meanwhile the paid product's QA stage is dumb CRUD: it stores whatever pass/fail counts and findings a human types. The objectives table has no Bloom column. qa_checks is a single oedi_rubric dimension. designMethod is free text. The product a customer buys today is a curriculum-flavored Trello with a standards table — not the engine they saw in the demo.
+
+Your job is to correct that inversion and turn this repository into a self-serve, profitable, production-grade SaaS: move the magic behind the paywall, point the whole product at one buyer who pays every year (nursing and health-professions programs facing accreditation site visits and self-studies), instrument everything so the founder can see what is working and what is not, and make it genuinely shippable.
+
+The day a nursing program director can paste their objectives, watch the engine flag the unmeasurable ones, and export a CCNE-aligned evidence packet without anyone on a sales call — this stops being consulting with a nice login and becomes a product. Build toward that moment.
+
+
+1. Guardrails — preserve, do not regress
+
+The engineering foundation is an asset. Protect it.
+
+
+Keep the contract-first discipline. OpenAPI is the source of truth → regenerate the typed hooks and Zod schemas after every schema change. Do not hand-write types that should be generated.
+The server stays the security boundary. All validation, authorization, and tenant scoping happen server-side. The client is never trusted.
+Do not weaken multi-tenant isolation or the audited impersonation safety. Keep the existing tenant-isolation and impersonation tests green; add to them, never delete them.
+Keep the 4-stage pipeline (Intake → Design → QA → Handoff) as the container — but re-center it on outcomes → assessments → alignment (see Phase 1).
+Keep the standards crosswalk model (objective/assessment ↔ competency). This is the accreditation gold; everything in Phase 2 builds on it.
+
+
+Do NOT expand into these this cycle (they are the platform dream, not the wedge): LMS integrations (Canvas/Blackboard/D2L), program-level PLO mapping, a multi-accreditor library, an SME portal, a multi-framework theory navigator. Stub or hide any half-built versions; do not invest in them now.
+
+Demote from the customer-facing product (keep the working code, but move it to an internal/admin-only area — it runs the services business, it is not what a buyer pays recurring dollars for): meeting recordings + AI transcription, the agendas engine, builder allocation, class rosters/memberships, time tracking, the ledger, the school report. Retire the Adaptive Reading demo from the public site entirely — one demo, one message.
+
+
+2. Phase 1 — Promote the engine into the paid product (highest leverage)
+
+This is the single most valuable change in the codebase. Everything else depends on it.
+
+
+Schema + contract changes.
+
+Add cognitiveLevel (Bloom's level enum) and measurabilityStatus (e.g. measurable | vague | unmeasurable) to the objectives table.
+Replace the single-dimension qa_checks.oedi_rubric with a structured report (jsonb) column that stores the full 5-category weighted QA result, the Bloom distribution, and per-finding detail.
+Migrate existing data safely (no destructive drops without a backfill path). Add DB migrations; do not mutate the schema by hand in production.
+Regenerate the OpenAPI client, hooks, and Zod schemas.
+
+
+
+Lift the engine out of the demo and into a shared library.
+
+Move the pure functions of curriculumRules.ts (evaluateCourse and its helpers) into a shared lib package callable by both the public demo and the API. One engine, two callers — no duplicated logic.
+Expose POST /compass/projects/:id/qa/evaluate that runs the engine against the project's real persisted data and writes the structured report into qa_checks.
+
+
+
+Wire it into the real product UX.
+
+Design Workspace: as objectives are written, give live measurability + Bloom feedback inline ("this objective isn't measurable," "you're at 80% recall-level verbs," "this assessment is orphaned"). The same feedback the demo gives — but on the customer's actual course.
+QA stage: replace the manual pass/fail form with a real, engine-generated, scored 5-category report and Bloom distribution. A human can still annotate, but the score is computed, not typed.
+
+
+
+
+
+Phase 1 done when: a real project produces a persisted, scored QA report from real objectives, and the Design Workspace shows live feedback as objectives are authored.
+
+
+3. Phase 2 — One-click accreditation evidence export
+
+This is the artifact that replaces months of spreadsheet work and justifies the price.
+
+
+Turn the crosswalk + the persisted QA report into a formatted alignment matrix / evidence packet mapped to one accreditor's standards. Start with CCNE (it plays to the founder's nursing / managed-care depth). Build the export so a second accreditor (e.g. ABET) can be added later without rework, but ship one fully first.
+Export to PDF and .docx, branded per tenant (ties into Phase 4 white-label).
+The packet should be self-study-ready: standards on one axis, objectives/assessments on the other, with the QA findings and Bloom evidence attached.
+
+
+Phase 2 done when: a user can generate a CCNE-aligned, tenant-branded evidence packet from a real project in one click and download it as PDF and Word.
+
+
+4. Phase 3 — Make it possible to want to pay (monetization)
+
+There is currently no monetization surface at all — no plans, no value metric, no checkout, no trial path. Build one.
+
+
+Pricing page anchored against the buyer's real pain (accreditation consultants at $300–500/hr; months of self-study prep). Make the value obvious.
+Value metric that grows with value: meter on active courses (or programs under accreditation) — pick active courses for v1. Do not meter on seats alone.
+Plans/tiers with clear feature gating. White-label and multi-accreditor exports belong in higher tiers (see Phase 4).
+Stripe billing: checkout, subscription management, upgrade/downgrade, cancellation, and a billing portal. Handle webhooks server-side.
+Product-led trial path: a low-friction "start a course, see your QA score in 10 minutes" flow that does not require a sales call. Closed/hand-provisioned registration can remain an option for enterprise, but a self-serve trial must exist and convert to paid.
+Trial → paid funnel must be measurable end to end (see Phase 5).
+
+
+Phase 3 done when: a brand-new user can sign up, start a trial, create a course, run QA, hit a gated feature, upgrade via Stripe, and land on a paid plan — with no human in the loop.
+
+
+5. Phase 4 — White-label options (sellable, configurable)
+
+Per-tenant branding as a paid capability — not the product's focus, but a real upsell.
+
+
+Per-tenant logo, color palette/theme, product name, and email sender identity.
+Optional custom domain support (gate behind the top tier; safe defaults if unset).
+White-label settings live in tenant admin and apply consistently across the app, the evidence-packet exports, and transactional emails.
+Ship sane defaults so a non-white-label tenant looks polished out of the box.
+
+
+Phase 4 done when: a tenant can upload branding and see it render consistently across the product UI and the exported evidence packet.
+
+
+6. Phase 5 — Telemetry, audit, and "what's working / what's not"
+
+Instrument the product so the founder can see, per-tenant and globally, who is doing what, when, from where, for how long — and where they succeed or drop off. Separate the two concerns cleanly:
+
+A. Security & audit logging (accountability)
+
+Capture an immutable audit/access log for sensitive and authentication events:
+
+
+Who (user + tenant), when (timestamp), from where (IP address, user-agent/device), what (action), and session duration.
+Log: signup, login/logout, password/credential changes, role changes, impersonation start/stop (extend the existing audited impersonation), billing changes, data export, and tenant-admin actions.
+Store securely (encrypted at rest), role-gate access to the logs, and set a retention policy.
+
+
+B. Product analytics (iteration)
+
+Capture a structured event stream with a clear taxonomy so engagement and funnels are answerable:
+
+
+Events: auth.signup, auth.login, course.create, objective.create, objective.edit, qa.evaluate.run (record computed score, Bloom distribution, flag count, run duration), export.generate (accreditor, format), billing.trial_start, billing.checkout_start, billing.subscribe, billing.cancel, session.start / session.end (with duration), and feature.view (route + dwell time).
+Founder analytics console (extend the existing platform console) with, per-tenant and global:
+
+Activation funnel: signup → first course → first QA run → first export → paid.
+Engagement: DAU/WAU, session length, time-on-task per pipeline stage (Intake/Design/QA/Handoff).
+QA outcomes: average QA score, % of objectives flagged unmeasurable, score improvement over time per course.
+Revenue: MRR, trial→paid conversion, churn.
+Health / "what's not working": error rates, slow endpoints, and drop-off points (where users abandon the funnel or a stage).
+
+
+
+Make "what's working vs. what's not" a literal dashboard view: top adopted features and highest-completion flows on one side; highest drop-off, highest error, and longest-time-on-task friction points on the other.
+
+
+C. Privacy (do not skip — IP and behavior tracking triggers obligations)
+
+
+A privacy policy page and a consent mechanism at signup covering analytics and IP logging.
+Data minimization + retention limits; prefer hashing/truncating IPs where full IPs are not required.
+Data export and deletion endpoints for GDPR/CCPA-style requests.
+All analytics/audit access is role-gated and encrypted at rest.
+
+
+Phase 5 done when: the founder console answers "who used what, when, from where, for how long, and where they dropped off" for any tenant and globally — with consent captured and retention enforced.
+
+
+7. Phase 6 — Navigability, production-readiness, and smoke testing
+
+Make it user-ready and prod-ready. The product currently opens on a near-empty admin shell; fix that.
+
+Navigability & UX
+
+
+The product opens on a meaningful dashboard (active courses, QA scores needing attention, next accreditation deadline, recent activity) — not an empty shell. Re-center the dashboard on the customer's job-to-be-done, not the internal pipeline.
+Consistent global navigation, breadcrumbs, no orphan pages or dead ends.
+Empty, loading, and error states everywhere. Seed/demo data so a fresh tenant is never staring at a blank screen.
+Mobile-responsive.
+
+
+Production-readiness
+
+
+Environment config + secrets management (no secrets in code), input validation (Zod) on every endpoint, rate limiting on auth and expensive routes, a health-check endpoint, structured error monitoring, and DB migration + backup discipline. Provide deploy configuration.
+
+
+Smoke tests (automated) for every critical journey:
+
+
+Sign up → trial start → land on dashboard.
+Create course → author objective → see live measurability/Bloom feedback.
+Run server-side QA evaluate → persisted scored report appears.
+Generate CCNE evidence packet → download PDF and .docx.
+Hit gated feature → Stripe checkout → land on paid plan.
+Apply white-label branding → branding renders in UI and in export.
+Impersonation start/stop → audit log entry written.
+Analytics event fires and surfaces in the founder console.
+
+
+Also deliver a manual QA checklist mirroring these journeys for human verification before release.
+
+
+8. Definition of done (the whole build)
+
+
+A new user can self-serve from signup to paid plan with no human in the loop.
+The QA engine runs server-side on real customer data and persists scored reports; the demo and the product share one engine.
+A tenant-branded, CCNE-aligned evidence packet exports in one click.
+Billing works end to end on a value-based metric (active courses).
+White-label branding renders across UI, exports, and emails.
+The founder console answers who/what/when/where/how-long and what's-working-vs-not, per-tenant and globally, with consent and retention in place.
+All critical journeys pass automated smoke tests; multi-tenant isolation and impersonation safety tests remain green.
+The product opens on a meaningful dashboard, has no dead ends, and handles empty/loading/error states throughout.
+
+
+9. Deliverables
+
+
+Updated schema + migrations + regenerated OpenAPI client.
+Shared engine library + POST .../qa/evaluate endpoint, wired into Design Workspace and QA stage.
+CCNE evidence-packet export (PDF + .docx), tenant-branded.
+Pricing page, plans/gating, Stripe billing, and a self-serve trial path.
+White-label tenant settings.
+Audit logging, product-analytics event stream, founder analytics console, and privacy/consent/retention.
+Reorganized navigation + real dashboard + empty/loading/error states + seed data.
+Automated smoke-test suite + manual QA checklist + deploy config.
+
+
+Build in order. Checkpoint after each phase. Don't advance on a red phase.
