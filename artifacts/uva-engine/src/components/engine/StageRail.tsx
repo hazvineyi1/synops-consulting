@@ -64,78 +64,70 @@ export function StageRail({ projectId, currentStage, viewingStage, variant = "fu
 
   return (
     <ol
-      className={cn("grid grid-cols-2 gap-2 sm:grid-cols-4", className)}
+      className={cn("flex items-stretch gap-1.5", className)}
       aria-label="Curriculum pipeline stages"
     >
       {STAGES.map((stage) => {
         const state = stageState(stage.id, currentStage);
-        const Icon = stage.icon;
         const isViewing = viewingStage != null && stage.id === viewingStage;
-        const stateLabel = state === "done" ? "Completed" : state === "current" ? "In progress" : "Upcoming";
+        const stateLabel =
+          state === "done" ? "Completed" : state === "current" ? "In progress" : "Upcoming";
         const ariaCurrent: "page" | "step" | undefined = isViewing
           ? "page"
           : viewingStage == null && state === "current"
             ? "step"
             : undefined;
 
-        const inner = (
-          <>
-            <div className="flex items-center justify-between">
+        const base = cn(
+          "flex h-full min-w-0 items-center gap-2 rounded-md border px-2.5 py-1.5 text-left transition-colors",
+          state === "current" && "border-primary/40 bg-primary/5",
+          state === "done" && "border-transparent bg-muted/40 hover:bg-muted/60",
+          state === "upcoming" && "border-dashed border-border bg-transparent hover:bg-muted/30",
+          isViewing && "ring-2 ring-primary ring-offset-1 ring-offset-background"
+        );
+
+        return (
+          <li key={stage.id} className="min-w-0 flex-1">
+            <Link
+              href={`/projects/${projectId}/${stage.slug}`}
+              aria-current={ariaCurrent}
+              aria-label={`${stage.title}: ${stateLabel}.${isViewing ? " Current page." : " Open workspace."}`}
+              className={cn(
+                base,
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              )}
+            >
               <span
                 className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
                   state === "current" && "bg-primary text-primary-foreground",
                   state === "done" && "bg-primary/15 text-primary",
                   state === "upcoming" && "bg-muted text-muted-foreground"
                 )}
               >
                 {state === "done" ? (
-                  <Check className="h-4 w-4" aria-hidden="true" />
+                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
                 ) : (
                   stage.id + 1
                 )}
               </span>
-              <Icon
-                className={cn(
-                  "h-4 w-4",
-                  state === "current" ? "text-primary" : "text-muted-foreground"
-                )}
-                aria-hidden="true"
-              />
-            </div>
-            <div className="mt-2 min-w-0">
-              <div
-                className={cn(
-                  "truncate text-sm font-semibold",
-                  state === "upcoming" ? "text-muted-foreground" : "text-foreground"
-                )}
-              >
-                {stage.title}
-              </div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                {isViewing ? "You are here" : stateLabel}
-              </div>
-            </div>
-          </>
-        );
-
-        const base = cn(
-          "block rounded-lg border p-3 text-left transition-colors",
-          state === "current" && "border-primary/40 bg-primary/5",
-          state === "done" && "bg-card hover:bg-muted/50",
-          state === "upcoming" && "border-dashed bg-muted/20 hover:bg-muted/40",
-          isViewing && "ring-2 ring-primary ring-offset-2 ring-offset-background"
-        );
-
-        return (
-          <li key={stage.id}>
-            <Link
-              href={`/projects/${projectId}/${stage.slug}`}
-              aria-current={ariaCurrent}
-              aria-label={`${stage.title}: ${stateLabel}.${isViewing ? " Current page." : " Open workspace."}`}
-              className={cn(base, "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}
-            >
-              {inner}
+              <span className="min-w-0 leading-tight">
+                <span
+                  className={cn(
+                    "block truncate text-xs font-semibold sm:text-sm",
+                    isViewing
+                      ? "text-primary"
+                      : state === "upcoming"
+                        ? "text-muted-foreground"
+                        : "text-foreground"
+                  )}
+                >
+                  {stage.title}
+                </span>
+                <span className="hidden truncate text-[10px] uppercase tracking-wide text-muted-foreground sm:block">
+                  {isViewing ? "You are here" : stateLabel}
+                </span>
+              </span>
             </Link>
           </li>
         );

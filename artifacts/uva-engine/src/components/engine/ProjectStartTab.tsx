@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { ObjectiveQualityBadge } from "@/components/engine/ObjectiveQualityBadge";
 import {
   GraduationCap,
   Layers,
@@ -43,27 +44,35 @@ const GOAL_LEVELS: {
   key: "university" | "program" | "course";
   label: string;
   hint: string;
+  measurable: boolean;
   icon: typeof GraduationCap;
 }[] = [
   {
     key: "university",
     label: "Institutional goals",
-    hint: "Mission-level outcomes the institution cares about.",
+    hint: "Mission-level aims the institution holds across every program. Broad and aspirational, not directly measured.",
+    measurable: false,
     icon: GraduationCap,
   },
   {
     key: "program",
     label: "Program goals",
-    hint: "What graduates of this program should be able to do.",
+    hint: "Program learning outcomes: what graduates of this program should be able to do.",
+    measurable: false,
     icon: Layers,
   },
   {
     key: "course",
     label: "Course goals",
-    hint: "Outcomes for this specific course.",
+    hint: "Measurable outcomes a learner can demonstrate by the end of this course. Each one should map up to a program goal.",
+    measurable: true,
     icon: BookOpen,
   },
 ];
+
+// Sample observable action verbs (revised Bloom's taxonomy) to steer learners
+// toward measurable course outcomes instead of vague aims like "understand."
+const BLOOM_VERBS = ["define", "describe", "apply", "analyze", "evaluate", "design", "create"];
 
 const MODALITY_OPTIONS = [
   "In person",
@@ -184,7 +193,8 @@ export function ProjectStartTab({
         <CardHeader className="border-b border-border bg-card px-5 py-4">
           <CardTitle className="text-lg">Goal hierarchy</CardTitle>
           <CardDescription className="m-0">
-            Align outcomes from institutional mission down to the course.
+            Constructive alignment starts here: institutional mission, then program outcomes, then
+            measurable course outcomes that ladder up to them.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 p-6">
@@ -199,6 +209,12 @@ export function ProjectStartTab({
                   <h3 className="text-sm font-semibold text-foreground">{lvl.label}</h3>
                 </div>
                 <p className="text-sm text-muted-foreground">{lvl.hint}</p>
+                {lvl.measurable && (
+                  <p className="text-xs text-muted-foreground">
+                    Start each outcome with an observable action verb (for example:{" "}
+                    {BLOOM_VERBS.join(", ")}). Avoid vague verbs like understand or know.
+                  </p>
+                )}
                 {items.length > 0 ? (
                   <ul className="space-y-2">
                     {items.map((o) => (
@@ -206,7 +222,14 @@ export function ProjectStartTab({
                         key={o.id}
                         className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted/20 p-3"
                       >
-                        <span className="text-sm text-foreground">{o.text}</span>
+                        <div className="min-w-0">
+                          <span className="text-sm text-foreground">{o.text}</span>
+                          {lvl.measurable && (
+                            <div className="mt-1.5">
+                              <ObjectiveQualityBadge text={o.text} />
+                            </div>
+                          )}
+                        </div>
                         <Button
                           size="icon"
                           variant="ghost"

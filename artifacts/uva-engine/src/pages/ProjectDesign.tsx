@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  useListCourses, getListCoursesQueryKey,
+  useListCourses, getListCoursesQueryKey, useCreateCourse,
   useListObjectives, getListObjectivesQueryKey,
   useListActivities, getListActivitiesQueryKey,
   useListAssessments, getListAssessmentsQueryKey,
   useCreateActivity, useCreateAssessment,
   useDeleteActivity, useDeleteAssessment,
   useUpdateProject, getGetProjectQueryKey, getListProjectsQueryKey,
+  getGetProjectGateStatusQueryKey,
   type Activity, type Assessment, type Objective, type ProjectUpdateDesignMethod,
 } from "@workspace/api-client-react";
 import {
@@ -26,9 +27,10 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 import { ObjectiveQualityBadge } from "@/components/engine/ObjectiveQualityBadge";
 import {
@@ -56,16 +58,21 @@ export default function ProjectDesign() {
   return (
     <ProjectWorkspace stageId={1}>
       {({ project }) => (
-        <DesignWorkspace projectId={project.id} designMethod={project.designMethod ?? null} />
+        <DesignWorkspace
+          projectId={project.id}
+          projectTitle={project.title}
+          designMethod={project.designMethod ?? null}
+        />
       )}
     </ProjectWorkspace>
   );
 }
 
 function DesignWorkspace({
-  projectId, designMethod,
+  projectId, projectTitle, designMethod,
 }: {
   projectId: number;
+  projectTitle: string;
   designMethod: string | null;
 }) {
   const { toast } = useToast();
@@ -190,23 +197,7 @@ function DesignWorkspace({
   }
 
   if (!course) {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <BookOpen className="mx-auto mb-4 h-10 w-10 text-muted-foreground" aria-hidden="true" />
-          <h3 className="text-lg font-semibold">Set up the course first</h3>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Design works against the course record. Create it in the Intake stage, then return here to
-            build assessments and activities.
-          </p>
-          <Button asChild className="mt-5">
-            <Link href={`/projects/${projectId}/intake`}>
-              Go to Intake <ArrowRight className="ml-1 h-4 w-4" aria-hidden="true" />
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
-    );
+    return <CourseQuickStart projectId={projectId} projectTitle={projectTitle} />;
   }
 
   const method = designMethod ? getMethod(designMethod) : undefined;
@@ -237,7 +228,7 @@ function DesignWorkspace({
           <ItemList
             kind="assessment"
             title="Assessments"
-            description="Determine acceptable evidence of mastery."
+            description="Determine acceptable evidence of mastery. Align every assessment to at least one objective."
             items={(assessments ?? []) as Assessment[]}
             objectives={courseObjectives}
             getType={(a) => (a as Assessment).assessmentType}
@@ -338,11 +329,39 @@ function DesignWorkspace({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(dialog.kind === "activity" ? ACTIVITY_TYPE_OPTIONS : ASSESSMENT_TYPE_OPTIONS).map((o) => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                      ))}
+                      {dialog.kind === "assessment" ? (
+                        <>
+                          <SelectGroup>
+                            <SelectLabel>Purpose</SelectLabel>
+                            {ASSESSMENT_TYPE_OPTIONS.filter(
+                              (o) => o.value === "formative" || o.value === "summative",
+                            ).map((o) => (
+                              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                            ))}
+                          </SelectGroup>
+                          <SelectGroup>
+                            <SelectLabel>Format</SelectLabel>
+                            {ASSESSMENT_TYPE_OPTIONS.filter(
+                              (o) => o.value !== "formative" && o.value !== "summative",
+                            ).map((o) => (
+                              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </>
+                      ) : (
+                        ACTIVITY_TYPE_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
+                  {dialog.kind === "assessment" && (
+                    <p className="text-xs text-muted-foreground">
+                      Formative checks guide learning while it is in progress; summative tasks judge
+                      mastery at the end. Quiz, assignment, project, exam, and discussion name the
+                      format you will use.
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -409,6 +428,98 @@ function DesignWorkspace({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function CourseQuickStart({
+  projectId, projectTitle,
+}: {
+  projectId: number;
+  projectTitle: string;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
+  const createCourse = useCreateCourse();
+  const [title, setTitle] = useState(projectTitle);
+
+  function handleCreate() {
+    const name = title.trim() || projectTitle || "Untitled course";
+    createCourse.mutate(
+      { projectId, data: { title: name, creditHours: 3, termWeeks: 15, moduleCount: 1 } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListCoursesQueryKey(projectId) });
+          queryClient.invalidateQueries({ queryKey: getGetProjectGateStatusQueryKey(projectId) });
+          toast({ title: "Course record created", description: name });
+        },
+        onError: (error) => {
+          if (error?.status === 402) {
+            const body = error.data as { message?: string } | null;
+            toast({
+              title: "Course limit reached",
+              description:
+                body?.message ??
+                "Your plan's active course limit has been reached. Upgrade to add more.",
+              variant: "destructive",
+              action: (
+                <ToastAction altText="View plans and billing" onClick={() => navigate("/billing")}>
+                  View plans
+                </ToastAction>
+              ),
+            });
+            return;
+          }
+          toast({ title: "Could not create the course record", variant: "destructive" });
+        },
+      },
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent className="py-10">
+        <div className="mx-auto max-w-md text-center">
+          <BookOpen className="mx-auto mb-4 h-10 w-10 text-muted-foreground" aria-hidden="true" />
+          <h3 className="text-lg font-semibold">Start the course record</h3>
+          <p className="mx-auto mt-2 text-sm text-muted-foreground">
+            Design works backward from the course outcomes. Name the course to begin building its
+            assessments and activities. Credits, term length, and module count use sensible defaults
+            you can refine in Intake anytime.
+          </p>
+          <div className="mt-5 space-y-3 text-left">
+            <div className="space-y-1.5">
+              <Label htmlFor="course-title">Course title</Label>
+              <Input
+                id="course-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Foundations of Anatomy"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && title.trim() && !createCourse.isPending) handleCreate();
+                }}
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={handleCreate}
+              disabled={!title.trim() || createCourse.isPending}
+            >
+              {createCourse.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> Creating</>
+              ) : (
+                <>Create course record and start designing</>
+              )}
+            </Button>
+            <div className="text-center">
+              <Button variant="link" asChild className="h-auto p-0 text-sm font-normal">
+                <Link href={`/projects/${projectId}/intake`}>Open full setup in Intake instead</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

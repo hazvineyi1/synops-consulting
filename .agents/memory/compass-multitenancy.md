@@ -38,6 +38,22 @@ impossible.
   is seeded in ALL envs by `ensureOrganizationsSeed`; pre-existing compass users
   with null org are adopted into it so the internal flow survives the upgrade.
 
+# Builders are allocation-scoped, not just org-scoped
+
+`admin`/`super_admin`/`school_admin` are org-limited, but `builder` is narrowed
+further: a builder only sees curriculum scopes covered by its ACTIVE rows in the
+`allocations` table (downward-only: a project allocation grants the whole
+subtree). A builder with ZERO allocations sees an EMPTY project list and gets 404
+on by-id, even for projects in its OWN org.
+
+**Why:** least-privilege per builder; cross-tenant/by-id leaks return 404 not 403.
+
+**How to apply:** to e2e or curl the authed project-workspace screens, log in as
+`super-admin@demo.synops.test` (global, sees all). The seeded
+`builder@demo.synops.test` has no allocations, so it is useless for viewing
+projects (this is correct behavior, not a bug). Allocations have no CRUD endpoint
+yet, so you cannot grant one from the UI; use a global role instead.
+
 # Express 5 Request augmentation gotcha
 
 To add a custom property to `req` (e.g. `req.actor`), augment via

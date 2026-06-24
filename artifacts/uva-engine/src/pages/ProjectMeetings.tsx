@@ -2124,6 +2124,12 @@ function MeetingCard({
     }
   }
 
+  const hasPrework = plan.prework.length > 0;
+  const hasStanding = plan.agenda.length > 0;
+  const visibleCols = [hasPrework, hasStanding, Boolean(agenda)].filter(Boolean).length;
+  const boardCols =
+    visibleCols >= 3 ? "lg:grid-cols-3" : visibleCols === 2 ? "lg:grid-cols-2" : "";
+
   function openEdit() {
     setEditTitle(meeting.title);
     setEditType(isMeetingType(meeting.meetingType) ? meeting.meetingType : "working");
@@ -2179,23 +2185,75 @@ function MeetingCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Pre-work */}
+        {/* Action toolbar: meeting status + generate the next agenda */}
+        <div className="flex flex-wrap items-end gap-2 border-b pb-4">
+          {completed ? (
+            <Button size="sm" variant="outline" onClick={() => onSetStatus("scheduled")}>
+              <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" /> Reopen meeting
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => onSetStatus("completed")}>
+              <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden="true" /> Mark completed
+            </Button>
+          )}
+          <div className="flex w-full flex-wrap items-end gap-2 sm:ml-auto sm:w-auto">
+            <div className="space-y-1">
+              <Label htmlFor={`next-type-${meeting.id}`} className="text-xs text-muted-foreground">
+                Next meeting type
+              </Label>
+              <Select value={nextType} onValueChange={(v) => setNextType(v as MeetingType)}>
+                <SelectTrigger id={`next-type-${meeting.id}`} className="h-9 w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MEETING_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {MEETING_TYPE_LABELS[t]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button size="sm" onClick={() => onGenerate(nextType)} disabled={isProcessing || !hasNotes}>
+              {isProcessing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+              )}
+              Generate next agenda
+            </Button>
+          </div>
+          {!hasNotes && (
+            <span className="w-full text-xs text-muted-foreground">
+              Record and transcribe first to generate the next agenda.
+            </span>
+          )}
+        </div>
+
+        {/* Agenda board */}
+        {!hasPrework && !hasStanding && !agenda ? (
+          <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+            No agenda items yet. Capture notes during the meeting, then generate the next agenda.
+          </div>
+        ) : (
+        <div className={`grid items-start gap-4 ${boardCols}`}>
+        {/* Pre-work column */}
         {plan.prework.length > 0 && (
-          <section className="rounded-lg border bg-muted/20 p-4" aria-label="Pre-work">
-            <div className="mb-3 flex items-center justify-between">
-              <h4 className="flex items-center gap-2 font-semibold">
+          <section className="flex flex-col rounded-xl border bg-muted/30 p-3" aria-label="Pre-work">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <h4 className="flex items-center gap-1.5 text-sm font-semibold">
                 <ClipboardList className="h-4 w-4 text-primary" aria-hidden="true" /> Pre-work
               </h4>
               <span className="text-xs text-muted-foreground">
-                {preworkDone} of {plan.prework.length} ready
+                {preworkDone}/{plan.prework.length}
               </span>
             </div>
-            <ul className="space-y-1.5">
+            <ul className="space-y-2">
               {plan.prework.map((item, i) => {
                 const id = `prework-${meeting.id}-${i}`;
                 return (
                   <li key={i}>
-                    <label className="flex items-start gap-2 text-sm" htmlFor={id}>
+                    <label className="flex items-start gap-2 rounded-md border bg-card p-2.5 text-sm" htmlFor={id}>
                       <Checkbox
                         id={id}
                         checked={item.done}
@@ -2211,10 +2269,10 @@ function MeetingCard({
           </section>
         )}
 
-        {/* Standing agenda */}
+        {/* Standing agenda column */}
         {plan.agenda.length > 0 && (
-          <section className="rounded-lg border bg-muted/20 p-4" aria-label="Standing agenda">
-            <h4 className="mb-3 flex items-center gap-2 font-semibold">
+          <section className="flex flex-col rounded-xl border bg-muted/30 p-3" aria-label="Standing agenda">
+            <h4 className="mb-2 flex items-center gap-1.5 px-1 text-sm font-semibold">
               <FileText className="h-4 w-4 text-primary" aria-hidden="true" /> Standing agenda
             </h4>
             <ol className="space-y-2">
@@ -2279,58 +2337,11 @@ function MeetingCard({
           </section>
         )}
 
-        {/* Generate next agenda */}
-        <div className="space-y-1.5">
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="space-y-1">
-              <Label htmlFor={`next-type-${meeting.id}`} className="text-xs text-muted-foreground">
-                Next meeting type
-              </Label>
-              <Select value={nextType} onValueChange={(v) => setNextType(v as MeetingType)}>
-                <SelectTrigger id={`next-type-${meeting.id}`} className="h-9 w-[150px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MEETING_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {MEETING_TYPE_LABELS[t]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button size="sm" onClick={() => onGenerate(nextType)} disabled={isProcessing || !hasNotes}>
-              {isProcessing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
-              )}
-              Generate next agenda
-            </Button>
-            {!hasNotes && (
-              <span className="text-xs text-muted-foreground">Record and transcribe first.</span>
-            )}
-          </div>
-        </div>
-
-        {/* Complete / reopen */}
-        <div className="flex flex-wrap items-center gap-2">
-          {completed ? (
-            <Button size="sm" variant="outline" onClick={() => onSetStatus("scheduled")}>
-              <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" /> Reopen meeting
-            </Button>
-          ) : (
-            <Button size="sm" onClick={() => onSetStatus("completed")}>
-              <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden="true" /> Mark completed
-            </Button>
-          )}
-        </div>
-
-        {/* Proposed next agenda */}
+        {/* Proposed next agenda column */}
         {agenda && (
-          <div className="rounded-lg border bg-muted/20 p-4">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h4 className="flex items-center gap-2 font-semibold">
+          <section className="flex flex-col rounded-xl border bg-muted/30 p-3" aria-label="Proposed next agenda">
+            <div className="mb-2 flex flex-col gap-2 px-1">
+              <h4 className="flex items-center gap-1.5 text-sm font-semibold">
                 <FileText className="h-4 w-4 text-primary" aria-hidden="true" /> Proposed next agenda
               </h4>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -2433,7 +2444,9 @@ function MeetingCard({
                 );
               })}
             </ol>
-          </div>
+          </section>
+        )}
+        </div>
         )}
       </CardContent>
 

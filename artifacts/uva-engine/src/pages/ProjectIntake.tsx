@@ -328,12 +328,12 @@ export default function ProjectIntake() {
     >
       {() => (
         <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:grid-cols-5">
-            <TabsTrigger value="start">Start</TabsTrigger>
-            <TabsTrigger value="meet">Meet</TabsTrigger>
-            <TabsTrigger value="prepare">Prepare</TabsTrigger>
-            <TabsTrigger value="wrap">Wrap</TabsTrigger>
-            <TabsTrigger value="accessibility">Accessibility</TabsTrigger>
+          <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto sm:grid sm:w-auto sm:grid-cols-5">
+            <TabsTrigger value="start" className="shrink-0">Start</TabsTrigger>
+            <TabsTrigger value="meet" className="shrink-0">Meet</TabsTrigger>
+            <TabsTrigger value="prepare" className="shrink-0">Prepare</TabsTrigger>
+            <TabsTrigger value="wrap" className="shrink-0">Wrap</TabsTrigger>
+            <TabsTrigger value="accessibility" className="shrink-0">Accessibility</TabsTrigger>
           </TabsList>
 
           {/* START: project-start essentials */}
