@@ -4,6 +4,7 @@ import {
   pruneDevData,
   ensureOrganizationsSeed,
   ensureDemoUsers,
+  ensureStandardsFrameworksSeed,
 } from "./lib/seed";
 
 const rawPort = process.env["PORT"];
@@ -38,6 +39,9 @@ app.listen(port, (err) => {
     await pruneDevData(logger);
     const { internalOrgId } = await ensureOrganizationsSeed(logger);
     await ensureDemoUsers(logger, internalOrgId);
+    // 4. ensureStandardsFrameworksSeed (all envs) ensures the global CCNE
+    //    standards catalog exists for crosswalk + evidence packet features.
+    await ensureStandardsFrameworksSeed(logger);
   })().catch((err) => {
     logger.error({ err }, "Failed to run startup seeds");
   });

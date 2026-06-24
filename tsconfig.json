@@ -7,6 +7,9 @@
       "path": "./lib/curriculum-engine"
     },
     {
+      "path": "./lib/evidence-packet"
+    },
+    {
       "path": "./lib/db"
     },
     {

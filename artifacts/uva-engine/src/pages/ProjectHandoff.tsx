@@ -6,6 +6,8 @@ import {
   getGetLedgerReportQueryKey,
   useCreateLedgerEntry,
   getListLedgerEntriesQueryKey,
+  useGetLatestQAReport,
+  getGetLatestQAReportQueryKey,
   type LedgerEntry,
   type LedgerReport,
   type LedgerEntryInput,
@@ -30,11 +32,13 @@ import {
 import {
   Download,
   FileText,
+  FileType2,
   ShieldCheck,
   Sparkles,
   GitCompare,
   Plus,
   User,
+  AlertTriangle,
 } from "lucide-react";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 import { getMethod } from "@/lib/instructional-methods";
@@ -205,6 +209,17 @@ export default function ProjectHandoff() {
 
   const createEntry = useCreateLedgerEntry();
 
+  // The QA report drives only the packet's contextual note (the export itself is
+  // never blocked): no report -> "not yet evaluated" hint; gate-blocked -> draft note.
+  const { data: qaReport } = useGetLatestQAReport(projectId, {
+    query: { enabled: !!projectId, queryKey: getGetLatestQAReportQueryKey(projectId) },
+  });
+  const hasQaReport = !!qaReport;
+  const qaGateBlocked = qaReport?.gateBlock === true;
+
+  const pdfHref = `/api/compass/projects/${projectId}/evidence-packet.pdf`;
+  const docxHref = `/api/compass/projects/${projectId}/evidence-packet.docx`;
+
   const [activeKey, setActiveKey] = useState<SectionKey | null>(null);
   const [content, setContent] = useState("");
   const [authorName, setAuthorName] = useState("");
@@ -294,6 +309,46 @@ export default function ProjectHandoff() {
     >
       {(ctx) => (
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Accreditation evidence packet</CardTitle>
+              <CardDescription>
+                A CCNE-aligned, tenant-branded packet that combines the standards alignment matrix,
+                the learning objectives table, and the QA summary in one document. Download it to share
+                with reviewers or attach to a self-study.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild>
+                  <a href={pdfHref} download aria-label="Download evidence packet as PDF">
+                    <FileText className="mr-2 h-4 w-4" aria-hidden="true" /> Download PDF
+                  </a>
+                </Button>
+                <Button asChild variant="outline">
+                  <a href={docxHref} download aria-label="Download evidence packet as DOCX">
+                    <FileType2 className="mr-2 h-4 w-4" aria-hidden="true" /> Download DOCX
+                  </a>
+                </Button>
+              </div>
+              {!hasQaReport ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  QA has not been run for this project yet, so the packet's quality section will read
+                  "not yet evaluated." The standards alignment matrix is still included. Run QA on the
+                  QA stage to add the quality summary.
+                </p>
+              ) : qaGateBlocked ? (
+                <p className="mt-3 flex items-start gap-2 text-sm text-amber-800">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    This project has unresolved QA blocking issues, so the packet is labeled DRAFT until
+                    they are resolved on the QA stage.
+                  </span>
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Evidence ledger</CardTitle>

@@ -1,0 +1,12 @@
+{
+  "name": "@workspace/evidence-packet",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@workspace/curriculum-engine": "workspace:*"
+  }
+}
