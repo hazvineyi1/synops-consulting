@@ -2,13 +2,44 @@ import { Router } from "express";
 import { eq, or, like } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import { z } from "zod/v4";
-import { db, usersTable, organizationsTable } from "@workspace/db";
+import { db, usersTable, organizationsTable, clientsTable } from "@workspace/db";
 import type { UserRow } from "@workspace/db";
 import { hashPassword, verifyPassword } from "../lib/auth";
 import { PRODUCT_KEYS, isSelfServiceProductKey } from "../lib/products";
 import { ensureStripeCustomer } from "../lib/stripeBilling";
+import {
+  loadOrgBilling,
+  buildBillingSummary,
+  globalBillingSummary,
+  type BillingSummary,
+} from "../lib/billing";
+import {
+  createVerificationToken,
+  consumeVerificationToken,
+  invalidateUserTokens,
+  sendVerificationEmail,
+  purgeStaleUnverifiedAccounts,
+} from "../lib/verification";
+import { logger } from "../lib/logger";
 
 const router = Router();
+
+// Email verification gates self-serve trials by default. It is a deliberately
+// narrow, LOUD kill-switch: set REQUIRE_EMAIL_VERIFICATION to a false-y value to
+// let signups in without confirming their address (the escape hatch for a broken
+// email transport in production). When off, register provisions and signs the
+// user in immediately and login stops blocking unverified accounts.
+const REQUIRE_EMAIL_VERIFICATION = (() => {
+  const raw = (process.env.REQUIRE_EMAIL_VERIFICATION ?? "").trim().toLowerCase();
+  const disabled = raw === "false" || raw === "0" || raw === "off" || raw === "no";
+  return !disabled;
+})();
+if (!REQUIRE_EMAIL_VERIFICATION) {
+  const msg =
+    "REQUIRE_EMAIL_VERIFICATION is OFF: self-serve signups bypass email verification and are auto-activated.";
+  if (process.env.NODE_ENV === "production") logger.error(msg);
+  else logger.warn(msg);
+}
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -19,14 +50,32 @@ const authLimiter = rateLimit({
 });
 
 // Registration is tighter than login: each successful sign-up provisions a whole
-// new tenant (org + user + Stripe customer), so we cap creation attempts well
-// below the login rate to blunt automated tenant-spam.
+// new tenant (org + user), so we cap creation attempts well below the login rate
+// to blunt automated tenant-spam.
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many sign-up attempts. Please try again later." },
+});
+
+// Resending a verification email triggers an outbound send, so it is rate-limited
+// as tightly as registration to prevent using it as a mail-bomb relay.
+const resendLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests. Please try again later." },
+});
+
+const verifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many attempts. Please try again in a few minutes." },
 });
 
 const TRIAL_DAYS = 14;
@@ -75,6 +124,49 @@ function isUniqueViolation(err: unknown): boolean {
   return false;
 }
 
+/**
+ * Start the trial clock and provision the first client for a freshly verified
+ * tenant. Idempotent: the trial clock is only set if it has not started, and the
+ * first client is only created when the org has none, so a double verify or a
+ * kill-switch re-run is harmless. The Stripe customer is best-effort and never
+ * blocks activation (mirrors the email degrade-to-log).
+ */
+async function activateTrial(orgId: number, email: string, log: typeof logger): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [org] = await tx
+      .select({ id: organizationsTable.id, name: organizationsTable.name, trialEndsAt: organizationsTable.trialEndsAt })
+      .from(organizationsTable)
+      .where(eq(organizationsTable.id, orgId));
+    if (!org) return;
+
+    if (org.trialEndsAt == null) {
+      await tx
+        .update(organizationsTable)
+        .set({
+          planTier: "trial",
+          subscriptionStatus: "trialing",
+          trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000),
+        })
+        .where(eq(organizationsTable.id, orgId));
+    }
+
+    const [existingClient] = await tx
+      .select({ id: clientsTable.id })
+      .from(clientsTable)
+      .where(eq(clientsTable.organizationId, orgId))
+      .limit(1);
+    if (!existingClient) {
+      await tx.insert(clientsTable).values({ organizationId: orgId, name: org.name });
+    }
+  });
+
+  try {
+    await ensureStripeCustomer(orgId, email);
+  } catch (err) {
+    log.warn({ err, orgId }, "Deferred Stripe customer creation at trial activation");
+  }
+}
+
 const registerSchema = z.object({
   email: z.string().email().max(255),
   password: z.string().min(8, "Password must be at least 8 characters").max(200),
@@ -88,10 +180,24 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const verifyEmailSchema = z.object({
+  token: z.string().min(1).max(512),
+});
+
+const resendSchema = z.object({
+  email: z.string().email().max(255),
+});
+
 interface ImpersonatorInfo {
   id: number;
   name: string;
   email: string;
+}
+
+async function billingSummaryForUser(u: UserRow): Promise<BillingSummary> {
+  if (u.organizationId == null) return globalBillingSummary();
+  const org = await loadOrgBilling(u.organizationId);
+  return org ? buildBillingSummary(org) : globalBillingSummary();
 }
 
 async function publicUser(u: UserRow, impersonator: ImpersonatorInfo | null = null) {
@@ -111,6 +217,7 @@ async function publicUser(u: UserRow, impersonator: ImpersonatorInfo | null = nu
     organizationType = org?.type ?? null;
     organizationSlug = org?.slug ?? null;
   }
+  const billing = await billingSummaryForUser(u);
   return {
     id: u.id,
     email: u.email,
@@ -126,13 +233,21 @@ async function publicUser(u: UserRow, impersonator: ImpersonatorInfo | null = nu
     // Present only while a super admin is acting as this user. The frontend uses
     // it to render a persistent banner with a "Stop impersonating" control.
     impersonator,
+    // Presentational billing/trial state. NONE of these authorize anything; the
+    // server enforces writability independently (see billing.canWrite and the
+    // read-only middleware).
+    effectiveTier: billing.effectiveTier,
+    planLabel: billing.planLabel,
+    trialEndsAt: billing.trialEndsAt,
+    trialDaysRemaining: billing.trialDaysRemaining,
+    readOnly: billing.readOnly,
     createdAt: u.createdAt.toISOString(),
   };
 }
 
 // express-session callbacks are node-style; wrap them so we can await in order.
-// Regenerating on login/register issues a brand-new session id (defeats session
-// fixation) AND, critically, drops any stale `impersonatorUserId` so an
+// Regenerating on login/register/verify issues a brand-new session id (defeats
+// session fixation) AND, critically, drops any stale `impersonatorUserId` so an
 // impersonated session cannot silently swap identity outside the audited
 // impersonation routes.
 function regenerateSession(req: import("express").Request): Promise<void> {
@@ -145,6 +260,13 @@ function saveSession(req: import("express").Request): Promise<void> {
   return new Promise((resolve, reject) => {
     req.session.save((err) => (err ? reject(err) : resolve()));
   });
+}
+
+async function establishSession(req: import("express").Request, user: UserRow): Promise<void> {
+  await regenerateSession(req);
+  req.session.userId = user.id;
+  req.session.role = user.role;
+  await saveSession(req);
 }
 
 router.post("/auth/register", registerLimiter, async (req, res): Promise<void> => {
@@ -169,24 +291,47 @@ router.post("/auth/register", registerLimiter, async (req, res): Promise<void> =
   const fullName = parsed.data.name.trim();
   const orgName = parsed.data.organization?.trim() || `${fullName}'s programs`;
 
-  // Friendly fast duplicate check. The DB unique constraint on email is the real
-  // guard for a concurrent-signup race (handled in the catch below).
-  const existing = await db
-    .select({ id: usersTable.id })
+  // Opportunistic, best-effort cleanup of long-abandoned unverified signups so
+  // they cannot accumulate. Never blocks the request.
+  void purgeStaleUnverifiedAccounts(req.log);
+
+  // Enumeration-safe duplicate handling. The contract promises an identical 202
+  // shape whether or not the address already exists, so a duplicate must NEVER
+  // 409 (that would leak which emails are registered). For an active, still
+  // unverified account we resend a fresh link so "check your email" stays
+  // truthful; otherwise we send nothing. We never establish a session here, so a
+  // duplicate can never take over an existing account. The DB unique constraint
+  // still guards a concurrent-signup race (handled enumeration-safely in the
+  // catch below).
+  const [existing] = await db
+    .select({
+      id: usersTable.id,
+      status: usersTable.status,
+      emailVerifiedAt: usersTable.emailVerifiedAt,
+    })
     .from(usersTable)
     .where(eq(usersTable.email, email));
-  if (existing.length > 0) {
-    res.status(409).json({ error: "An account with this email already exists." });
+  if (existing) {
+    if (
+      REQUIRE_EMAIL_VERIFICATION &&
+      existing.status !== "deactivated" &&
+      existing.emailVerifiedAt == null
+    ) {
+      const token = await createVerificationToken(existing.id);
+      await sendVerificationEmail(req.log, email, token);
+    }
+    res.status(202).json({ ok: true, email, verificationRequired: REQUIRE_EMAIL_VERIFICATION });
     return;
   }
 
   const passwordHash = await hashPassword(parsed.data.password);
   const slug = await generateOrgSlug(orgName);
-  const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
 
-  // Provision the tenant atomically: a new school organization on a trial, plus
-  // the owning school_admin user bound to it. If either insert fails, neither
-  // persists (no orphan org, no half-provisioned user).
+  // Provision the tenant atomically: a new school organization plus the owning
+  // school_admin user bound to it. The trial clock does NOT start here
+  // (trialEndsAt stays null) and, when verification is required, the user is
+  // created unverified (emailVerifiedAt null). Both are finalized at verification
+  // so the 14 days begin only once the address is confirmed.
   let user: UserRow;
   let orgId: number;
   try {
@@ -199,7 +344,7 @@ router.post("/auth/register", registerLimiter, async (req, res): Promise<void> =
           type: "school",
           planTier: "trial",
           subscriptionStatus: "trialing",
-          trialEndsAt,
+          trialEndsAt: null,
         })
         .returning({ id: organizationsTable.id });
       const [u] = await tx
@@ -212,6 +357,7 @@ router.post("/auth/register", registerLimiter, async (req, res): Promise<void> =
           productKey,
           role: "school_admin",
           organizationId: org.id,
+          emailVerifiedAt: REQUIRE_EMAIL_VERIFICATION ? null : new Date(),
         })
         .returning();
       return { orgId: org.id, user: u };
@@ -220,7 +366,10 @@ router.post("/auth/register", registerLimiter, async (req, res): Promise<void> =
     orgId = created.orgId;
   } catch (err) {
     if (isUniqueViolation(err)) {
-      res.status(409).json({ error: "An account with this email already exists." });
+      // Lost a concurrent-signup race for this email. The winning request already
+      // provisioned the account and sent its verification email, so stay
+      // enumeration-safe and return the same shape instead of leaking with a 409.
+      res.status(202).json({ ok: true, email, verificationRequired: REQUIRE_EMAIL_VERIFICATION });
       return;
     }
     req.log.error({ err }, "Self-serve registration failed");
@@ -228,19 +377,75 @@ router.post("/auth/register", registerLimiter, async (req, res): Promise<void> =
     return;
   }
 
-  // Best-effort: provision a Stripe customer up front so the first upgrade is one
-  // click. Never block sign-up on Stripe (mirrors the email degrade-to-log).
-  try {
-    await ensureStripeCustomer(orgId, email);
-  } catch (err) {
-    req.log.warn({ err, orgId }, "Deferred Stripe customer creation at sign-up");
+  if (REQUIRE_EMAIL_VERIFICATION) {
+    const token = await createVerificationToken(user.id);
+    await sendVerificationEmail(req.log, user.email, token);
+    res.status(202).json({ ok: true, email, verificationRequired: true });
+    return;
   }
 
-  await regenerateSession(req);
-  req.session.userId = user.id;
-  req.session.role = user.role;
-  await saveSession(req);
-  res.status(201).json(await publicUser(user));
+  // Kill-switch OFF: skip email confirmation, start the trial, and sign the user
+  // in immediately so a broken email transport never locks signups out.
+  await activateTrial(orgId, email, logger);
+  await establishSession(req, user);
+  res.status(202).json({ ok: true, email, verificationRequired: false });
+});
+
+router.post("/auth/verify-email", verifyLimiter, async (req, res): Promise<void> => {
+  const parsed = verifyEmailSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid input" });
+    return;
+  }
+
+  const userId = await consumeVerificationToken(parsed.data.token);
+  if (userId == null) {
+    res
+      .status(400)
+      .json({ error: "This verification link is invalid or has expired.", code: "invalid_token" });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+  if (!user) {
+    res.status(400).json({ error: "This verification link is invalid or has expired.", code: "invalid_token" });
+    return;
+  }
+  if (user.status === "deactivated") {
+    res.status(403).json({ error: "This account has been deactivated. Contact your administrator." });
+    return;
+  }
+
+  if (user.emailVerifiedAt == null) {
+    await db.update(usersTable).set({ emailVerifiedAt: new Date() }).where(eq(usersTable.id, userId));
+  }
+  if (user.organizationId != null) {
+    await activateTrial(user.organizationId, user.email, logger);
+  }
+  // Invalidate any other outstanding links for this user.
+  await invalidateUserTokens(userId);
+
+  const [fresh] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+  await establishSession(req, fresh);
+  res.json(await publicUser(fresh));
+});
+
+router.post("/auth/resend-verification", resendLimiter, async (req, res): Promise<void> => {
+  const parsed = resendSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid input" });
+    return;
+  }
+  const email = parsed.data.email.toLowerCase().trim();
+
+  // Enumeration-safe: always return the same 202 shape. Only actually send when
+  // the address maps to an active, still-unverified account.
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  if (user && user.status !== "deactivated" && user.emailVerifiedAt == null) {
+    const token = await createVerificationToken(user.id);
+    await sendVerificationEmail(req.log, user.email, token);
+  }
+  res.status(202).json({ ok: true, email, verificationRequired: true });
 });
 
 router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
@@ -262,10 +467,17 @@ router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
     return;
   }
 
-  await regenerateSession(req);
-  req.session.userId = user.id;
-  req.session.role = user.role;
-  await saveSession(req);
+  // Block sign-in until the address is confirmed (unless the kill-switch is off).
+  // The client uses the code to offer a "resend verification" action.
+  if (REQUIRE_EMAIL_VERIFICATION && user.emailVerifiedAt == null) {
+    res.status(403).json({
+      error: "Please verify your email address before signing in. Check your inbox for the verification link.",
+      code: "email_unverified",
+    });
+    return;
+  }
+
+  await establishSession(req, user);
   res.json(await publicUser(user));
 });
 

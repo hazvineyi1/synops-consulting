@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, Redirect } from "wouter";
-import { useAuth, authErrorMessage } from "@/lib/auth-context";
+import { useAuth, authErrorMessage, authErrorCode } from "@/lib/auth-context";
 import { useBranding } from "@/lib/branding-context";
 import { usePageMeta } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ export default function ProductLogin({ product }: { product: Product }) {
     `Sign in to ${product.name}`,
     `Sign in to ${product.name}, the ${product.title} from Synops Advisory Group.`,
   );
-  const { user, login } = useAuth();
+  const { user, login, resendVerification } = useAuth();
   const { isBranded, organization } = useBranding();
 
   // When the host resolves to a white-label org, its accent and logo theme the
@@ -27,6 +27,11 @@ export default function ProductLogin({ product }: { product: Product }) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Set when login is refused because the address is not yet confirmed. We then
+  // offer to re-send the confirmation link instead of showing a dead-end error.
+  const [unverified, setUnverified] = useState(false);
+  const [resendState, setResendState] = useState<"idle" | "sending" | "sent">("idle");
+
   // Drive the post-auth redirect from auth state, not an imperative navigate,
   // which would race the auth-context re-render and bounce back to login. Land
   // users on the product they belong to.
@@ -37,12 +42,26 @@ export default function ProductLogin({ product }: { product: Product }) {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setUnverified(false);
     setSubmitting(true);
     try {
       await login({ email, password });
     } catch (err) {
-      setError(authErrorMessage(err));
+      if (authErrorCode(err) === "email_unverified") {
+        setUnverified(true);
+      } else {
+        setError(authErrorMessage(err));
+      }
       setSubmitting(false);
+    }
+  }
+
+  async function onResend() {
+    setResendState("sending");
+    try {
+      await resendVerification(email.trim());
+    } finally {
+      setResendState("sent");
     }
   }
 
@@ -87,6 +106,29 @@ export default function ProductLogin({ product }: { product: Product }) {
             className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
           >
             {error}
+          </div>
+        )}
+        {unverified && (
+          <div
+            role="alert"
+            className="space-y-2 rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground"
+          >
+            <p>
+              Please confirm your email before signing in. Open the link we sent when you registered.
+            </p>
+            {resendState === "sent" ? (
+              <p aria-live="polite">A new confirmation link is on its way if your account is awaiting confirmation.</p>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onResend}
+                disabled={resendState === "sending" || email.trim().length === 0}
+              >
+                {resendState === "sending" ? "Sending..." : "Resend confirmation email"}
+              </Button>
+            )}
           </div>
         )}
         <div className="space-y-2">

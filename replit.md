@@ -34,7 +34,9 @@ editing routes, then re-verify.
   `CONTACT_FROM_EMAIL` (sender; must be an address on a Resend-verified domain.
   Defaults to Resend's onboarding sender, which only delivers to the Resend account
   owner); `REPLIT_DOMAINS` (prod CSRF allowed origins); `LOG_LEVEL` (pino, default
-  `info`).
+  `info`); `REQUIRE_EMAIL_VERIFICATION` (default on; set `0`/`false` only as an
+  emergency kill-switch that lets register sign users in without confirming their
+  email - logs a loud warning in prod).
 - Email transport is the Resend connector (a Replit integration, called via
   `@workspace/api-server`'s `@replit/connectors-sdk`); there is no API-key env var.
   If `CONTACT_EMAIL` is unset or the Resend send fails, email degrades to logging and
@@ -139,15 +141,32 @@ The four earlier products (Hub, Cadence, Rise, Meridian) were removed entirely
   leaking existence). Client creation copies the actor's org (never client-supplied).
   Standards frameworks/competencies are shared/global; crosswalk links are scoped.
   See `.agents/memory/compass-multitenancy.md`.
-- **Self-service trial registration is open for compass.** `SELF_SERVICE_PRODUCT_KEYS`
-  is `["compass"]`, so `POST /auth/register` starts a free trial: it transactionally
-  creates a new `school`-type organization (planTier `trial`, `trialing`,
-  `trialEndsAt` +14d), a `school_admin` user bound to it, and a best-effort Stripe
-  customer; then regenerates the session. The server FORCES `productKey=compass`,
-  `role=school_admin`, and a server-generated org + slug, and never trusts a
-  client-supplied `productKey`/role/org. Register is rate-limited tighter than login.
-  Any product outside the allowlist is still 403 and admin-provisioned. See
+- **Self-service trial registration is open for compass, gated by email
+  verification.** `SELF_SERVICE_PRODUCT_KEYS` is `["compass"]`. `POST /auth/register`
+  transactionally creates a new `school`-type organization (planTier `trial`,
+  `trialing`, `trialEndsAt` **null**) and an UNVERIFIED `school_admin` user, sends a
+  verification email, and returns `202 {ok,email,verificationRequired}` with NO
+  session, NO Stripe customer, and NO first client. The 14-day trial clock
+  (`trialEndsAt` = now+14d), the auto-created first client, the Stripe customer, and
+  the session are all established at `POST /auth/verify-email` (single-use,
+  sha256-hashed, 24h token). `POST /auth/login` returns `403 code email_unverified`
+  until verified; `POST /auth/resend-verification` re-sends. Register is
+  enumeration-safe (a duplicate returns the same `202`, never `409`; an active
+  unverified duplicate triggers a resend) and rate-limited tighter than login. The
+  server FORCES `productKey=compass`, `role=school_admin`, and a server-generated org
+  + slug, never trusting client-supplied values. Any product outside the allowlist is
+  still 403 and admin-provisioned. The `REQUIRE_EMAIL_VERIFICATION` env kill-switch
+  (default on) skips confirmation in emergencies. See
   `.agents/memory/self-service-registration.md`.
+- **An elapsed trial is read-only, server-enforced.** `billing.ts`
+  `canWrite(org)`/`isReadOnly(org)`: internal writes; `active`/`past_due` write;
+  `trialing` writes iff `trialEndsAt > now`; an elapsed `trialEndsAt` is read-only;
+  `trialing` with `trialEndsAt == null` is writable (avoids freezing seed/default
+  fixtures and the pre-verification org, which has no session anyway). Enforcement is
+  one `blockWritesWhenReadOnly` middleware on `/compass`, mounted AFTER `billingRouter`
+  (so an expired trial can still upgrade), plus the same guard on the top-level
+  `/storage` upload-url mint; a blocked write returns `402`. The AuthUser `readOnly`
+  flag drives only advisory UI; the server is the boundary.
 - **Contract-first.** Routes validate input/output with Zod; the web app consumes
   generated hooks. Regenerate after spec changes; never change `info.title`.
 - **Email never blocks a form.** Submissions persist first; the notification email is

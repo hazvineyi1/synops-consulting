@@ -2861,7 +2861,8 @@ export const GetBrandingResponse = zod.object({
 
 
 /**
- * @summary Register a new client account
+ * Creates an unverified account and emails a verification link. No session is established and the trial clock does not start until the email is verified. Always returns the same shape whether or not the email already existed, to avoid account enumeration.
+ * @summary Start a free trial (sends a verification email)
  */
 export const registerBodyPasswordMin = 8;
 
@@ -2873,6 +2874,49 @@ export const RegisterBody = zod.object({
   "name": zod.string(),
   "organization": zod.string().optional(),
   "productKey": zod.enum(['compass']).optional().describe('The product\/portal a user belongs to.')
+})
+
+
+/**
+ * Consumes a single-use verification token, marks the account verified, starts the 14 day trial, provisions the first client, and establishes a session. Returns the authenticated user on success.
+ * @summary Verify an email address and start the trial
+ */
+export const VerifyEmailBody = zod.object({
+  "token": zod.string()
+})
+
+export const VerifyEmailResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "organization": zod.string().nullish(),
+  "role": zod.string(),
+  "productKey": zod.enum(['compass']).describe('The product\/portal a user belongs to.'),
+  "status": zod.string().describe('Account lifecycle status (active or deactivated).'),
+  "organizationId": zod.number().nullish(),
+  "organizationName": zod.string().nullish(),
+  "organizationType": zod.string().nullish(),
+  "organizationSlug": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "impersonator": zod.union([zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string()
+}),zod.null()]).optional().describe('When set, the real super admin currently impersonating this user. Null during a normal session.'),
+  "effectiveTier": zod.string().optional().describe('The actor\'s current entitled plan tier (e.g. trial, starter, enterprise). Presentational only; never authorizes anything.'),
+  "planLabel": zod.string().optional().describe('Human-readable label for the effective plan tier.'),
+  "trialEndsAt": zod.coerce.date().nullish().describe('When the free trial ends, or null when not on a trial.'),
+  "trialDaysRemaining": zod.number().nullish().describe('Whole days left in the trial (0 once lapsed), or null when not on a trial. Display only.'),
+  "readOnly": zod.boolean().optional().describe('True when the tenant may view but not create or edit (e.g. an expired trial). Advisory only; the server enforces writes independently.')
+})
+
+
+/**
+ * Sends a fresh verification link if the address belongs to an unverified account. Always returns the same shape to avoid account enumeration.
+ * @summary Resend a verification email
+ */
+export const ResendVerificationBody = zod.object({
+  "email": zod.string().email()
 })
 
 
@@ -2901,7 +2945,12 @@ export const LoginResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string()
-}),zod.null()]).optional().describe('When set, the real super admin currently impersonating this user. Null during a normal session.')
+}),zod.null()]).optional().describe('When set, the real super admin currently impersonating this user. Null during a normal session.'),
+  "effectiveTier": zod.string().optional().describe('The actor\'s current entitled plan tier (e.g. trial, starter, enterprise). Presentational only; never authorizes anything.'),
+  "planLabel": zod.string().optional().describe('Human-readable label for the effective plan tier.'),
+  "trialEndsAt": zod.coerce.date().nullish().describe('When the free trial ends, or null when not on a trial.'),
+  "trialDaysRemaining": zod.number().nullish().describe('Whole days left in the trial (0 once lapsed), or null when not on a trial. Display only.'),
+  "readOnly": zod.boolean().optional().describe('True when the tenant may view but not create or edit (e.g. an expired trial). Advisory only; the server enforces writes independently.')
 })
 
 
@@ -2933,7 +2982,12 @@ export const GetCurrentUserResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string()
-}),zod.null()]).optional().describe('When set, the real super admin currently impersonating this user. Null during a normal session.')
+}),zod.null()]).optional().describe('When set, the real super admin currently impersonating this user. Null during a normal session.'),
+  "effectiveTier": zod.string().optional().describe('The actor\'s current entitled plan tier (e.g. trial, starter, enterprise). Presentational only; never authorizes anything.'),
+  "planLabel": zod.string().optional().describe('Human-readable label for the effective plan tier.'),
+  "trialEndsAt": zod.coerce.date().nullish().describe('When the free trial ends, or null when not on a trial.'),
+  "trialDaysRemaining": zod.number().nullish().describe('Whole days left in the trial (0 once lapsed), or null when not on a trial. Display only.'),
+  "readOnly": zod.boolean().optional().describe('True when the tenant may view but not create or edit (e.g. an expired trial). Advisory only; the server enforces writes independently.')
 })
 
 

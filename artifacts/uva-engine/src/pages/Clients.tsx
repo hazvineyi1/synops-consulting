@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Link } from "wouter";
-import { Users, Plus, ArrowRight, Building2, Mail, User } from "lucide-react";
+import { Users, Plus, ArrowRight, Building2, Mail, User, Lock } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,6 +41,7 @@ function serverErrorMessage(error: unknown, fallback: string): string {
 export default function Clients() {
   const { user } = useAuth();
   const isGlobal = isGlobalAdmin(user?.role);
+  const readOnly = !!user?.readOnly;
 
   const { data: clients, isLoading } = useListClients();
   const { data: organizations } = useListOrganizations({
@@ -84,6 +85,7 @@ export default function Clients() {
   });
 
   function onSubmit(data: ClientFormValues) {
+    if (readOnly) return;
     const payload = {
       name: data.name,
       institution: data.institution || undefined,
@@ -127,7 +129,7 @@ export default function Clients() {
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" /> New Client</Button>
+            <Button disabled={readOnly}><Plus className="mr-2 h-4 w-4" /> New Client</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -229,8 +231,19 @@ export default function Clients() {
         </Dialog>
       </div>
 
+      {readOnly && (
+        <div
+          role="status"
+          className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
+          Your free trial has ended. You can view clients, but creating and editing are paused.
+        </div>
+      )}
+
+      {clients && clients.length > 0 ? (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {clients?.map((client) => (
+        {clients.map((client) => (
           <Card key={client.id} className="flex flex-col">
             <CardHeader>
               <CardTitle className="text-xl flex items-center justify-between">
@@ -265,6 +278,23 @@ export default function Clients() {
           </Card>
         ))}
       </div>
+      ) : (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center text-sm text-muted-foreground">
+            <Users className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+            <p>
+              {readOnly
+                ? "No clients yet. Creating is paused while your trial is read-only."
+                : "No clients yet. Add your first client to start a project."}
+            </p>
+            {!readOnly && (
+              <Button onClick={() => setOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> New Client
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

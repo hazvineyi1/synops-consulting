@@ -205,6 +205,90 @@ export function hasTrialExpired(org: OrgBilling): boolean {
   return org.trialEndsAt.getTime() < Date.now();
 }
 
+/**
+ * Whether a tenant may currently CREATE or EDIT curriculum data. The internal
+ * tenant always can. A paid subscription in good standing (active/past_due) can,
+ * provided it resolves to a real paid tier. A trial can write while its clock is
+ * still running OR has not been started yet (trialEndsAt null); it becomes
+ * READ-ONLY only once the clock has been SET and has ELAPSED. Every other
+ * subscription state (canceled, incomplete, etc.) is also read-only: the tenant
+ * keeps full read access but must upgrade to write again.
+ *
+ * The "not started" (trialEndsAt null) case is treated as writable on purpose:
+ * in production a trial clock is only ever null before email verification, and
+ * an unverified account has no session, so the read-only middleware never runs
+ * for it. Freezing that state would only penalize the indeterminate/default org
+ * shape (e.g. an admin-provisioned org) with no security benefit. The genuine
+ * read-only trigger is an EXPIRED trial (clock set, in the past). This is the
+ * single source of truth the read-only middleware enforces; the client mirrors
+ * it only as a UX hint.
+ */
+export function canWrite(org: OrgBilling): boolean {
+  if (org.type === "internal") return true;
+  const status = org.subscriptionStatus;
+  if (status === "active" || status === "past_due") {
+    return isPlanTier(org.planTier) && org.planTier !== "trial";
+  }
+  if (status === "trialing") {
+    return org.trialEndsAt == null || org.trialEndsAt.getTime() > Date.now();
+  }
+  return false;
+}
+
+export function isReadOnly(org: OrgBilling): boolean {
+  return !canWrite(org);
+}
+
+/**
+ * Whole days left in an active trial, rounded up; 0 once it has lapsed. Null when
+ * the org is not on a (started) trial. Display only; `canWrite` is the boundary.
+ */
+export function trialDaysRemaining(org: OrgBilling): number | null {
+  if (org.subscriptionStatus !== "trialing" || !org.trialEndsAt) return null;
+  const ms = org.trialEndsAt.getTime() - Date.now();
+  if (ms <= 0) return 0;
+  return Math.ceil(ms / (24 * 60 * 60 * 1000));
+}
+
+/**
+ * The presentational billing summary attached to AuthUser so the client can show
+ * a trial banner and disable write affordances. NONE of these fields authorize
+ * anything; the server enforces `canWrite` on every mutation.
+ */
+export interface BillingSummary {
+  effectiveTier: PlanTier;
+  planLabel: string;
+  trialEndsAt: string | null;
+  trialDaysRemaining: number | null;
+  readOnly: boolean;
+}
+
+export function buildBillingSummary(org: OrgBilling): BillingSummary {
+  const tier = effectiveTier(org);
+  return {
+    effectiveTier: tier,
+    planLabel: PLANS[tier].label,
+    trialEndsAt: org.trialEndsAt ? org.trialEndsAt.toISOString() : null,
+    trialDaysRemaining: trialDaysRemaining(org),
+    readOnly: isReadOnly(org),
+  };
+}
+
+/**
+ * The billing summary for an actor with no concrete organization (a global
+ * admin/super_admin). Such actors bypass org scoping and write freely, so they
+ * are never read-only and carry no trial.
+ */
+export function globalBillingSummary(): BillingSummary {
+  return {
+    effectiveTier: "enterprise",
+    planLabel: PLANS.enterprise.label,
+    trialEndsAt: null,
+    trialDaysRemaining: null,
+    readOnly: false,
+  };
+}
+
 // pg advisory-lock namespace (classid) for org-scoped billing serialization.
 const BILLING_LOCK_NAMESPACE = 815;
 

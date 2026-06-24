@@ -5,6 +5,8 @@ import {
   getGetCurrentUserQueryKey,
   useLogin,
   useRegister,
+  useVerifyEmail,
+  useResendVerification,
   useLogout,
   useStartImpersonation,
   useStopImpersonation,
@@ -12,6 +14,7 @@ import {
   type Impersonator,
   type LoginInput,
   type RegisterInput,
+  type RegisterResponse,
 } from "@workspace/api-client-react";
 
 interface AuthContextValue {
@@ -20,7 +23,18 @@ interface AuthContextValue {
   impersonator: Impersonator | null;
   isLoading: boolean;
   login: (body: LoginInput) => Promise<AuthUser>;
-  register: (body: RegisterInput) => Promise<AuthUser>;
+  /**
+   * Self-serve registration. By default this creates an unverified account and
+   * sends a verification link WITHOUT establishing a session, so it resolves to
+   * a RegisterResponse (not an AuthUser). Only when the server kill-switch
+   * disables verification does it sign the user in; in that case the cached
+   * current-user is refreshed so the post-auth redirect can fire.
+   */
+  register: (body: RegisterInput) => Promise<RegisterResponse>;
+  /** Confirm an email with its token; on success the session is established. */
+  verifyEmail: (token: string) => Promise<AuthUser>;
+  /** Re-send a verification link to an address (enumeration-safe on the server). */
+  resendVerification: (email: string) => Promise<RegisterResponse>;
   logout: () => Promise<void>;
   startImpersonating: (userId: number) => Promise<void>;
   stopImpersonating: () => Promise<void>;
@@ -42,6 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMut = useLogin();
   const registerMut = useRegister();
+  const verifyEmailMut = useVerifyEmail();
+  const resendVerificationMut = useResendVerification();
   const logoutMut = useLogout();
   const startImpersonationMut = useStartImpersonation();
   const stopImpersonationMut = useStopImpersonation();
@@ -53,9 +69,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (body: RegisterInput) => {
-    const user = await registerMut.mutateAsync({ data: body });
+    const res = await registerMut.mutateAsync({ data: body });
+    // Verification required: no session was created, so there is nothing to
+    // cache. The caller shows a "check your email" state. When verification is
+    // disabled the server already signed the user in, so refresh /me to let the
+    // state-driven redirect take over.
+    if (!res.verificationRequired) {
+      await queryClient.invalidateQueries({ queryKey: meQueryKey });
+    }
+    return res;
+  };
+
+  const verifyEmail = async (token: string) => {
+    const user = await verifyEmailMut.mutateAsync({ data: { token } });
     queryClient.setQueryData(meQueryKey, user);
     return user;
+  };
+
+  const resendVerification = async (email: string) => {
+    return resendVerificationMut.mutateAsync({ data: { email } });
   };
 
   const logout = async () => {
@@ -85,6 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         register,
+        verifyEmail,
+        resendVerification,
         logout,
         startImpersonating,
         stopImpersonating,
@@ -114,4 +148,20 @@ export function authErrorMessage(err: unknown): string {
     }
   }
   return "Something went wrong. Please try again.";
+}
+
+/**
+ * Pull the machine-readable `code` an API error may carry (for example
+ * `email_unverified` from login, or `invalid_token` from verification) so the UI
+ * can branch on it. Returns null when no code is present.
+ */
+export function authErrorCode(err: unknown): string | null {
+  if (err && typeof err === "object" && "data" in err) {
+    const data = (err as { data?: unknown }).data;
+    if (data && typeof data === "object") {
+      const c = (data as { code?: unknown }).code;
+      if (typeof c === "string" && c.length > 0) return c;
+    }
+  }
+  return null;
 }

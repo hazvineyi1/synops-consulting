@@ -2390,7 +2390,12 @@ paths:
     post:
       operationId: register
       tags: [auth]
-      summary: Register a new client account
+      summary: Start a free trial (sends a verification email)
+      description: >-
+        Creates an unverified account and emails a verification link. No session
+        is established and the trial clock does not start until the email is
+        verified. Always returns the same shape whether or not the email already
+        existed, to avoid account enumeration.
       requestBody:
         required: true
         content:
@@ -2398,12 +2403,59 @@ paths:
             schema:
               $ref: "#/components/schemas/RegisterInput"
       responses:
-        "201":
-          description: Created
+        "202":
+          description: Verification email sent (if the address is eligible)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+
+  /auth/verify-email:
+    post:
+      operationId: verifyEmail
+      tags: [auth]
+      summary: Verify an email address and start the trial
+      description: >-
+        Consumes a single-use verification token, marks the account verified,
+        starts the 14 day trial, provisions the first client, and establishes a
+        session. Returns the authenticated user on success.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailInput"
+      responses:
+        "200":
+          description: Verified and signed in
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthUser"
+        "400":
+          description: Invalid or expired token
+
+  /auth/resend-verification:
+    post:
+      operationId: resendVerification
+      tags: [auth]
+      summary: Resend a verification email
+      description: >-
+        Sends a fresh verification link if the address belongs to an unverified
+        account. Always returns the same shape to avoid account enumeration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendVerificationInput"
+      responses:
+        "202":
+          description: Verification email sent (if the address is eligible)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
 
   /auth/login:
     post:
@@ -2772,6 +2824,46 @@ components:
           description: >-
             When set, the real super admin currently impersonating this user.
             Null during a normal session.
+        effectiveTier:
+          type: string
+          description: >-
+            The actor's current entitled plan tier (e.g. trial, starter,
+            enterprise). Presentational only; never authorizes anything.
+        planLabel:
+          type: string
+          description: Human-readable label for the effective plan tier.
+        trialEndsAt:
+          type: ["string", "null"]
+          format: date-time
+          description: When the free trial ends, or null when not on a trial.
+        trialDaysRemaining:
+          type: ["integer", "null"]
+          description: >-
+            Whole days left in the trial (0 once lapsed), or null when not on a
+            trial. Display only.
+        readOnly:
+          type: boolean
+          description: >-
+            True when the tenant may view but not create or edit (e.g. an expired
+            trial). Advisory only; the server enforces writes independently.
+
+    RegisterResponse:
+      type: object
+      required: [ok, email, verificationRequired]
+      properties:
+        ok:
+          type: boolean
+        email:
+          type: string
+          format: email
+          description: The address the verification link was sent to.
+        verificationRequired:
+          type: boolean
+          description: >-
+            True when the account was created unverified and a verification link
+            was sent (no session established). False only when email verification
+            is disabled by the server kill-switch, in which case the trial has
+            already started and a session was established.
 
     RegisterInput:
       type: object
@@ -2789,6 +2881,21 @@ components:
           type: string
         productKey:
           $ref: "#/components/schemas/ProductKey"
+
+    VerifyEmailInput:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+
+    ResendVerificationInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
 
     LoginInput:
       type: object

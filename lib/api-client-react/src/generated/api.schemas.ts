@@ -42,6 +42,30 @@ export interface AuthUser {
   createdAt: string;
   /** When set, the real super admin currently impersonating this user. Null during a normal session. */
   impersonator?: Impersonator | null;
+  /** The actor's current entitled plan tier (e.g. trial, starter, enterprise). Presentational only; never authorizes anything. */
+  effectiveTier?: string;
+  /** Human-readable label for the effective plan tier. */
+  planLabel?: string;
+  /**
+     * When the free trial ends, or null when not on a trial.
+     * @nullable
+     */
+  trialEndsAt?: string | null;
+  /**
+     * Whole days left in the trial (0 once lapsed), or null when not on a trial. Display only.
+     * @nullable
+     */
+  trialDaysRemaining?: number | null;
+  /** True when the tenant may view but not create or edit (e.g. an expired trial). Advisory only; the server enforces writes independently. */
+  readOnly?: boolean;
+}
+
+export interface RegisterResponse {
+  ok: boolean;
+  /** The address the verification link was sent to. */
+  email: string;
+  /** True when the account was created unverified and a verification link was sent (no session established). False only when email verification is disabled by the server kill-switch, in which case the trial has already started and a session was established. */
+  verificationRequired: boolean;
 }
 
 export interface RegisterInput {
@@ -51,6 +75,14 @@ export interface RegisterInput {
   name: string;
   organization?: string;
   productKey?: ProductKey;
+}
+
+export interface VerifyEmailInput {
+  token: string;
+}
+
+export interface ResendVerificationInput {
+  email: string;
 }
 
 export interface LoginInput {

@@ -14,7 +14,7 @@ export default function ProductRegister({ product }: { product: Product }) {
     `Create your ${product.name} account`,
     `Register for ${product.name}, the ${product.title} from Synops Advisory Group.`,
   );
-  const { user, register } = useAuth();
+  const { user, register, resendVerification } = useAuth();
 
   const [name, setName] = useState("");
   const [organization, setOrganization] = useState("");
@@ -22,6 +22,12 @@ export default function ProductRegister({ product }: { product: Product }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Set once registration succeeds and a verification link has been sent. We
+  // then swap the form for a "check your email" confirmation instead of logging
+  // the user in, because the trial does not start until the address is confirmed.
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [resendState, setResendState] = useState<"idle" | "sending" | "sent">("idle");
 
   if (user) {
     return <Redirect to={`~/${user.productKey}`} />;
@@ -38,17 +44,87 @@ export default function ProductRegister({ product }: { product: Product }) {
 
     setSubmitting(true);
     try {
-      await register({
+      const res = await register({
         name,
         email,
         password,
         organization: organization.trim() || undefined,
         productKey: product.key as RegisterInput["productKey"],
       });
+      if (res.verificationRequired) {
+        setSentTo(res.email);
+      }
+      // When verification is disabled the context refreshed /me; the `if (user)`
+      // redirect above takes over on the next render.
     } catch (err) {
       setError(authErrorMessage(err));
       setSubmitting(false);
     }
+  }
+
+  async function onResend() {
+    if (!sentTo) return;
+    setResendState("sending");
+    try {
+      await resendVerification(sentTo);
+    } finally {
+      setResendState("sent");
+    }
+  }
+
+  if (sentTo) {
+    return (
+      <AuthShell
+        title="Check your email"
+        subtitle={`Confirm your address to start your ${product.title} trial.`}
+        eyebrow={`${product.name} \u00b7 ${product.vertical}`}
+        panelLine={product.panelLine}
+        accent={product.accent}
+        footer={
+          <p>
+            Already confirmed?{" "}
+            <Link
+              href={`/${product.key}/login`}
+              className="font-medium hover:underline"
+              style={{ color: product.accent }}
+            >
+              Sign in
+            </Link>
+          </p>
+        }
+      >
+        <div className="space-y-5">
+          <div
+            className="rounded-md border bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
+            aria-live="polite"
+          >
+            <p>
+              We sent a confirmation link to <span className="font-medium text-foreground">{sentTo}</span>.
+              Open it to confirm your address and start your 14 day free trial. No credit card required.
+            </p>
+            <p className="mt-2">
+              The link expires in 24 hours. If you do not see the email, check your spam folder.
+            </p>
+          </div>
+
+          {resendState === "sent" ? (
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              A new link is on its way if your address is still awaiting confirmation.
+            </p>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={onResend}
+              disabled={resendState === "sending"}
+            >
+              {resendState === "sending" ? "Sending..." : "Resend confirmation email"}
+            </Button>
+          )}
+        </div>
+      </AuthShell>
+    );
   }
 
   return (
@@ -118,8 +194,11 @@ export default function ProductRegister({ product }: { product: Product }) {
           style={{ backgroundColor: product.accent }}
           disabled={submitting}
         >
-          {submitting ? "Starting your trial..." : "Start free trial"}
+          {submitting ? "Creating your account..." : "Start free trial"}
         </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          We will email you a link to confirm your address before the trial begins.
+        </p>
       </form>
     </AuthShell>
   );

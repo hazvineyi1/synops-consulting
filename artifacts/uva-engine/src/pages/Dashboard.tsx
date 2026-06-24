@@ -4,12 +4,16 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertTriangle, Clock, ArrowRight, CheckCircle2,
-  FolderKanban, ShieldAlert, Users, ChevronDown, type LucideIcon,
+  FolderKanban, ShieldAlert, Users, ChevronDown, Plus, Layers, type LucideIcon,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/engine/PageHeader";
 import { StageRail } from "@/components/engine/StageRail";
+import { useAuth } from "@/lib/auth-context";
+import { isBuilder } from "@/lib/roles";
+import { STAGES } from "@/lib/stages";
 import { format } from "date-fns";
 
 function isOverdue(p: { targetDeliveryDate?: string | null; status: string }): boolean {
@@ -32,6 +36,7 @@ function statIconColor(tone: StatTone, value: number): string {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const { data: summary, isLoading: isSummaryLoading } = useGetDashboardSummary();
   const { data: activity, isLoading: isActivityLoading } = useGetDashboardActivity();
   const { data: projects, isLoading: isProjectsLoading } = useListProjects();
@@ -93,6 +98,10 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {allProjects.length === 0 ? (
+        <GettingStartedCard readOnly={!!user?.readOnly} builder={isBuilder(user?.role)} />
+      ) : (
+      <>
       {/* 2. Needs attention: what to triage first */}
       <section className="space-y-4" aria-label="Needs attention">
         <div className="flex items-baseline justify-between gap-3">
@@ -236,6 +245,124 @@ export default function Dashboard() {
           </Collapsible>
         </section>
       </div>
+      </>
+      )}
     </div>
+  );
+}
+
+function GettingStartedCard({ readOnly, builder }: { readOnly: boolean; builder: boolean }) {
+  // Builders are assigned work rather than creating clients or projects, so they
+  // get a simpler explanation instead of the setup checklist.
+  if (builder) {
+    return (
+      <Card>
+        <CardContent className="space-y-2 py-10 text-center">
+          <FolderKanban className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
+          <h2 className="text-lg font-semibold tracking-tight">No work assigned yet</h2>
+          <p className="mx-auto max-w-md text-sm text-muted-foreground">
+            When a project is assigned to you it will appear here. You will move each one
+            through Intake, Design, QA, and Handoff.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const steps = [
+    {
+      n: 1,
+      icon: Users,
+      title: "Add a client",
+      body: "Create the institution or partner you are designing curriculum for.",
+      href: "/clients",
+      cta: "Add a client",
+    },
+    {
+      n: 2,
+      icon: Plus,
+      title: "Create a project",
+      body: "Start a course design project for that client.",
+      href: "/projects/new",
+      cta: "Create a project",
+    },
+    {
+      n: 3,
+      icon: Layers,
+      title: "Move through the stages",
+      body: "Work each project through the four stages below, one gated step at a time.",
+      href: null,
+      cta: null,
+    },
+  ];
+
+  return (
+    <section className="space-y-6" aria-label="Getting started">
+      <Card>
+        <CardContent className="space-y-6 p-6">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold tracking-tight">Get started</h2>
+            <p className="text-sm text-muted-foreground">
+              Set up your workspace in three steps. Your first client and project take just a minute.
+            </p>
+          </div>
+
+          {readOnly && (
+            <div
+              role="status"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              Your free trial has ended, so creating is paused. Choose a plan from Plan and billing to start building.
+            </div>
+          )}
+
+          <ol className="space-y-4">
+            {steps.map((step) => {
+              const Icon = step.icon;
+              return (
+                <li key={step.n} className="flex items-start gap-4">
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                    aria-hidden="true"
+                  >
+                    {step.n}
+                  </span>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                      <h3 className="font-medium">{step.title}</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{step.body}</p>
+                    {step.href && step.cta && !readOnly && (
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={step.href}>{step.cta}</Link>
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+
+          <div className="rounded-lg border bg-muted/40 p-4">
+            <h3 className="text-sm font-medium">The four stages of every project</h3>
+            <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+              {STAGES.map((stage) => {
+                const Icon = stage.icon;
+                return (
+                  <div key={stage.id} className="flex items-start gap-3">
+                    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <div>
+                      <dt className="text-sm font-medium">{stage.title}</dt>
+                      <dd className="text-xs text-muted-foreground">{stage.blurb}</dd>
+                    </div>
+                  </div>
+                );
+              })}
+            </dl>
+          </div>
+        </CardContent>
+      </Card>
+    </section>
   );
 }

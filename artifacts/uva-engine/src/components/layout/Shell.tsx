@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/lib/auth-context";
 import { canManageSchool, isBuilder, canViewConsole, roleLabel } from "@/lib/roles";
 import { PRODUCT_MAP } from "@/lib/products";
+import { TrialBanner } from "@/components/portal/TrialBanner";
 import React from "react";
 
 type NavItem = { name: string; href: string; icon: typeof LayoutDashboard };
@@ -36,7 +37,7 @@ function navForRole(role?: string | null): NavSection[] {
 
   const sections: NavSection[] = [
     { label: "Overview", items: [{ name: "Dashboard", href: "/", icon: LayoutDashboard }] },
-    { label: "Build", items: build },
+    { label: "Curriculum", items: build },
   ];
 
   if (canManageSchool(role)) {
@@ -167,7 +168,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
               Sign out
             </button>
           </header>
-          <main className="flex-1 overflow-auto bg-background">{children}</main>
+          <main className="flex-1 overflow-auto bg-background">
+            <TrialBanner />
+            {children}
+          </main>
         </div>
       </div>
     </div>

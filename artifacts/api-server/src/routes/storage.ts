@@ -7,6 +7,8 @@ import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage"
 import { requireAuth } from "../lib/auth";
 import { loadActorContext } from "../lib/actor";
 import { denyNoScope, resolveProjectScope } from "../lib/tenancy";
+import { loadOrgBilling, isReadOnly } from "../lib/billing";
+import { READ_ONLY_MESSAGE } from "../lib/readonly";
 
 /**
  * Object storage endpoints. These live OUTSIDE the /compass namespace but are
@@ -28,6 +30,19 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response):
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
+  }
+
+  // Minting an upload URL is the first step of a create, so it is gated like any
+  // other write: a read-only tenant (e.g. expired trial) cannot start an upload.
+  // This route lives outside /compass, so it cannot rely on the engine's
+  // blockWritesWhenReadOnly guard and must check here.
+  const actor = req.actor!;
+  if (!actor.isGlobal && actor.organizationId != null) {
+    const org = await loadOrgBilling(actor.organizationId);
+    if (org && isReadOnly(org)) {
+      res.status(402).json({ error: "read_only", upgrade: true, message: READ_ONLY_MESSAGE });
+      return;
+    }
   }
 
   try {

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
@@ -18,6 +19,13 @@ export const usersTable = pgTable("users", {
   // authenticating (rejected at login/me and at every product/admin/actor gate).
   // School admins toggle this for the builders they manage.
   status: text("status").notNull().default("active"),
+  // When the user's email address was confirmed. NULL means unverified: a
+  // self-serve trial registrant cannot sign in or start their trial until they
+  // click the verification link. The column DEFAULTs to now() so that every
+  // pre-existing, seeded, or admin-provisioned account is treated as already
+  // verified (a backfill at migration time); ONLY the /auth/register path writes
+  // an explicit NULL to create an unverified user.
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }).default(sql`now()`),
   // Which product this user belongs to. Currently the only product is
   // "compass" (user-facing label "Curriculum Builder"); admins/super_admins can
   // access every product regardless of this value. Keep in sync with

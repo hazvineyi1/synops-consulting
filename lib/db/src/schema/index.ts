@@ -18,6 +18,7 @@ export * from "./meeting-recordings";
 export * from "./agenda";
 export * from "./time-tracking";
 export * from "./users";
+export * from "./email-verification-tokens";
 export * from "./marketing";
 export * from "./sessions";
 export * from "./billing";

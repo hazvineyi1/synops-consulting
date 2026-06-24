@@ -29,4 +29,20 @@ export interface AuthUser {
   createdAt: Date;
   /** When set, the real super admin currently impersonating this user. Null during a normal session. */
   impersonator?: Impersonator | null;
+  /** The actor's current entitled plan tier (e.g. trial, starter, enterprise). Presentational only; never authorizes anything. */
+  effectiveTier?: string;
+  /** Human-readable label for the effective plan tier. */
+  planLabel?: string;
+  /**
+     * When the free trial ends, or null when not on a trial.
+     * @nullable
+     */
+  trialEndsAt?: Date | null;
+  /**
+     * Whole days left in the trial (0 once lapsed), or null when not on a trial. Display only.
+     * @nullable
+     */
+  trialDaysRemaining?: number | null;
+  /** True when the tenant may view but not create or edit (e.g. an expired trial). Advisory only; the server enforces writes independently. */
+  readOnly?: boolean;
 }

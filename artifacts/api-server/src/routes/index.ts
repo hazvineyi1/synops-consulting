@@ -29,6 +29,7 @@ import storageRouter from "./storage";
 import billingRouter, { billingPublicRouter } from "./billing";
 import { requireAuth, requireProduct } from "../lib/auth";
 import { loadActorContext } from "../lib/actor";
+import { blockWritesWhenReadOnly } from "../lib/readonly";
 
 const router: IRouter = Router();
 
@@ -50,6 +51,13 @@ router.use(billingPublicRouter);
 // a new prefix wide open). See engine.safeguard.test.ts.
 const engineRouter = Router();
 engineRouter.use(requireAuth, requireProduct("compass"), loadActorContext);
+// Billing is mounted FIRST, above the read-only guard, so a read-only tenant
+// (e.g. an expired trial) can still reach checkout/portal to upgrade. Its own
+// handlers authorize each action.
+engineRouter.use(billingRouter);
+// From here down, create/edit/delete is refused for read-only tenants; reads
+// always pass. Global actors and the internal org bypass (see billing.canWrite).
+engineRouter.use(blockWritesWhenReadOnly);
 engineRouter.use(dashboardRouter);
 engineRouter.use(clientsRouter);
 engineRouter.use(projectsRouter);
@@ -70,7 +78,6 @@ engineRouter.use(allocationsRouter);
 engineRouter.use(classesRouter);
 engineRouter.use(schoolRouter);
 engineRouter.use(consoleRouter);
-engineRouter.use(billingRouter);
 router.use("/compass", engineRouter);
 
 // ── Object storage (top-level, self-gated) ──────────────────

@@ -8,11 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Lock } from "lucide-react";
 import { Link } from "wouter";
+import { useAuth } from "@/lib/auth-context";
 
 const LMS_OPTIONS = [
   { value: "canvas", label: "Canvas (Instructure)" },
@@ -37,6 +38,8 @@ const projectSchema = z.object({
 });
 
 export default function NewProject() {
+  const { user } = useAuth();
+  const readOnly = !!user?.readOnly;
   const { data: clients, isLoading: isClientsLoading } = useListClients();
   const createProject = useCreateProject();
   const queryClient = useQueryClient();
@@ -60,6 +63,7 @@ export default function NewProject() {
   });
 
   function onSubmit(data: z.infer<typeof projectSchema>) {
+    if (readOnly) return;
     createProject.mutate({ data }, {
       onSuccess: (project) => {
         queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
@@ -82,9 +86,19 @@ export default function NewProject() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">New Project</h1>
-          <p className="text-muted-foreground mt-1">Initialize a new course design project in the pipeline.</p>
+          <p className="text-muted-foreground mt-1">Start a new course design project in the pipeline.</p>
         </div>
       </div>
+
+      {readOnly && (
+        <div
+          role="status"
+          className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
+          Your free trial has ended. Choose a plan from Plan and billing to create new projects.
+        </div>
+      )}
 
       <Card>
         <CardContent className="p-6">
@@ -199,6 +213,10 @@ export default function NewProject() {
                           <SelectItem value="3">Tier 3 - Light Touch</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormDescription>
+                        How much build support this course needs. Tier 1 is a full custom build,
+                        Tier 2 adapts existing templates, and Tier 3 is a light review and polish.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -219,7 +237,7 @@ export default function NewProject() {
                 <Button type="button" variant="outline" className="mr-2" asChild>
                   <Link href="/projects">Cancel</Link>
                 </Button>
-                <Button type="submit" disabled={createProject.isPending}>
+                <Button type="submit" disabled={createProject.isPending || readOnly}>
                   {createProject.isPending ? "Creating..." : "Create Project"}
                 </Button>
               </div>

@@ -23,6 +23,7 @@ import Pricing from "@/pages/public/Pricing";
 import Portals from "@/pages/public/Portals";
 import ProductLogin from "@/pages/auth/ProductLogin";
 import ProductRegister from "@/pages/auth/ProductRegister";
+import ProductVerifyEmail from "@/pages/auth/ProductVerifyEmail";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -62,6 +63,13 @@ function Router() {
       {PRODUCTS.filter((p) => p.hasRegister).map((p) => (
         <Route key={`reg-${p.key}`} path={`/${p.key}/register`}>
           {() => <ProductRegister product={p} />}
+        </Route>
+      ))}
+
+      {/* Per-product email confirmation landing (POSTs the token from the link). */}
+      {PRODUCTS.filter((p) => p.hasRegister).map((p) => (
+        <Route key={`verify-${p.key}`} path={`/${p.key}/verify-email`}>
+          {() => <ProductVerifyEmail product={p} />}
         </Route>
       ))}
 
