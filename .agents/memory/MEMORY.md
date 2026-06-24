@@ -8,4 +8,5 @@
 - [Optimistic full-row toggles](optimistic-checklist-serialization.md) — when a PATCH returns the whole row, run all its optimistic toggles through ONE per-row promise chain and replay pending transforms; per-field chains let out-of-order responses clobber siblings.
 - [Audio STT empty transcript](audio-stt-empty-transcript.md) — proxy gpt-4o-mini-transcribe returns "" (no throw) for silent/no-speech audio; treat empty transcript as a failure, not success.
 - [Drizzle pg error codes](drizzle-pg-error-codes.md) — SQLSTATE (e.g. 23505) sits on err.cause not err; unwrap to map a DB constraint to a 4xx. Pair a partial unique index + atomic close for one-running-row rules.
+- [Demo usage-counting guard](demo-usage-counting-guard.md) — a useRef "log once per run" guard must be reset on every fresh-start path (Start over / Load example / Clear) or repeat runs go uncounted; never reset on plain back/next nav.
 - [video-js scene controls](video-js-scene-controls.md) — custom control wrapper on VideoTemplate (prop API + SCENE_DURATIONS export) can be silently stripped by DESIGN-subagent video iterations; re-verify after each.

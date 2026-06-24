@@ -150,6 +150,41 @@ export interface DemoSessionInput {
   path: DemoPathStep[];
 }
 
+export type CurriculumDemoSessionInputStageReached = typeof CurriculumDemoSessionInputStageReached[keyof typeof CurriculumDemoSessionInputStageReached];
+
+
+export const CurriculumDemoSessionInputStageReached = {
+  qa: 'qa',
+  handoff: 'handoff',
+} as const;
+
+export interface CurriculumDemoSessionInput {
+  courseTitle?: string;
+  gradeBand?: string;
+  objectiveCount: number;
+  assessmentCount: number;
+  qaScore: number;
+  stageReached: CurriculumDemoSessionInputStageReached;
+}
+
+export type DemoLeadInputDemo = typeof DemoLeadInputDemo[keyof typeof DemoLeadInputDemo];
+
+
+export const DemoLeadInputDemo = {
+  curriculum: 'curriculum',
+  reading: 'reading',
+} as const;
+
+export interface DemoLeadInput {
+  name: string;
+  email: string;
+  organization?: string;
+  demo: DemoLeadInputDemo;
+  summary?: string;
+  /** Honeypot field, leave empty. */
+  website?: string;
+}
+
 export type IntakeProgressInputNotes = {[key: string]: string};
 
 export type IntakeProgressInputInventorySelections = {[key: string]: string};

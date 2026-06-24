@@ -133,6 +133,9 @@ export async function sendContactNotification(
 
     const from = process.env.CONTACT_FROM_EMAIL || DEFAULT_FROM;
     const { text, html } = buildBodies(n);
+    const subject = n.source.startsWith("demo")
+      ? `New demo lead: ${n.name}`
+      : `New contact form submission: ${n.name}`;
 
     const connectors = new ReplitConnectors();
     const sendPromise = connectors.proxy("resend", "/emails", {
@@ -141,7 +144,7 @@ export async function sendContactNotification(
         from,
         to: [to],
         reply_to: n.email,
-        subject: sanitizeHeader(`New contact form submission: ${n.name}`),
+        subject: sanitizeHeader(subject),
         text,
         html,
       },

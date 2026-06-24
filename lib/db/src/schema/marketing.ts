@@ -29,6 +29,19 @@ export const demoSessionsTable = pgTable("demo_sessions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const curriculumDemoSessionsTable = pgTable("curriculum_demo_sessions", {
+  id: serial("id").primaryKey(),
+  courseTitle: text("course_title"),
+  gradeBand: text("grade_band"),
+  objectiveCount: integer("objective_count").notNull().default(0),
+  assessmentCount: integer("assessment_count").notNull().default(0),
+  qaScore: integer("qa_score").notNull().default(0),
+  stageReached: text("stage_reached"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type ContactSubmissionRow = typeof contactSubmissionsTable.$inferSelect;
 export type NewsletterSignupRow = typeof newsletterSignupsTable.$inferSelect;
 export type DemoSessionRow = typeof demoSessionsTable.$inferSelect;
+export type CurriculumDemoSessionRow =
+  typeof curriculumDemoSessionsTable.$inferSelect;

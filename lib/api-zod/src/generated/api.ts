@@ -2937,6 +2937,32 @@ export const SaveDemoSessionBody = zod.object({
 
 
 /**
+ * @summary Persist an anonymous curriculum builder demo run
+ */
+export const SaveCurriculumDemoSessionBody = zod.object({
+  "courseTitle": zod.string().optional(),
+  "gradeBand": zod.string().optional(),
+  "objectiveCount": zod.number(),
+  "assessmentCount": zod.number(),
+  "qaScore": zod.number(),
+  "stageReached": zod.enum(['qa', 'handoff'])
+})
+
+
+/**
+ * @summary Capture an opt-in demo lead and notify the team
+ */
+export const SubmitDemoLeadBody = zod.object({
+  "name": zod.string(),
+  "email": zod.string().email(),
+  "organization": zod.string().optional(),
+  "demo": zod.enum(['curriculum', 'reading']),
+  "summary": zod.string().optional(),
+  "website": zod.string().optional().describe('Honeypot field, leave empty.')
+})
+
+
+/**
  * @summary Request a presigned URL to upload a file directly to object storage
  */
 export const RequestUploadUrlBody = zod.object({

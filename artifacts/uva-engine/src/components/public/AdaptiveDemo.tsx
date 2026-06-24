@@ -28,6 +28,7 @@ import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
 } from "recharts";
+import { DemoLeadCapture } from "@/components/public/DemoLeadCapture";
 
 type Phase = "intro" | "active" | "results";
 
@@ -673,6 +674,15 @@ export function AdaptiveDemo() {
           </p>
         </div>
       </CardContent>
+
+      <div className="mx-auto mt-2 w-full max-w-xl">
+        <DemoLeadCapture
+          demo="reading"
+          summary={`Estimated mastery: ${Math.round(mastery * 100)}%\nCorrect: ${correctTotal} of ${path.length}\nStrength: ${strength?.skill ?? "Not enough signal"}\nFocus area: ${focus?.skill ?? "Not enough signal"}`}
+          heading="Send this profile to our team"
+          description="Want to talk through these results? Share your details and we will follow up. Optional."
+        />
+      </div>
 
       <CardFooter className="justify-center px-0 pb-0 pt-8">
         <Button variant="outline" onClick={handleReset}>

@@ -27,6 +27,8 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
+import { useSaveCurriculumDemoSession } from "@workspace/api-client-react";
+import { DemoLeadCapture } from "@/components/public/DemoLeadCapture";
 import { STAGES } from "@/lib/stages";
 import {
   buildExampleCourse,
@@ -154,12 +156,29 @@ export function CurriculumBuilderDemo() {
     [course, report],
   );
   const reportHeadingRef = useRef<HTMLHeadingElement>(null);
+  const logSession = useSaveCurriculumDemoSession();
+  const loggedRef = useRef(false);
 
   function goTo(i: number) {
     setStep(i);
     setAnnounce(`Step ${i + 1} of ${STAGES.length}: ${STAGES[i].title}.`);
     if (STAGES[i].slug === "qa") {
       window.setTimeout(() => reportHeadingRef.current?.focus(), 60);
+      // Count this run once, when the visitor first reaches QA. Best-effort:
+      // a failed log never interrupts the demo.
+      if (!loggedRef.current) {
+        loggedRef.current = true;
+        logSession.mutate({
+          data: {
+            courseTitle: course.title.trim() || undefined,
+            gradeBand: course.gradeBand,
+            objectiveCount: course.objectives.length,
+            assessmentCount: course.assessments.length,
+            qaScore: report.score,
+            stageReached: "qa",
+          },
+        });
+      }
     }
   }
 
@@ -246,6 +265,8 @@ export function CurriculumBuilderDemo() {
 
   function loadExample() {
     setCourse(buildExampleCourse());
+    // A fresh course is a new run, so allow the next QA visit to be counted.
+    loggedRef.current = false;
     setAnnounce("Loaded the example course.");
   }
 
@@ -257,6 +278,8 @@ export function CurriculumBuilderDemo() {
       objectives: [{ id: nextDemoId("obj"), text: "", standardId: null }],
       assessments: [],
     });
+    // A fresh course is a new run, so allow the next QA visit to be counted.
+    loggedRef.current = false;
     setAnnounce("Cleared the course so you can start from scratch.");
   }
 
@@ -590,6 +613,12 @@ export function CurriculumBuilderDemo() {
               {markdown}
             </pre>
           </div>
+          <DemoLeadCapture
+            demo="curriculum"
+            summary={`Course: ${course.title.trim() || "Untitled"}\nGrade band: ${course.gradeBand}\nOutcomes: ${course.objectives.length}\nAssessments: ${course.assessments.length}\nQA score: ${report.score}%`}
+            heading="Have our team take this the rest of the way"
+            description="Send your course and its QA report to our team. Optional, and only if you want a conversation."
+          />
         </div>
       )}
 
@@ -608,7 +637,14 @@ export function CurriculumBuilderDemo() {
             <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
           </Button>
         ) : (
-          <Button variant="outline" onClick={() => goTo(0)}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              // Starting over begins a new run; count the next QA visit again.
+              loggedRef.current = false;
+              goTo(0);
+            }}
+          >
             <RefreshCcw className="mr-2 h-4 w-4" aria-hidden="true" /> Start over
           </Button>
         )}

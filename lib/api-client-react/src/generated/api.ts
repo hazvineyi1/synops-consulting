@@ -56,10 +56,12 @@ import type {
   CrosswalkGapReport,
   CrosswalkLink,
   CrosswalkLinkInput,
+  CurriculumDemoSessionInput,
   DashboardSummary,
   DemoAnswerInput,
   DemoAnswerResult,
   DemoBank,
+  DemoLeadInput,
   DemoLevelOption,
   DemoSessionInput,
   GateStatus,
@@ -9105,6 +9107,148 @@ export const useSaveDemoSession = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSaveDemoSessionMutationOptions(options));
+    }
+
+export const getSaveCurriculumDemoSessionUrl = () => {
+
+
+
+
+  return `/api/demo/curriculum-sessions`
+}
+
+/**
+ * @summary Persist an anonymous curriculum builder demo run
+ */
+export const saveCurriculumDemoSession = async (curriculumDemoSessionInput: CurriculumDemoSessionInput, options?: RequestInit): Promise<SubmitResult> => {
+
+  return customFetch<SubmitResult>(getSaveCurriculumDemoSessionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      curriculumDemoSessionInput,)
+  }
+);}
+
+
+
+
+export const getSaveCurriculumDemoSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveCurriculumDemoSession>>, TError,{data: BodyType<CurriculumDemoSessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveCurriculumDemoSession>>, TError,{data: BodyType<CurriculumDemoSessionInput>}, TContext> => {
+
+const mutationKey = ['saveCurriculumDemoSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveCurriculumDemoSession>>, {data: BodyType<CurriculumDemoSessionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveCurriculumDemoSession(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveCurriculumDemoSessionMutationResult = NonNullable<Awaited<ReturnType<typeof saveCurriculumDemoSession>>>
+    export type SaveCurriculumDemoSessionMutationBody = BodyType<CurriculumDemoSessionInput>
+    export type SaveCurriculumDemoSessionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Persist an anonymous curriculum builder demo run
+ */
+export const useSaveCurriculumDemoSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveCurriculumDemoSession>>, TError,{data: BodyType<CurriculumDemoSessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveCurriculumDemoSession>>,
+        TError,
+        {data: BodyType<CurriculumDemoSessionInput>},
+        TContext
+      > => {
+      return useMutation(getSaveCurriculumDemoSessionMutationOptions(options));
+    }
+
+export const getSubmitDemoLeadUrl = () => {
+
+
+
+
+  return `/api/demo/leads`
+}
+
+/**
+ * @summary Capture an opt-in demo lead and notify the team
+ */
+export const submitDemoLead = async (demoLeadInput: DemoLeadInput, options?: RequestInit): Promise<SubmitResult> => {
+
+  return customFetch<SubmitResult>(getSubmitDemoLeadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      demoLeadInput,)
+  }
+);}
+
+
+
+
+export const getSubmitDemoLeadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitDemoLead>>, TError,{data: BodyType<DemoLeadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitDemoLead>>, TError,{data: BodyType<DemoLeadInput>}, TContext> => {
+
+const mutationKey = ['submitDemoLead'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitDemoLead>>, {data: BodyType<DemoLeadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitDemoLead(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitDemoLeadMutationResult = NonNullable<Awaited<ReturnType<typeof submitDemoLead>>>
+    export type SubmitDemoLeadMutationBody = BodyType<DemoLeadInput>
+    export type SubmitDemoLeadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Capture an opt-in demo lead and notify the team
+ */
+export const useSubmitDemoLead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitDemoLead>>, TError,{data: BodyType<DemoLeadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitDemoLead>>,
+        TError,
+        {data: BodyType<DemoLeadInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitDemoLeadMutationOptions(options));
     }
 
 export const getRequestUploadUrlUrl = () => {

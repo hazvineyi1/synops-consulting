@@ -2519,6 +2519,44 @@ paths:
               schema:
                 $ref: "#/components/schemas/SubmitResult"
 
+  /demo/curriculum-sessions:
+    post:
+      operationId: saveCurriculumDemoSession
+      tags: [demo]
+      summary: Persist an anonymous curriculum builder demo run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CurriculumDemoSessionInput"
+      responses:
+        "201":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitResult"
+
+  /demo/leads:
+    post:
+      operationId: submitDemoLead
+      tags: [demo]
+      summary: Capture an opt-in demo lead and notify the team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DemoLeadInput"
+      responses:
+        "201":
+          description: Received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitResult"
+
   # ── Object storage ───────────────────────────────────────────
   /storage/uploads/request-url:
     post:
@@ -2781,6 +2819,44 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DemoPathStep"
+
+    CurriculumDemoSessionInput:
+      type: object
+      required: [objectiveCount, assessmentCount, qaScore, stageReached]
+      properties:
+        courseTitle:
+          type: string
+        gradeBand:
+          type: string
+        objectiveCount:
+          type: integer
+        assessmentCount:
+          type: integer
+        qaScore:
+          type: integer
+        stageReached:
+          type: string
+          enum: [qa, handoff]
+
+    DemoLeadInput:
+      type: object
+      required: [name, email, demo]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        organization:
+          type: string
+        demo:
+          type: string
+          enum: [curriculum, reading]
+        summary:
+          type: string
+        website:
+          type: string
+          description: Honeypot field, leave empty.
 
     IntakeProgressInput:
       type: object
