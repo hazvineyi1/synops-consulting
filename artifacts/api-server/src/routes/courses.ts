@@ -23,6 +23,7 @@ import {
   resolveProjectScope,
 } from "../lib/tenancy";
 import { recordActorAudit } from "../lib/audit";
+import { createCourseWithLimit, PLANS } from "../lib/billing";
 
 const router = Router();
 
@@ -78,35 +79,55 @@ router.post("/projects/:projectId/courses", async (req, res): Promise<void> => {
   }
 
   // Creating a course is a project-level write (adds a child to the project).
-  if (
-    await denyNoScope(
-      res,
-      req.actor!,
-      await resolveProjectScope(params.data.projectId),
-      "write",
-      "Project not found",
-    )
-  ) {
+  const projectScope = await resolveProjectScope(params.data.projectId);
+  if (await denyNoScope(res, req.actor!, projectScope, "write", "Project not found")) {
     return;
   }
 
-  const [course] = await db
-    .insert(coursesTable)
-    .values({
-      projectId: params.data.projectId,
-      title: parsed.data.title,
-      creditHours: parsed.data.creditHours ?? null,
-      termWeeks: parsed.data.termWeeks ?? null,
-      moduleCount: parsed.data.moduleCount ?? null,
-      modality: parsed.data.modality ?? null,
-      accreditors: parsed.data.accreditors ?? null,
-      seatTimeHours: parsed.data.seatTimeHours ?? null,
-      courseDescription: parsed.data.courseDescription ?? null,
-      instructorName: parsed.data.instructorName ?? null,
-      instructorEmail: parsed.data.instructorEmail ?? null,
-      instructorTitle: parsed.data.instructorTitle ?? null,
-    })
-    .returning();
+  // Enforce the tenant's active-course quota atomically (advisory lock keyed by
+  // org) so two concurrent creates cannot both pass the check and overshoot.
+  // Global actors (internal staff) bypass metering.
+  const result = await createCourseWithLimit(
+    projectScope!.orgId,
+    req.actor!.isGlobal,
+    async (exec) => {
+      const [created] = await exec
+        .insert(coursesTable)
+        .values({
+          projectId: params.data.projectId,
+          title: parsed.data.title,
+          creditHours: parsed.data.creditHours ?? null,
+          termWeeks: parsed.data.termWeeks ?? null,
+          moduleCount: parsed.data.moduleCount ?? null,
+          modality: parsed.data.modality ?? null,
+          accreditors: parsed.data.accreditors ?? null,
+          seatTimeHours: parsed.data.seatTimeHours ?? null,
+          courseDescription: parsed.data.courseDescription ?? null,
+          instructorName: parsed.data.instructorName ?? null,
+          instructorEmail: parsed.data.instructorEmail ?? null,
+          instructorTitle: parsed.data.instructorTitle ?? null,
+        })
+        .returning();
+      return created;
+    },
+  );
+
+  if (result.status === "limit_exceeded") {
+    res.status(402).json({
+      error: "upgrade_required",
+      message: `Your ${PLANS[result.tier].label} plan allows ${result.limit} active ${result.limit === 1 ? "course" : "courses"}. Upgrade your plan to add more.`,
+      tier: result.tier,
+      limit: result.limit,
+      current: result.current,
+    });
+    return;
+  }
+
+  const course = result.value;
+  if (!course) {
+    res.status(500).json({ error: "Failed to create course" });
+    return;
+  }
 
   await recordActorAudit(req.actor!, {
     action: "created",

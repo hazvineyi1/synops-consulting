@@ -12,6 +12,7 @@ const NAV = [
   { name: "Platforms", href: "/platforms" },
   { name: "Government", href: "/government" },
   { name: "Insights", href: "/insights" },
+  { name: "Pricing", href: "/pricing" },
 ];
 
 function Brandmark() {
@@ -143,6 +144,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
             <Link href="/about" className="hover:text-foreground">About</Link>
             <Link href="/insights" className="hover:text-foreground">Insights</Link>
+            <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
             <Link href="/contact" className="hover:text-foreground">Contact</Link>
             <Link href="/portals" className="hover:text-foreground">Curriculum Builder</Link>
           </nav>

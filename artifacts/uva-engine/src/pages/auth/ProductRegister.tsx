@@ -53,8 +53,8 @@ export default function ProductRegister({ product }: { product: Product }) {
 
   return (
     <AuthShell
-      title={`Create your ${product.name} account`}
-      subtitle={`Set up access to ${product.title}.`}
+      title={`Start your free ${product.title} trial`}
+      subtitle={`Create your ${product.name} account and explore ${product.title} free for 14 days. No credit card required.`}
       eyebrow={`${product.name} \u00b7 ${product.vertical}`}
       panelLine={product.panelLine}
       accent={product.accent}
@@ -118,7 +118,7 @@ export default function ProductRegister({ product }: { product: Product }) {
           style={{ backgroundColor: product.accent }}
           disabled={submitting}
         >
-          {submitting ? "Creating account..." : "Create account"}
+          {submitting ? "Starting your trial..." : "Start free trial"}
         </Button>
       </form>
     </AuthShell>

@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { eq } from "drizzle-orm";
+import { eq, or, like } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import { z } from "zod/v4";
 import { db, usersTable, organizationsTable } from "@workspace/db";
 import type { UserRow } from "@workspace/db";
 import { hashPassword, verifyPassword } from "../lib/auth";
 import { PRODUCT_KEYS, isSelfServiceProductKey } from "../lib/products";
+import { ensureStripeCustomer } from "../lib/stripeBilling";
 
 const router = Router();
 
@@ -16,6 +17,63 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many attempts. Please try again in a few minutes." },
 });
+
+// Registration is tighter than login: each successful sign-up provisions a whole
+// new tenant (org + user + Stripe customer), so we cap creation attempts well
+// below the login rate to blunt automated tenant-spam.
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many sign-up attempts. Please try again later." },
+});
+
+const TRIAL_DAYS = 14;
+
+function slugify(input: string): string {
+  const base = input
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return base || "school";
+}
+
+/**
+ * Build a unique org slug from a display name. We pre-resolve a free slug by
+ * scanning existing slugs that share the base and picking the first opening,
+ * then fall back to a numeric suffix. The DB unique constraint on `slug` is the
+ * backstop for the rare concurrent-signup race.
+ */
+async function generateOrgSlug(name: string): Promise<string> {
+  const root = slugify(name);
+  const rows = await db
+    .select({ slug: organizationsTable.slug })
+    .from(organizationsTable)
+    .where(or(eq(organizationsTable.slug, root), like(organizationsTable.slug, `${root}-%`)));
+  const taken = new Set(rows.map((r) => r.slug));
+  if (!taken.has(root)) return root;
+  for (let i = 2; i < 1000; i++) {
+    const candidate = `${root}-${i}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+  return `${root}-${Date.now().toString(36)}`;
+}
+
+// Drizzle wraps the pg driver error, so a unique_violation (SQLSTATE 23505) may
+// sit on the thrown error or anywhere along its cause chain.
+function isUniqueViolation(err: unknown): boolean {
+  let cur: unknown = err;
+  for (let i = 0; i < 6 && cur; i++) {
+    if (typeof cur === "object" && cur !== null && (cur as { code?: string }).code === "23505") {
+      return true;
+    }
+    cur = (cur as { cause?: unknown } | null)?.cause;
+  }
+  return false;
+}
 
 const registerSchema = z.object({
   email: z.string().email().max(255),
@@ -89,7 +147,7 @@ function saveSession(req: import("express").Request): Promise<void> {
   });
 }
 
-router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
+router.post("/auth/register", registerLimiter, async (req, res): Promise<void> => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
@@ -97,34 +155,86 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
   }
   const email = parsed.data.email.toLowerCase().trim();
 
-  // Public self-registration is allowed only for self-service products. There
-  // are currently none, so every product is provisioned by the engagement team:
-  // reject the attempt (the client never offers a sign-up form).
-  const productKey = parsed.data.productKey;
-  if (!productKey || !isSelfServiceProductKey(productKey)) {
-    res
-      .status(403)
-      .json({ error: "This product is provisioned by your engagement team." });
+  // Compass (Curriculum Builder) is the only self-service product. The server
+  // FORCES the product key, role, and tenant; a client-supplied productKey,
+  // role, or organization id is never trusted (registerSchema carries only
+  // display fields, and zod strips unknown keys). The allowlist check keeps the
+  // policy explicit: empty the allowlist and self-serve sign-up closes again.
+  const productKey = "compass" as const;
+  if (!isSelfServiceProductKey(productKey)) {
+    res.status(403).json({ error: "Self-service sign-up is not available right now." });
     return;
   }
 
-  const existing = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  const fullName = parsed.data.name.trim();
+  const orgName = parsed.data.organization?.trim() || `${fullName}'s programs`;
+
+  // Friendly fast duplicate check. The DB unique constraint on email is the real
+  // guard for a concurrent-signup race (handled in the catch below).
+  const existing = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.email, email));
   if (existing.length > 0) {
     res.status(409).json({ error: "An account with this email already exists." });
     return;
   }
 
   const passwordHash = await hashPassword(parsed.data.password);
-  const [user] = await db
-    .insert(usersTable)
-    .values({
-      email,
-      passwordHash,
-      name: parsed.data.name.trim(),
-      organization: parsed.data.organization?.trim() || null,
-      productKey,
-    })
-    .returning();
+  const slug = await generateOrgSlug(orgName);
+  const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+
+  // Provision the tenant atomically: a new school organization on a trial, plus
+  // the owning school_admin user bound to it. If either insert fails, neither
+  // persists (no orphan org, no half-provisioned user).
+  let user: UserRow;
+  let orgId: number;
+  try {
+    const created = await db.transaction(async (tx) => {
+      const [org] = await tx
+        .insert(organizationsTable)
+        .values({
+          name: orgName,
+          slug,
+          type: "school",
+          planTier: "trial",
+          subscriptionStatus: "trialing",
+          trialEndsAt,
+        })
+        .returning({ id: organizationsTable.id });
+      const [u] = await tx
+        .insert(usersTable)
+        .values({
+          email,
+          passwordHash,
+          name: fullName,
+          organization: orgName,
+          productKey,
+          role: "school_admin",
+          organizationId: org.id,
+        })
+        .returning();
+      return { orgId: org.id, user: u };
+    });
+    user = created.user;
+    orgId = created.orgId;
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      res.status(409).json({ error: "An account with this email already exists." });
+      return;
+    }
+    req.log.error({ err }, "Self-serve registration failed");
+    res.status(500).json({ error: "Could not create your account. Please try again." });
+    return;
+  }
+
+  // Best-effort: provision a Stripe customer up front so the first upgrade is one
+  // click. Never block sign-up on Stripe (mirrors the email degrade-to-log).
+  try {
+    await ensureStripeCustomer(orgId, email);
+  } catch (err) {
+    req.log.warn({ err, orgId }, "Deferred Stripe customer creation at sign-up");
+  }
 
   await regenerateSession(req);
   req.session.userId = user.id;

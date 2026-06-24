@@ -6,6 +6,7 @@ import connectPgSimple from "connect-pg-simple";
 import { pool } from "@workspace/db";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { handleStripeWebhook } from "./lib/stripeWebhook";
 
 const app: Express = express();
 
@@ -32,6 +33,12 @@ app.use(
   }),
 );
 app.use(cors());
+
+// Stripe webhook: needs the raw request body for signature verification, so it
+// is registered BEFORE express.json(). It self-verifies the Stripe signature and
+// is mounted before the same-origin guard (server-to-server POST has no Origin).
+app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

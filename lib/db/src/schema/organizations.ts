@@ -19,6 +19,18 @@ export const organizationsTable = pgTable("organizations", {
   tagline: text("tagline"),
   logoUrl: text("logo_url"),
   domain: text("domain"),
+  // Billing / subscription state. Compass is sold per organization (the tenant
+  // subscribes). `planTier` is the entitlement tier (trial/starter/professional/
+  // enterprise); `subscriptionStatus` mirrors the Stripe subscription lifecycle
+  // (trialing/active/past_due/canceled/incomplete). The internal tenant is always
+  // treated as enterprise/unlimited regardless of these columns. Stripe ids let
+  // us open the billing portal and reconcile webhooks; never used for authz.
+  planTier: text("plan_tier").notNull().default("trial"),
+  subscriptionStatus: text("subscription_status").notNull().default("trialing"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

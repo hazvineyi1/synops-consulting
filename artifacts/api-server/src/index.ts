@@ -6,6 +6,7 @@ import {
   ensureDemoUsers,
   ensureStandardsFrameworksSeed,
 } from "./lib/seed";
+import { initStripe } from "./lib/stripeWebhook";
 
 const rawPort = process.env["PORT"];
 
@@ -42,6 +43,10 @@ app.listen(port, (err) => {
     // 4. ensureStandardsFrameworksSeed (all envs) ensures the global CCNE
     //    standards catalog exists for crosswalk + evidence packet features.
     await ensureStandardsFrameworksSeed(logger);
+    // 5. initStripe (all envs) ensures the managed billing webhook exists and
+    //    caches its signing secret. Degrades gracefully so a Stripe outage or a
+    //    missing connection never crashes boot (billing falls back to reconcile).
+    await initStripe(logger);
   })().catch((err) => {
     logger.error({ err }, "Failed to run startup seeds");
   });

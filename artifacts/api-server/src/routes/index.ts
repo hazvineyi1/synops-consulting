@@ -26,6 +26,7 @@ import correspondenceRouter from "./correspondence";
 import timeTrackingRouter from "./time-tracking";
 import evidenceRouter from "./evidence";
 import storageRouter from "./storage";
+import billingRouter, { billingPublicRouter } from "./billing";
 import { requireAuth, requireProduct } from "../lib/auth";
 import { loadActorContext } from "../lib/actor";
 
@@ -37,6 +38,7 @@ router.use(authRouter);
 router.use(contactRouter);
 router.use(demoRouter);
 router.use(brandingRouter);
+router.use(billingPublicRouter);
 
 // ── Compass curriculum builder (single guarded namespace) ────
 // Every curriculum route lives under /compass behind ONE gate applied at the top
@@ -68,6 +70,7 @@ engineRouter.use(allocationsRouter);
 engineRouter.use(classesRouter);
 engineRouter.use(schoolRouter);
 engineRouter.use(consoleRouter);
+engineRouter.use(billingRouter);
 router.use("/compass", engineRouter);
 
 // ── Object storage (top-level, self-gated) ──────────────────

@@ -22,6 +22,7 @@ import SchoolReport from "@/pages/compass/SchoolReport";
 import MyWork from "@/pages/compass/MyWork";
 import Console from "@/pages/compass/Console";
 import ClassDetail from "@/pages/compass/ClassDetail";
+import Billing from "@/pages/compass/Billing";
 import NotFound from "@/pages/not-found";
 
 /**
@@ -71,6 +72,7 @@ export function EngineApp() {
         <Route path="/school-report">
           {manage ? <SchoolReport /> : <Redirect to="/" />}
         </Route>
+        <Route path="/billing">{manage ? <Billing /> : <Redirect to="/" />}</Route>
         <Route path="/my-work">{builder ? <MyWork /> : <Redirect to="/" />}</Route>
         <Route path="/console">
           {canViewConsole(role) ? <Console /> : <Redirect to="/" />}

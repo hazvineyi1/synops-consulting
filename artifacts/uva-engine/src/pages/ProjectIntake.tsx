@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import {
   useGetProject, getGetProjectQueryKey,
   useGetProjectGateStatus, getGetProjectGateStatusQueryKey,
@@ -25,6 +25,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 import { DeliveryTimeline } from "@/components/engine/DeliveryTimeline";
 import { DesignApproachCard } from "@/components/engine/DesignApproachCard";
@@ -59,6 +60,7 @@ export default function ProjectIntake() {
   const projectId = parseInt(params.id || "0", 10);
 
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const queryClient = useQueryClient();
 
   const { data: project } = useGetProject(projectId, {
@@ -230,7 +232,28 @@ export default function ProjectIntake() {
             toast({ title: "Course record initialized" });
             logLedger("design_decision", `Course record initialized: ${title}`);
           },
-          onError: () => toast({ title: "Failed to create course", variant: "destructive" }),
+          onError: (error) => {
+            if (error?.status === 402) {
+              const body = error.data as { message?: string } | null;
+              toast({
+                title: "Course limit reached",
+                description:
+                  body?.message ??
+                  "Your plan's active course limit has been reached. Upgrade to add more.",
+                variant: "destructive",
+                action: (
+                  <ToastAction
+                    altText="View plans and billing"
+                    onClick={() => navigate("/billing")}
+                  >
+                    View plans
+                  </ToastAction>
+                ),
+              });
+              return;
+            }
+            toast({ title: "Failed to create course", variant: "destructive" });
+          },
         }
       );
     }

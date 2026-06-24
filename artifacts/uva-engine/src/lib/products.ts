@@ -33,7 +33,7 @@ export const PRODUCTS: Product[] = [
       "Design standards-aligned curriculum with quality and accessibility checks built into every step.",
     accent: "#1d4ed8",
     icon: CompassIcon,
-    hasRegister: false,
+    hasRegister: true,
   },
 ];
 

@@ -10,6 +10,7 @@ import {
   FileBarChart,
   Briefcase,
   ShieldCheck,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -45,6 +46,7 @@ function navForRole(role?: string | null): NavSection[] {
         { name: "Builders", href: "/builders", icon: UserCog },
         { name: "Allocations", href: "/allocations", icon: KeySquare },
         { name: "School report", href: "/school-report", icon: FileBarChart },
+        { name: "Plan and billing", href: "/billing", icon: CreditCard },
       ],
     });
   }

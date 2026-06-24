@@ -58,6 +58,100 @@ export interface LoginInput {
   password: string;
 }
 
+export interface PlanFeatures {
+  whiteLabel: boolean;
+  multiAccreditorExport: boolean;
+  customDomain: boolean;
+}
+
+export type PlanCatalogEntryTier = typeof PlanCatalogEntryTier[keyof typeof PlanCatalogEntryTier];
+
+
+export const PlanCatalogEntryTier = {
+  trial: 'trial',
+  starter: 'starter',
+  professional: 'professional',
+  enterprise: 'enterprise',
+} as const;
+
+export interface PlanCatalogEntry {
+  tier: PlanCatalogEntryTier;
+  label: string;
+  description: string;
+  /**
+     * Max simultaneously-active courses; null means unlimited.
+     * @nullable
+     */
+  activeCourseLimit: number | null;
+  monthlyPriceCents: number;
+  features: PlanFeatures;
+  highlights: string[];
+}
+
+export type BillingCheckoutInputTier = typeof BillingCheckoutInputTier[keyof typeof BillingCheckoutInputTier];
+
+
+export const BillingCheckoutInputTier = {
+  starter: 'starter',
+  professional: 'professional',
+  enterprise: 'enterprise',
+} as const;
+
+export type BillingCheckoutInputInterval = typeof BillingCheckoutInputInterval[keyof typeof BillingCheckoutInputInterval];
+
+
+export const BillingCheckoutInputInterval = {
+  month: 'month',
+  year: 'year',
+} as const;
+
+export interface BillingCheckoutInput {
+  tier: BillingCheckoutInputTier;
+  interval: BillingCheckoutInputInterval;
+}
+
+export interface BillingReconcileInput {
+  /** A Stripe Checkout Session id to reconcile after redirect. */
+  sessionId?: string;
+}
+
+export interface BillingRedirect {
+  /** A Stripe-hosted URL to redirect the browser to. */
+  url: string;
+}
+
+/**
+ * The effective entitlement tier the org currently has.
+ */
+export type BillingSubscriptionTier = typeof BillingSubscriptionTier[keyof typeof BillingSubscriptionTier];
+
+
+export const BillingSubscriptionTier = {
+  trial: 'trial',
+  starter: 'starter',
+  professional: 'professional',
+  enterprise: 'enterprise',
+} as const;
+
+export interface BillingSubscription {
+  /** The effective entitlement tier the org currently has. */
+  tier: BillingSubscriptionTier;
+  planLabel: string;
+  /** The raw purchased tier stored on the org. */
+  planTier: string;
+  subscriptionStatus: string;
+  /** @nullable */
+  trialEndsAt?: string | null;
+  /** @nullable */
+  currentPeriodEnd?: string | null;
+  /** @nullable */
+  activeCourseLimit: number | null;
+  activeCourseCount: number;
+  features: PlanFeatures;
+  trialExpired: boolean;
+  hasStripeCustomer: boolean;
+}
+
 export interface OkResponse {
   ok: boolean;
 }

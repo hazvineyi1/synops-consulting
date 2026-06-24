@@ -28,6 +28,7 @@ import {
   loadBuilderScope,
   resolveProjectScope,
 } from "../lib/tenancy";
+import { activateProjectWithLimit, PLANS, type Executor } from "../lib/billing";
 
 const router = Router();
 
@@ -231,8 +232,8 @@ router.patch("/projects/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (await denyNoScope(res, req.actor!, await resolveProjectScope(params.data.id), "write", "Project not found"))
-    return;
+  const projectScope = await resolveProjectScope(params.data.id);
+  if (await denyNoScope(res, req.actor!, projectScope, "write", "Project not found")) return;
 
   const updates: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) updates.title = parsed.data.title;
@@ -247,11 +248,38 @@ router.patch("/projects/:id", async (req, res): Promise<void> => {
       ? parsed.data.targetDeliveryDate.toISOString().slice(0, 10)
       : null;
 
-  const [project] = await db
-    .update(projectsTable)
-    .set(updates)
-    .where(eq(projectsTable.id, params.data.id))
-    .returning();
+  const applyUpdate = (exec: Executor) =>
+    exec.update(projectsTable).set(updates).where(eq(projectsTable.id, params.data.id)).returning();
+
+  // Meter on (re)activation. Activating a non-active project flips its courses
+  // to count against the org's active-course quota (countActiveCourses only
+  // counts courses on active projects), so a tenant could otherwise pile courses
+  // onto an inactive project and switch it to "active" to bypass the limit. The
+  // quota check and the update run inside ONE org-advisory-locked transaction
+  // (activateProjectWithLimit) so concurrent activations cannot both pass; the
+  // 402 is returned before the update commits. Globals bypass metering.
+  let project: typeof projectsTable.$inferSelect | undefined;
+  if (parsed.data.status === "active" && projectScope) {
+    const activation = await activateProjectWithLimit(
+      projectScope.orgId,
+      params.data.id,
+      req.actor!.isGlobal,
+      applyUpdate,
+    );
+    if (activation.status === "limit_exceeded") {
+      res.status(402).json({
+        error: "upgrade_required",
+        message: `Your ${PLANS[activation.tier].label} plan allows ${activation.limit} active ${activation.limit === 1 ? "course" : "courses"}. Archive courses or upgrade your plan to activate this project.`,
+        tier: activation.tier,
+        limit: activation.limit,
+        current: activation.current,
+      });
+      return;
+    }
+    project = activation.value[0];
+  } else {
+    [project] = await applyUpdate(db);
+  }
 
   if (!project) {
     res.status(404).json({ error: "Project not found" });

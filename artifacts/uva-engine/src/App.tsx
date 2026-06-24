@@ -19,6 +19,7 @@ import Government from "@/pages/public/Government";
 import Insights from "@/pages/public/Insights";
 import InsightArticle from "@/pages/public/InsightArticle";
 import Contact from "@/pages/public/Contact";
+import Pricing from "@/pages/public/Pricing";
 import Portals from "@/pages/public/Portals";
 import ProductLogin from "@/pages/auth/ProductLogin";
 import ProductRegister from "@/pages/auth/ProductRegister";
@@ -46,6 +47,7 @@ function PublicSite() {
         <Route path="/insights" component={Insights} />
         <Route path="/insights/:slug" component={InsightArticle} />
         <Route path="/contact" component={Contact} />
+        <Route path="/pricing" component={Pricing} />
         <Route path="/portals" component={Portals} />
         <Route component={NotFound} />
       </Switch>

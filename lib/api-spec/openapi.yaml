@@ -38,6 +38,8 @@ tags:
     description: Object storage upload and serving
   - name: roster
     description: Class roster membership
+  - name: billing
+    description: Subscription plans, checkout, and billing portal
 
 paths:
   /healthz:
@@ -2643,6 +2645,86 @@ paths:
         "404":
           description: Not found or not accessible
 
+  # ── Billing ───────────────────────────────────────────────────
+  /billing/plans:
+    get:
+      operationId: listPlans
+      tags: [billing]
+      summary: Public catalog of subscription plans (presentational only)
+      responses:
+        "200":
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlanCatalogEntry"
+
+  /compass/billing/subscription:
+    get:
+      operationId: getBillingSubscription
+      tags: [billing]
+      summary: The acting organization's current plan, status, and usage
+      responses:
+        "200":
+          description: Subscription state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingSubscription"
+
+  /compass/billing/checkout:
+    post:
+      operationId: createBillingCheckout
+      tags: [billing]
+      summary: Start a Stripe Checkout session to subscribe the organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingCheckoutInput"
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingRedirect"
+
+  /compass/billing/portal:
+    post:
+      operationId: createBillingPortal
+      tags: [billing]
+      summary: Open the Stripe billing portal for the organization
+      responses:
+        "200":
+          description: Billing portal URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingRedirect"
+
+  /compass/billing/reconcile:
+    post:
+      operationId: reconcileBilling
+      tags: [billing]
+      summary: Pull the latest subscription state from Stripe after checkout
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingReconcileInput"
+      responses:
+        "200":
+          description: Updated subscription state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingSubscription"
+
 # ── Component Schemas ───────────────────────────────────────────────
 components:
   schemas:
@@ -2717,6 +2799,111 @@ components:
           format: email
         password:
           type: string
+
+    # ── Billing ───────────────────────────────────────────────────
+    PlanFeatures:
+      type: object
+      required: [whiteLabel, multiAccreditorExport, customDomain]
+      properties:
+        whiteLabel:
+          type: boolean
+        multiAccreditorExport:
+          type: boolean
+        customDomain:
+          type: boolean
+
+    PlanCatalogEntry:
+      type: object
+      required:
+        [tier, label, description, activeCourseLimit, monthlyPriceCents, features, highlights]
+      properties:
+        tier:
+          type: string
+          enum: [trial, starter, professional, enterprise]
+        label:
+          type: string
+        description:
+          type: string
+        activeCourseLimit:
+          type: ["integer", "null"]
+          description: Max simultaneously-active courses; null means unlimited.
+        monthlyPriceCents:
+          type: integer
+        features:
+          $ref: "#/components/schemas/PlanFeatures"
+        highlights:
+          type: array
+          items:
+            type: string
+
+    BillingCheckoutInput:
+      type: object
+      required: [tier, interval]
+      properties:
+        tier:
+          type: string
+          enum: [starter, professional, enterprise]
+        interval:
+          type: string
+          enum: [month, year]
+
+    BillingReconcileInput:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          description: A Stripe Checkout Session id to reconcile after redirect.
+
+    BillingRedirect:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          description: A Stripe-hosted URL to redirect the browser to.
+
+    BillingSubscription:
+      type: object
+      required:
+        [
+          tier,
+          planLabel,
+          planTier,
+          subscriptionStatus,
+          activeCourseLimit,
+          activeCourseCount,
+          features,
+          trialExpired,
+          hasStripeCustomer,
+        ]
+      properties:
+        tier:
+          type: string
+          description: The effective entitlement tier the org currently has.
+          enum: [trial, starter, professional, enterprise]
+        planLabel:
+          type: string
+        planTier:
+          type: string
+          description: The raw purchased tier stored on the org.
+        subscriptionStatus:
+          type: string
+        trialEndsAt:
+          type: ["string", "null"]
+          format: date-time
+        currentPeriodEnd:
+          type: ["string", "null"]
+          format: date-time
+        activeCourseLimit:
+          type: ["integer", "null"]
+        activeCourseCount:
+          type: integer
+        features:
+          $ref: "#/components/schemas/PlanFeatures"
+        trialExpired:
+          type: boolean
+        hasStripeCustomer:
+          type: boolean
 
     OkResponse:
       type: object

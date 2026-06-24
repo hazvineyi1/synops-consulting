@@ -3063,3 +3063,91 @@ export const GetStorageObjectParams = zod.object({
 })
 
 
+/**
+ * @summary Public catalog of subscription plans (presentational only)
+ */
+export const ListPlansResponseItem = zod.object({
+  "tier": zod.enum(['trial', 'starter', 'professional', 'enterprise']),
+  "label": zod.string(),
+  "description": zod.string(),
+  "activeCourseLimit": zod.number().nullable().describe('Max simultaneously-active courses; null means unlimited.'),
+  "monthlyPriceCents": zod.number(),
+  "features": zod.object({
+  "whiteLabel": zod.boolean(),
+  "multiAccreditorExport": zod.boolean(),
+  "customDomain": zod.boolean()
+}),
+  "highlights": zod.array(zod.string())
+})
+export const ListPlansResponse = zod.array(ListPlansResponseItem)
+
+
+/**
+ * @summary The acting organization's current plan, status, and usage
+ */
+export const GetBillingSubscriptionResponse = zod.object({
+  "tier": zod.enum(['trial', 'starter', 'professional', 'enterprise']).describe('The effective entitlement tier the org currently has.'),
+  "planLabel": zod.string(),
+  "planTier": zod.string().describe('The raw purchased tier stored on the org.'),
+  "subscriptionStatus": zod.string(),
+  "trialEndsAt": zod.coerce.date().nullish(),
+  "currentPeriodEnd": zod.coerce.date().nullish(),
+  "activeCourseLimit": zod.number().nullable(),
+  "activeCourseCount": zod.number(),
+  "features": zod.object({
+  "whiteLabel": zod.boolean(),
+  "multiAccreditorExport": zod.boolean(),
+  "customDomain": zod.boolean()
+}),
+  "trialExpired": zod.boolean(),
+  "hasStripeCustomer": zod.boolean()
+})
+
+
+/**
+ * @summary Start a Stripe Checkout session to subscribe the organization
+ */
+export const CreateBillingCheckoutBody = zod.object({
+  "tier": zod.enum(['starter', 'professional', 'enterprise']),
+  "interval": zod.enum(['month', 'year'])
+})
+
+export const CreateBillingCheckoutResponse = zod.object({
+  "url": zod.string().describe('A Stripe-hosted URL to redirect the browser to.')
+})
+
+
+/**
+ * @summary Open the Stripe billing portal for the organization
+ */
+export const CreateBillingPortalResponse = zod.object({
+  "url": zod.string().describe('A Stripe-hosted URL to redirect the browser to.')
+})
+
+
+/**
+ * @summary Pull the latest subscription state from Stripe after checkout
+ */
+export const ReconcileBillingBody = zod.object({
+  "sessionId": zod.string().optional().describe('A Stripe Checkout Session id to reconcile after redirect.')
+})
+
+export const ReconcileBillingResponse = zod.object({
+  "tier": zod.enum(['trial', 'starter', 'professional', 'enterprise']).describe('The effective entitlement tier the org currently has.'),
+  "planLabel": zod.string(),
+  "planTier": zod.string().describe('The raw purchased tier stored on the org.'),
+  "subscriptionStatus": zod.string(),
+  "trialEndsAt": zod.coerce.date().nullish(),
+  "currentPeriodEnd": zod.coerce.date().nullish(),
+  "activeCourseLimit": zod.number().nullable(),
+  "activeCourseCount": zod.number(),
+  "features": zod.object({
+  "whiteLabel": zod.boolean(),
+  "multiAccreditorExport": zod.boolean(),
+  "customDomain": zod.boolean()
+}),
+  "trialExpired": zod.boolean(),
+  "hasStripeCustomer": zod.boolean()
+})
+
+

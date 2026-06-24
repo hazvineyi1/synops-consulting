@@ -73,7 +73,7 @@ The four earlier products (Hub, Cadence, Rise, Meridian) were removed entirely
   `artifacts/uva-engine/src/lib/products.ts` (`PRODUCTS` + `PRODUCT_MAP`/`getProduct`;
   compass `title` is "Curriculum Builder"); backend
   `artifacts/api-server/src/lib/products.ts` (`PRODUCT_KEYS = ["compass"]`,
-  `SELF_SERVICE_PRODUCT_KEYS = []`, guards). Keep both key lists in sync with the
+  `SELF_SERVICE_PRODUCT_KEYS = ["compass"]`, guards). Keep both key lists in sync with the
   OpenAPI `ProductKey` enum.
 - **DB schema (source of truth):** `lib/db/src/schema/*` re-exported from
   `lib/db/src/index.ts`. Tenancy columns: `users.organization_id` (nullable),
@@ -90,7 +90,8 @@ The four earlier products (Hub, Cadence, Rise, Meridian) were removed entirely
   Generated client/hooks/schemas in `lib/api-client-react/src/generated/`; fetch
   wrapper `lib/api-client-react/src/custom-fetch.ts`.
 - **API routes:** `artifacts/api-server/src/routes/`. Public/shared: `auth.ts`
-  (sessions, `productKey` on login/me; register closed), `demo.ts` (public adaptive
+  (sessions, `productKey` on login/me; self-serve trial register open for compass),
+  `demo.ts` (public adaptive
   demo), `branding.ts` (`GET /branding`, host-resolved, never authorizes),
   `contact.ts`, health. All Compass engine routers mount inside ONE `engineRouter`
   at `/compass`, with `requireAuth` -> `requireProduct("compass")` ->
@@ -138,9 +139,14 @@ The four earlier products (Hub, Cadence, Rise, Meridian) were removed entirely
   leaking existence). Client creation copies the actor's org (never client-supplied).
   Standards frameworks/competencies are shared/global; crosswalk links are scoped.
   See `.agents/memory/compass-multitenancy.md`.
-- **Self-service registration is closed.** `SELF_SERVICE_PRODUCT_KEYS` is empty, so
-  `POST /auth/register` rejects every attempt with 403. All users are
-  admin-provisioned; the server never trusts a client-supplied `productKey`. See
+- **Self-service trial registration is open for compass.** `SELF_SERVICE_PRODUCT_KEYS`
+  is `["compass"]`, so `POST /auth/register` starts a free trial: it transactionally
+  creates a new `school`-type organization (planTier `trial`, `trialing`,
+  `trialEndsAt` +14d), a `school_admin` user bound to it, and a best-effort Stripe
+  customer; then regenerates the session. The server FORCES `productKey=compass`,
+  `role=school_admin`, and a server-generated org + slug, and never trusts a
+  client-supplied `productKey`/role/org. Register is rate-limited tighter than login.
+  Any product outside the allowlist is still 403 and admin-provisioned. See
   `.agents/memory/self-service-registration.md`.
 - **Contract-first.** Routes validate input/output with Zod; the web app consumes
   generated hooks. Regenerate after spec changes; never change `info.title`.
