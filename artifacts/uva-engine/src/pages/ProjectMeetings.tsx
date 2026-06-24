@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams } from "wouter";
 import {
   useListProjectMeetings,
@@ -61,6 +61,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Video,
+  ChevronDown,
+  type LucideIcon,
 } from "lucide-react";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 import { MeetingRecordings, formatDuration, type RecorderControlsHandle } from "@/components/engine/MeetingRecordings";
@@ -98,6 +100,7 @@ import {
 } from "@/components/ui/resizable";
 import type { ImperativePanelHandle } from "react-resizable-panels";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -2066,6 +2069,84 @@ export default function ProjectMeetings() {
 /*   proposed next agenda, mark completed / reopen                   */
 /* ------------------------------------------------------------------ */
 
+/**
+ * One agenda-board column. On desktop the three columns sit side by side and are
+ * always open. On mobile they stack, so each becomes a tap-to-expand disclosure
+ * (with a done/total count visible while collapsed) to cut vertical scrolling.
+ */
+function BoardColumn({
+  label,
+  icon: Icon,
+  count,
+  defaultOpen,
+  isMobile,
+  className,
+  children,
+}: {
+  label: string;
+  icon: LucideIcon;
+  count?: ReactNode;
+  defaultOpen: boolean;
+  isMobile: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const contentId = useId();
+
+  // Re-apply the default open state when the set of visible columns changes
+  // (e.g. a proposed agenda is generated after mount), so the mobile board keeps
+  // only the most actionable column open. Manual toggles persist because
+  // defaultOpen only changes when the column composition itself changes.
+  useEffect(() => {
+    setOpen(defaultOpen);
+  }, [defaultOpen]);
+
+  if (!isMobile) {
+    return (
+      <section className={className} aria-label={label}>
+        <div className="mb-2 flex items-center justify-between gap-2 px-1">
+          <h4 className="flex items-center gap-1.5 text-sm font-semibold">
+            <Icon className="h-4 w-4 text-primary" aria-hidden="true" /> {label}
+          </h4>
+          {count != null && (
+            <span className="shrink-0 text-xs text-muted-foreground">{count}</span>
+          )}
+        </div>
+        {children}
+      </section>
+    );
+  }
+
+  return (
+    <section className={className} aria-label={label}>
+      <div className="mb-2">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls={contentId}
+          className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="flex min-w-0 items-center gap-1.5 text-sm font-semibold">
+            <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" /> {label}
+          </span>
+          <span className="flex shrink-0 items-center gap-2 text-xs font-normal text-muted-foreground">
+            {count != null && <span>{count}</span>}
+            <ChevronDown
+              className={cn("h-4 w-4 transition-transform", open && "rotate-180")}
+              aria-hidden="true"
+            />
+          </span>
+        </button>
+      </div>
+      <div id={contentId} hidden={!open}>
+        {children}
+      </div>
+    </section>
+  );
+}
+
 function MeetingCard({
   meeting,
   isProcessing,
@@ -2126,6 +2207,15 @@ function MeetingCard({
 
   const hasPrework = plan.prework.length > 0;
   const hasStanding = plan.agenda.length > 0;
+
+  // On mobile the board columns become tap-to-expand sections to cut scrolling.
+  // The most actionable column starts open: the proposed next agenda when present,
+  // otherwise the standing agenda, otherwise pre-work. Desktop shows them all.
+  const isMobile = useIsMobile();
+  const hasProposed = Boolean(agenda);
+  const proposedDefaultOpen = true;
+  const standingDefaultOpen = !hasProposed;
+  const preworkDefaultOpen = !hasProposed && !hasStanding;
   const visibleCols = [hasPrework, hasStanding, Boolean(agenda)].filter(Boolean).length;
   const boardCols =
     visibleCols >= 3 ? "lg:grid-cols-3" : visibleCols === 2 ? "lg:grid-cols-2" : "";
@@ -2239,15 +2329,14 @@ function MeetingCard({
         <div className={`grid items-start gap-3 ${boardCols}`}>
         {/* Pre-work column */}
         {plan.prework.length > 0 && (
-          <section className="flex flex-col rounded-xl border bg-muted/30 p-3" aria-label="Pre-work">
-            <div className="mb-2 flex items-center justify-between px-1">
-              <h4 className="flex items-center gap-1.5 text-sm font-semibold">
-                <ClipboardList className="h-4 w-4 text-primary" aria-hidden="true" /> Pre-work
-              </h4>
-              <span className="text-xs text-muted-foreground">
-                {preworkDone}/{plan.prework.length}
-              </span>
-            </div>
+          <BoardColumn
+            label="Pre-work"
+            icon={ClipboardList}
+            count={`${preworkDone}/${plan.prework.length}`}
+            defaultOpen={preworkDefaultOpen}
+            isMobile={isMobile}
+            className="flex flex-col rounded-xl border bg-muted/30 p-3"
+          >
             <ul className="space-y-2">
               {plan.prework.map((item, i) => {
                 const id = `prework-${meeting.id}-${i}`;
@@ -2266,15 +2355,18 @@ function MeetingCard({
                 );
               })}
             </ul>
-          </section>
+          </BoardColumn>
         )}
 
         {/* Standing agenda column */}
         {plan.agenda.length > 0 && (
-          <section className="flex flex-col rounded-xl border bg-muted/30 p-3" aria-label="Standing agenda">
-            <h4 className="mb-2 flex items-center gap-1.5 px-1 text-sm font-semibold">
-              <FileText className="h-4 w-4 text-primary" aria-hidden="true" /> Standing agenda
-            </h4>
+          <BoardColumn
+            label="Standing agenda"
+            icon={FileText}
+            defaultOpen={standingDefaultOpen}
+            isMobile={isMobile}
+            className="flex flex-col rounded-xl border bg-muted/30 p-3"
+          >
             <ol className="space-y-2">
               {plan.agenda.map((it, i) => {
                 const hasPrompts = it.prompts.length > 0;
@@ -2334,17 +2426,19 @@ function MeetingCard({
                 );
               })}
             </ol>
-          </section>
+          </BoardColumn>
         )}
 
         {/* Proposed next agenda column */}
         {agenda && (
-          <section className="flex flex-col rounded-xl border bg-muted/30 p-3" aria-label="Proposed next agenda">
-            <div className="mb-2 flex flex-col gap-2 px-1">
-              <h4 className="flex items-center gap-1.5 text-sm font-semibold">
-                <FileText className="h-4 w-4 text-primary" aria-hidden="true" /> Proposed next agenda
-              </h4>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <BoardColumn
+            label="Proposed next agenda"
+            icon={FileText}
+            defaultOpen={proposedDefaultOpen}
+            isMobile={isMobile}
+            className="flex flex-col rounded-xl border bg-muted/30 p-3"
+          >
+            <div className="mb-2 flex flex-wrap items-center gap-2 px-1 text-xs text-muted-foreground">
                 {agenda.nextMeetingType && isMeetingType(agenda.nextMeetingType) && (
                   <Badge
                     variant="secondary"
@@ -2362,7 +2456,6 @@ function MeetingCard({
                 <span>
                   {agenda.openActionCount} open action item{agenda.openActionCount === 1 ? "" : "s"}
                 </span>
-              </div>
             </div>
             {agenda.summary.length > 0 && (
               <ul className="mb-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
@@ -2444,7 +2537,7 @@ function MeetingCard({
                 );
               })}
             </ol>
-          </section>
+          </BoardColumn>
         )}
         </div>
         )}

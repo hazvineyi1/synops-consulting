@@ -40,6 +40,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // ---------------------------------------------------------------------------
 // Rules-based kickoff interview (deterministic, no AI)
@@ -1550,6 +1551,18 @@ function CurrentAgendaView({
 }: CurrentAgendaViewProps) {
   const [expandedTranscriptId, setExpandedTranscriptId] = useState<number | null>(null);
 
+  // On mobile, collapse the kickoff phases into a single-open accordion to cut
+  // scrolling; the phase holding the active segment opens and follows progress.
+  // Desktop always shows every phase expanded.
+  const isMobile = useIsMobile();
+  const activePhaseId =
+    KICKOFF_PHASES.find((p) => p.segments.some((s) => s.index === currentActiveIdx))?.id ??
+    KICKOFF_PHASES[0].id;
+  const [openPhaseId, setOpenPhaseId] = useState<string | null>(activePhaseId);
+  useEffect(() => {
+    setOpenPhaseId(activePhaseId);
+  }, [activePhaseId]);
+
   return (
     <div className="flex flex-col">
       {/* Meeting header */}
@@ -1656,39 +1669,73 @@ function CurrentAgendaView({
 
       {/* Phase-grouped segments */}
       <div className="space-y-4 p-4">
-        {KICKOFF_PHASES.map((phase) => (
-          <section key={phase.id} aria-labelledby={`phase-${phase.id}`}>
-            <div
-              id={`phase-${phase.id}`}
-              className="mb-2 flex items-center gap-2"
-            >
-              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {phase.label}
-              </span>
-              <div className="h-px flex-1 bg-border" aria-hidden="true" />
-            </div>
-            <div className="space-y-2">
-              {phase.segments.map((seg) => (
-                <SegmentRow
-                  key={seg.index}
-                  seg={seg}
-                  checks={checks[seg.index] ?? []}
-                  status={statuses[seg.index] ?? "idle"}
-                  isActive={seg.index === currentActiveIdx}
-                  expanded={expandedSegIdx === seg.index}
-                  onExpand={() =>
-                    setExpandedSegIdx(expandedSegIdx === seg.index ? null : seg.index)
-                  }
-                  onCheckChange={(ci, v) => onCheckChange(seg.index, ci, v)}
-                  onMarkDone={() => onMarkDone(seg.index)}
-                  timerElapsed={timerElapsed[seg.index] ?? 0}
-                  timerRunning={activeTimerIdx === seg.index}
-                  onTimerToggle={() => onTimerToggle(seg.index)}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
+        {KICKOFF_PHASES.map((phase) => {
+          const phaseOpen = !isMobile || openPhaseId === phase.id;
+          const panelId = `phase-panel-${phase.id}`;
+          const phaseDone = phase.segments.filter(
+            (s) => statuses[s.index] === "done" || allChecksDone(checks, s.index),
+          ).length;
+          return (
+            <section key={phase.id} aria-labelledby={`phase-${phase.id}`}>
+              {isMobile ? (
+                <div className="mb-2">
+                  <button
+                    type="button"
+                    id={`phase-${phase.id}`}
+                    onClick={() =>
+                      setOpenPhaseId(openPhaseId === phase.id ? null : phase.id)
+                    }
+                    aria-expanded={phaseOpen}
+                    aria-controls={panelId}
+                    className="flex w-full items-center gap-2 rounded-md py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      {phase.label}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {phaseDone}/{phase.segments.length}
+                    </span>
+                    <div className="h-px flex-1 bg-border" aria-hidden="true" />
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                        phaseOpen && "rotate-180",
+                      )}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+              ) : (
+                <div id={`phase-${phase.id}`} className="mb-2 flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    {phase.label}
+                  </span>
+                  <div className="h-px flex-1 bg-border" aria-hidden="true" />
+                </div>
+              )}
+              <div id={panelId} className="space-y-2" hidden={!phaseOpen}>
+                {phase.segments.map((seg) => (
+                  <SegmentRow
+                    key={seg.index}
+                    seg={seg}
+                    checks={checks[seg.index] ?? []}
+                    status={statuses[seg.index] ?? "idle"}
+                    isActive={seg.index === currentActiveIdx}
+                    expanded={expandedSegIdx === seg.index}
+                    onExpand={() =>
+                      setExpandedSegIdx(expandedSegIdx === seg.index ? null : seg.index)
+                    }
+                    onCheckChange={(ci, v) => onCheckChange(seg.index, ci, v)}
+                    onMarkDone={() => onMarkDone(seg.index)}
+                    timerElapsed={timerElapsed[seg.index] ?? 0}
+                    timerRunning={activeTimerIdx === seg.index}
+                    onTimerToggle={() => onTimerToggle(seg.index)}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })}
 
         {/* Wrap-up footer */}
         <section aria-labelledby="wrapup-heading" className="rounded-lg border border-border bg-muted/20 p-4">
