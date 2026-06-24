@@ -327,7 +327,7 @@ export default function ProjectIntake() {
       )}
     >
       {() => (
-        <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+        <Tabs value={tab} onValueChange={setTab} className="space-y-4">
           <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto sm:grid sm:w-auto sm:grid-cols-5">
             <TabsTrigger value="start" className="shrink-0">Start</TabsTrigger>
             <TabsTrigger value="meet" className="shrink-0">Meet</TabsTrigger>
@@ -337,7 +337,7 @@ export default function ProjectIntake() {
           </TabsList>
 
           {/* START: project-start essentials */}
-          <TabsContent value="start" className="space-y-6">
+          <TabsContent value="start" className="space-y-4">
             <ProjectStartTab
               projectId={projectId}
               course={course}
@@ -354,7 +354,7 @@ export default function ProjectIntake() {
           </TabsContent>
 
           {/* PREPARE: gather and audit materials */}
-          <TabsContent value="prepare" className="space-y-6">
+          <TabsContent value="prepare" className="space-y-4">
             <DeliveryTimeline />
 
             <p className="max-w-[70ch] text-sm text-muted-foreground">

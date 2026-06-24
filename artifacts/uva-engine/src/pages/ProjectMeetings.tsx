@@ -1267,7 +1267,7 @@ export default function ProjectMeetings() {
   // The editable workspace for the working meeting. Built once and reused by both
   // the desktop resizable layout and the mobile layout so it mounts a single time.
   const mainPaneNode = selectedMeeting ? (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Record control -- visible only when idle (not recording and no pending review) */}
       {!recorderIsRecording && !recorderHasPending ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 p-4">
@@ -1386,7 +1386,7 @@ export default function ProjectMeetings() {
   return (
     <ProjectWorkspace subtitle="Run kickoff, working, and final meetings with type-aware agendas. Record audio, transcribe, and generate the next agenda.">
       {() => (
-        <Tabs defaultValue="meetings" className="space-y-6">
+        <Tabs defaultValue="meetings" className="space-y-4">
           <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:grid-cols-4">
             <TabsTrigger value="meetings">Agendas</TabsTrigger>
             <TabsTrigger value="actions">Action items</TabsTrigger>
@@ -1395,7 +1395,7 @@ export default function ProjectMeetings() {
           </TabsList>
 
           {/* ============================ MEETINGS ============================ */}
-          <TabsContent value="meetings" className="space-y-6">
+          <TabsContent value="meetings" className="space-y-4">
             {meetings.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center text-muted-foreground">
@@ -2236,7 +2236,7 @@ function MeetingCard({
             No agenda items yet. Capture notes during the meeting, then generate the next agenda.
           </div>
         ) : (
-        <div className={`grid items-start gap-4 ${boardCols}`}>
+        <div className={`grid items-start gap-3 ${boardCols}`}>
         {/* Pre-work column */}
         {plan.prework.length > 0 && (
           <section className="flex flex-col rounded-xl border bg-muted/30 p-3" aria-label="Pre-work">

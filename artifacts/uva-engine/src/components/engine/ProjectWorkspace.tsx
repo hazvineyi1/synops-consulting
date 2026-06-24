@@ -65,7 +65,7 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
   ];
 
   return (
-    <div className="mx-auto max-w-6xl p-6 md:p-8">
+    <div className="mx-auto max-w-6xl p-4 md:p-8">
       <PageHeader
         title={project.title}
         subtitle={subtitle ?? stage?.blurb}
@@ -93,7 +93,7 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
       {/* Pinned so progress and stage navigation stay visible while scrolling content. */}
       <section
         aria-label="Project navigation"
-        className="sticky top-0 z-20 -mx-6 mt-5 border-b bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8"
+        className="sticky top-0 z-20 -mx-4 mt-4 border-b bg-background/95 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8"
       >
         <StageRail
           projectId={project.id}
@@ -103,7 +103,7 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
         />
         <nav
           aria-label="Project tools"
-          className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3"
+          className="mt-2.5 flex flex-wrap items-center gap-2 border-t pt-2.5"
         >
           <span className="mr-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Tools
@@ -130,7 +130,7 @@ export function ProjectWorkspace({ stageId, subtitle, actions, meta, children }:
         </nav>
       </section>
 
-      <div className="space-y-6 pt-6">{children(ctx)}</div>
+      <div className="space-y-5 pt-5">{children(ctx)}</div>
     </div>
   );
 }

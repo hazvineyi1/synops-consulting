@@ -1655,7 +1655,7 @@ function CurrentAgendaView({
       </div>
 
       {/* Phase-grouped segments */}
-      <div className="space-y-6 p-4">
+      <div className="space-y-4 p-4">
         {KICKOFF_PHASES.map((phase) => (
           <section key={phase.id} aria-labelledby={`phase-${phase.id}`}>
             <div

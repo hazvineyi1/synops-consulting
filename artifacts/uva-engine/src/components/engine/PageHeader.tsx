@@ -25,7 +25,7 @@ interface PageHeaderProps {
  */
 export function PageHeader({ title, subtitle, crumbs, actions, children }: PageHeaderProps) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {crumbs && crumbs.length > 0 && (
         <nav aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
@@ -49,7 +49,7 @@ export function PageHeader({ title, subtitle, crumbs, actions, children }: PageH
           </ol>
         </nav>
       )}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
           {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
