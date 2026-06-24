@@ -32,6 +32,8 @@ import { DemoLeadCapture } from "@/components/public/DemoLeadCapture";
 import { STAGES } from "@/lib/stages";
 import {
   buildExampleCourse,
+  buildTemplateCourse,
+  COURSE_TEMPLATES,
   detectVerb,
   evaluateCourse,
   nextDemoId,
@@ -40,6 +42,7 @@ import {
   DEMO_STANDARD_MAP,
   RULE_CATEGORY_LABELS,
   type AssessmentType,
+  type CourseTemplateId,
   type DemoAssessment,
   type DemoCourse,
   type DemoObjective,
@@ -53,7 +56,10 @@ const GRADE_BANDS = [
   "Grades 6 to 8",
   "Grades 9 to 10",
   "Grades 11 to 12",
-  "Postsecondary",
+  "Postsecondary / higher ed",
+  "Prelicensure BSN",
+  "Workforce / corporate L&D",
+  "Continuing education",
 ];
 
 const STANDARD_FRAMEWORKS = Array.from(
@@ -149,6 +155,9 @@ export function CurriculumBuilderDemo() {
   const [step, setStep] = useState(0);
   const [announce, setAnnounce] = useState("");
   const [copied, setCopied] = useState(false);
+  const [activeTemplate, setActiveTemplate] = useState<CourseTemplateId | null>(
+    "healthcare",
+  );
 
   const report = useMemo(() => evaluateCourse(course), [course]);
   const markdown = useMemo(
@@ -263,11 +272,17 @@ export function CurriculumBuilderDemo() {
     }));
   }
 
-  function loadExample() {
-    setCourse(buildExampleCourse());
+  function loadTemplate(id: CourseTemplateId) {
+    setCourse(buildTemplateCourse(id));
+    setActiveTemplate(id);
     // A fresh course is a new run, so allow the next QA visit to be counted.
     loggedRef.current = false;
-    setAnnounce("Loaded the example course.");
+    const template = COURSE_TEMPLATES.find((t) => t.id === id);
+    setAnnounce(`Loaded the ${template?.name ?? "example"} template.`);
+  }
+
+  function loadExample() {
+    loadTemplate(activeTemplate ?? "healthcare");
   }
 
   function clearAll() {
@@ -278,6 +293,7 @@ export function CurriculumBuilderDemo() {
       objectives: [{ id: nextDemoId("obj"), text: "", standardId: null }],
       assessments: [],
     });
+    setActiveTemplate(null);
     // A fresh course is a new run, so allow the next QA visit to be counted.
     loggedRef.current = false;
     setAnnounce("Cleared the course so you can start from scratch.");
@@ -342,6 +358,49 @@ export function CurriculumBuilderDemo() {
             {STAGES[0].blurb} Start with the course basics. These fields shape the
             handoff report at the end.
           </p>
+
+          <fieldset className="space-y-3">
+            <legend className="text-sm font-semibold">
+              Start from a sector template
+            </legend>
+            <p className="text-sm text-muted-foreground">
+              Pick the example closest to your work. Each one loads a real course
+              with a few deliberate gaps, so you can watch the QA engine catch and
+              fix them.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {COURSE_TEMPLATES.map((t) => {
+                const selected = activeTemplate === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => loadTemplate(t.id)}
+                    aria-pressed={selected}
+                    className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                      selected
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "border-border bg-card hover:bg-muted"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      {selected && (
+                        <CheckCircle2
+                          className="h-4 w-4 text-primary"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {t.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {t.tagline}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="demo-title">Course title</Label>
@@ -353,13 +412,13 @@ export function CurriculumBuilderDemo() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="demo-grade">Grade band</Label>
+              <Label htmlFor="demo-grade">Audience or level</Label>
               <Select
                 value={course.gradeBand}
                 onValueChange={(v) => patchCourse({ gradeBand: v })}
               >
                 <SelectTrigger id="demo-grade">
-                  <SelectValue placeholder="Select a grade band" />
+                  <SelectValue placeholder="Select an audience or level" />
                 </SelectTrigger>
                 <SelectContent>
                   {GRADE_BANDS.map((g) => (
@@ -469,6 +528,16 @@ export function CurriculumBuilderDemo() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {o.standardId && DEMO_STANDARD_MAP[o.standardId] && (
+                      <span className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                        <ClipboardCheck
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                        {DEMO_STANDARD_MAP[o.standardId].framework}{" "}
+                        {DEMO_STANDARD_MAP[o.standardId].code}
+                      </span>
+                    )}
                   </div>
                 </li>
               ))}
@@ -615,9 +684,19 @@ export function CurriculumBuilderDemo() {
           </div>
           <DemoLeadCapture
             demo="curriculum"
-            summary={`Course: ${course.title.trim() || "Untitled"}\nGrade band: ${course.gradeBand}\nOutcomes: ${course.objectives.length}\nAssessments: ${course.assessments.length}\nQA score: ${report.score}%`}
-            heading="Have our team take this the rest of the way"
-            description="Send your course and its QA report to our team. Optional, and only if you want a conversation."
+            summary={`Course: ${course.title.trim() || "Untitled"}\nAudience or level: ${course.gradeBand}\nOutcomes: ${course.objectives.length}\nAssessments: ${course.assessments.length}\nQA score: ${report.score}%`}
+            heading="Join the Curriculum Builder waitlist"
+            description="Be first to build, QA, and ship standards-aligned curricula with our team. We save your place and send the course you just built to our specialists."
+            benefits={[
+              "Priority onboarding when Curriculum Builder opens to new teams",
+              "A working session with our specialists on the course you just built",
+              "Accreditation-ready QA across CCNE, ACEN, ATD, SHRM, and K-12 frameworks",
+            ]}
+            submitLabel="Join the waitlist"
+            pendingLabel="Joining..."
+            successTitle="You are on the waitlist."
+            successBody="We saved your place and sent your course summary to our team. We will reach out at the address you provided."
+            consentNote="We only use your details to follow up about Curriculum Builder."
           />
         </div>
       )}

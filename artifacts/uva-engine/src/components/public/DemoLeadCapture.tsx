@@ -13,11 +13,23 @@ export function DemoLeadCapture({
   summary,
   heading = "Send these results to our team",
   description = "Add your details and we will follow up. Optional, and only if you want a conversation.",
+  benefits,
+  submitLabel = "Send my results",
+  pendingLabel = "Sending...",
+  successTitle = "Thank you. Your results are on the way to our team.",
+  successBody = "We will reach out to the address you provided.",
+  consentNote,
 }: {
   demo: DemoLeadInputDemo;
   summary: string;
   heading?: string;
   description?: string;
+  benefits?: string[];
+  submitLabel?: string;
+  pendingLabel?: string;
+  successTitle?: string;
+  successBody?: string;
+  consentNote?: string;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -53,12 +65,8 @@ export function DemoLeadCapture({
           aria-hidden="true"
         />
         <div>
-          <p className="font-medium text-foreground">
-            Thank you. Your results are on the way to our team.
-          </p>
-          <p className="text-muted-foreground">
-            We will reach out to the address you provided.
-          </p>
+          <p className="font-medium text-foreground">{successTitle}</p>
+          <p className="text-muted-foreground">{successBody}</p>
         </div>
       </div>
     );
@@ -74,6 +82,24 @@ export function DemoLeadCapture({
         <h4 className="text-base font-semibold">{heading}</h4>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
+
+      {benefits && benefits.length > 0 && (
+        <ul className="space-y-1.5">
+          {benefits.map((b) => (
+            <li
+              key={b}
+              className="flex items-start gap-2 text-sm text-muted-foreground"
+            >
+              <CheckCircle2
+                className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
+              <span>{b}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor={`lead-name-${demo}`}>Name</Label>
@@ -129,10 +155,15 @@ export function DemoLeadCapture({
         </p>
       )}
 
-      <Button type="submit" disabled={mut.isPending}>
-        <Send className="mr-2 h-4 w-4" aria-hidden="true" />
-        {mut.isPending ? "Sending..." : "Send my results"}
-      </Button>
+      <div className="space-y-2">
+        <Button type="submit" disabled={mut.isPending}>
+          <Send className="mr-2 h-4 w-4" aria-hidden="true" />
+          {mut.isPending ? pendingLabel : submitLabel}
+        </Button>
+        {consentNote && (
+          <p className="text-xs text-muted-foreground">{consentNote}</p>
+        )}
+      </div>
     </form>
   );
 }

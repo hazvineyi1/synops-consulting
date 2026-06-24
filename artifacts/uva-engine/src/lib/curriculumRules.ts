@@ -104,7 +104,24 @@ export interface DemoStandard {
 
 // A small, realistic standards picklist grouped by framework. Curated so the
 // demo reads like a real cross-framework course without needing a live catalog.
+// Frameworks span accreditation (nursing), workforce, and K-12 so the demo can
+// tailor itself to the visitor's sector.
 export const DEMO_STANDARDS: DemoStandard[] = [
+  // Nursing accreditation: AACN Essentials, as reviewed for CCNE accreditation.
+  { id: "ccne-d1", framework: "Nursing (CCNE)", code: "Domain 1", label: "Knowledge for nursing practice" },
+  { id: "ccne-d2", framework: "Nursing (CCNE)", code: "Domain 2", label: "Person-centered care" },
+  { id: "ccne-d5", framework: "Nursing (CCNE)", code: "Domain 5", label: "Quality and safety" },
+  { id: "ccne-d6", framework: "Nursing (CCNE)", code: "Domain 6", label: "Interprofessional partnerships" },
+  { id: "ccne-d8", framework: "Nursing (CCNE)", code: "Domain 8", label: "Informatics and healthcare technologies" },
+  // Nursing accreditation: ACEN standards and end-of-program outcomes.
+  { id: "acen-curriculum", framework: "Nursing (ACEN)", code: "Std 4", label: "Curriculum aligned to professional nursing standards" },
+  { id: "acen-outcomes", framework: "Nursing (ACEN)", code: "Std 6", label: "End-of-program student learning outcomes" },
+  // Workforce and professional development.
+  { id: "atd-id", framework: "Workforce (ATD)", code: "ATD", label: "Instructional design and learning sciences" },
+  { id: "atd-pc", framework: "Workforce (ATD)", code: "ATD", label: "Performance improvement and consulting" },
+  { id: "shrm-lead", framework: "Leadership (SHRM)", code: "SHRM", label: "Leadership and navigation" },
+  { id: "shrm-comm", framework: "Leadership (SHRM)", code: "SHRM", label: "Communication" },
+  // K-12 frameworks.
   { id: "ccss-rst-9-10-7", framework: "ELA (CCSS)", code: "RST.9-10.7", label: "Translate technical information expressed in words and visuals" },
   { id: "ccss-ri-9-10-1", framework: "ELA (CCSS)", code: "RI.9-10.1", label: "Cite strong textual evidence to support analysis" },
   { id: "ccss-hss-id-a-2", framework: "Math (CCSS)", code: "HSS.ID.A.2", label: "Use statistics to compare center and spread of data sets" },
@@ -574,12 +591,120 @@ export function nextDemoId(prefix: string): string {
   return `${prefix}-${idCounter}`;
 }
 
-/**
- * A realistic starter course. It is intentionally imperfect (one vague outcome,
- * one unmapped outcome, one outcome with no assessment) so the QA stage has real
- * issues to surface; the visitor fixes them and watches the score climb.
- */
-export function buildExampleCourse(): DemoCourse {
+// Sector starter templates. Each one is intentionally imperfect (one vague
+// outcome, one unmapped outcome, one outcome with no assessment) so the QA stage
+// has real issues to surface; the visitor fixes them and watches the score climb.
+// This is the core demo hook, so it works across the sectors we sell into.
+export type CourseTemplateId = "healthcare" | "corporate" | "k12";
+
+export interface CourseTemplate {
+  id: CourseTemplateId;
+  name: string;
+  audience: string;
+  tagline: string;
+  build: () => DemoCourse;
+}
+
+/** Healthcare: a prelicensure nursing course mapped to CCNE and ACEN standards. */
+function buildHealthcareCourse(): DemoCourse {
+  const o1 = nextDemoId("obj");
+  const o2 = nextDemoId("obj");
+  const o3 = nextDemoId("obj");
+  const o4 = nextDemoId("obj");
+  return {
+    title: "Medical-Surgical Nursing: Adult Acute Care",
+    gradeBand: "Prelicensure BSN",
+    termWeeks: 15,
+    objectives: [
+      {
+        id: o1,
+        text: "Assess a postoperative patient for early signs of hemorrhage and infection.",
+        standardId: "ccne-d2",
+      },
+      {
+        id: o2,
+        text: "Understand the pathophysiology of heart failure.",
+        standardId: "ccne-d1",
+      },
+      {
+        id: o3,
+        text: "Demonstrate safe medication administration using the rights of medication administration.",
+        standardId: null,
+      },
+      {
+        id: o4,
+        text: "Recognize early signs of clinical deterioration and escalate care.",
+        standardId: "acen-outcomes",
+      },
+    ],
+    assessments: [
+      {
+        id: nextDemoId("asm"),
+        title: "Medical-surgical comprehensive exam",
+        type: "summative",
+        objectiveIds: [o1, o2],
+      },
+      {
+        id: nextDemoId("asm"),
+        title: "Medication administration skills validation",
+        type: "formative",
+        objectiveIds: [o3],
+      },
+    ],
+  };
+}
+
+/** Corporate: a new-manager leadership program mapped to ATD and SHRM. */
+function buildCorporateCourse(): DemoCourse {
+  const o1 = nextDemoId("obj");
+  const o2 = nextDemoId("obj");
+  const o3 = nextDemoId("obj");
+  const o4 = nextDemoId("obj");
+  return {
+    title: "Leadership Essentials for New Managers",
+    gradeBand: "Workforce / corporate L&D",
+    termWeeks: 6,
+    objectives: [
+      {
+        id: o1,
+        text: "Demonstrate active-listening techniques during a one-on-one meeting.",
+        standardId: "shrm-comm",
+      },
+      {
+        id: o2,
+        text: "Understand the difference between managing and leading.",
+        standardId: "shrm-lead",
+      },
+      {
+        id: o3,
+        text: "Apply a structured feedback model to deliver constructive feedback.",
+        standardId: null,
+      },
+      {
+        id: o4,
+        text: "Develop a 30-60-90 day onboarding plan for a new team member.",
+        standardId: "atd-id",
+      },
+    ],
+    assessments: [
+      {
+        id: nextDemoId("asm"),
+        title: "Leadership scenario role-play",
+        type: "formative",
+        objectiveIds: [o1, o2],
+      },
+      {
+        id: nextDemoId("asm"),
+        title: "Feedback conversation simulation",
+        type: "summative",
+        objectiveIds: [o3],
+      },
+    ],
+  };
+}
+
+/** K-12: a data-literacy course mapped to Common Core standards. */
+function buildK12Course(): DemoCourse {
   const o1 = nextDemoId("obj");
   const o2 = nextDemoId("obj");
   const o3 = nextDemoId("obj");
@@ -627,6 +752,46 @@ export function buildExampleCourse(): DemoCourse {
   };
 }
 
+export const COURSE_TEMPLATES: CourseTemplate[] = [
+  {
+    id: "healthcare",
+    name: "Healthcare and nursing",
+    audience: "Prelicensure BSN",
+    tagline: "Aligned to CCNE Essentials and ACEN standards.",
+    build: buildHealthcareCourse,
+  },
+  {
+    id: "corporate",
+    name: "Corporate and workforce",
+    audience: "Workforce / corporate L&D",
+    tagline: "Leadership and onboarding aligned to ATD and SHRM.",
+    build: buildCorporateCourse,
+  },
+  {
+    id: "k12",
+    name: "K-12 classroom",
+    audience: "Grades 9 to 10",
+    tagline: "Data literacy aligned to Common Core.",
+    build: buildK12Course,
+  },
+];
+
+export const COURSE_TEMPLATE_MAP: Record<CourseTemplateId, CourseTemplate> =
+  Object.fromEntries(COURSE_TEMPLATES.map((t) => [t.id, t])) as Record<
+    CourseTemplateId,
+    CourseTemplate
+  >;
+
+/** Build a fresh course from a named sector template. */
+export function buildTemplateCourse(id: CourseTemplateId): DemoCourse {
+  return (COURSE_TEMPLATE_MAP[id] ?? COURSE_TEMPLATES[0]).build();
+}
+
+/** Default starter course for the demo: the healthcare/nursing template. */
+export function buildExampleCourse(): DemoCourse {
+  return buildHealthcareCourse();
+}
+
 function severitySymbol(severity: Severity): string {
   if (severity === "pass") return "[pass]";
   if (severity === "warn") return "[warn]";
@@ -638,7 +803,7 @@ export function renderQaReportMarkdown(course: DemoCourse, report: QaReport): st
   const lines: string[] = [];
   lines.push(`# ${course.title || "Untitled course"} - Curriculum QA Report`);
   lines.push("");
-  lines.push(`Grade band: ${course.gradeBand || "Not set"}`);
+  lines.push(`Audience or level: ${course.gradeBand || "Not set"}`);
   lines.push(`Term length: ${course.termWeeks ? `${course.termWeeks} weeks` : "Not set"}`);
   lines.push(`Overall QA score: ${report.score}%`);
   lines.push(
