@@ -835,6 +835,50 @@ paths:
               schema:
                 $ref: "#/components/schemas/QACheck"
 
+  /compass/projects/{id}/qa/evaluate:
+    post:
+      operationId: evaluateProjectQA
+      tags: [qa]
+      summary: Run the curriculum engine on a project and persist a scored QA report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: A freshly computed and persisted QA report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QaReportRecord"
+        "404":
+          description: Project not found or outside the actor's organization scope
+
+  /compass/projects/{id}/qa/report:
+    get:
+      operationId: getLatestQAReport
+      tags: [qa]
+      summary: Get the latest persisted QA report for a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The latest persisted QA report, or null if none has been computed
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: "#/components/schemas/QaReportRecord"
+                  - type: "null"
+        "404":
+          description: Project not found or outside the actor's organization scope
+
   # ── Standards Frameworks ──────────────────────────────────────
   /compass/standards-frameworks:
     get:
@@ -4135,6 +4179,12 @@ components:
           type: ["integer", "null"]
         masteryEvidence:
           type: ["string", "null"]
+        cognitiveLevel:
+          type: ["string", "null"]
+          description: "Engine-derived Bloom's level (Remember..Create); null until first QA evaluation"
+        measurabilityStatus:
+          type: ["string", "null"]
+          description: "Engine-derived: measurable | vague | unmeasurable; null until first QA evaluation"
         alignedAssessmentCount:
           type: integer
         alignedActivityCount:
@@ -4461,6 +4511,177 @@ components:
           type: integer
         failedCount:
           type: integer
+
+    # ── Curriculum QA engine ──────────────────────────────────────
+    QaVerbDetection:
+      type: object
+      required: [verb, bloomLevel, kind]
+      properties:
+        verb:
+          type: ["string", "null"]
+        bloomLevel:
+          type: ["string", "null"]
+          description: "Bloom's level: Remember | Understand | Apply | Analyze | Evaluate | Create"
+        kind:
+          type: string
+          enum: [measurable, vague, missing]
+        suggestion:
+          type: string
+
+    QaObjectiveAnalysis:
+      type: object
+      required:
+        [
+          objectiveId,
+          text,
+          detection,
+          measurability,
+          wordCount,
+          hasCriterion,
+          compound,
+          aligned,
+          standardAlignmentIds,
+          assessmentCount,
+        ]
+      properties:
+        objectiveId:
+          type: string
+        text:
+          type: string
+        detection:
+          $ref: "#/components/schemas/QaVerbDetection"
+        measurability:
+          type: string
+          enum: [measurable, vague, unmeasurable]
+        wordCount:
+          type: integer
+        hasCriterion:
+          type: boolean
+        compound:
+          type: boolean
+        aligned:
+          type: boolean
+        standardAlignmentIds:
+          type: array
+          items:
+            type: string
+        standardAlignmentLabel:
+          type: string
+        assessmentCount:
+          type: integer
+
+    QaFinding:
+      type: object
+      required: [id, severity, category, targetType, targetLabel, message]
+      properties:
+        id:
+          type: string
+        severity:
+          type: string
+          enum: [pass, warn, fail]
+        category:
+          type: string
+          enum: [measurability, standards, assessment, clarity, structure]
+        targetType:
+          type: string
+          enum: [course, objective, assessment]
+        targetId:
+          type: string
+        targetLabel:
+          type: string
+        message:
+          type: string
+        remediation:
+          type: string
+
+    QaCategoryScore:
+      type: object
+      required: [category, passed, total, score]
+      properties:
+        category:
+          type: string
+          enum: [measurability, standards, assessment, clarity, structure]
+        passed:
+          type: integer
+        total:
+          type: integer
+        score:
+          type: integer
+
+    QaReportCounts:
+      type: object
+      required: [pass, warn, fail]
+      properties:
+        pass:
+          type: integer
+        warn:
+          type: integer
+        fail:
+          type: integer
+
+    QaBloomDistributionEntry:
+      type: object
+      required: [level, count]
+      properties:
+        level:
+          type: string
+          description: "Bloom's level: Remember | Understand | Apply | Analyze | Evaluate | Create"
+        count:
+          type: integer
+
+    QaReportData:
+      type: object
+      required: [findings, score, categoryScores, counts, bloomDistribution, objectiveAnalyses]
+      properties:
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/QaFinding"
+        score:
+          type: integer
+        categoryScores:
+          type: array
+          items:
+            $ref: "#/components/schemas/QaCategoryScore"
+        counts:
+          $ref: "#/components/schemas/QaReportCounts"
+        bloomDistribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/QaBloomDistributionEntry"
+        objectiveAnalyses:
+          type: array
+          items:
+            $ref: "#/components/schemas/QaObjectiveAnalysis"
+
+    QaReportRecord:
+      type: object
+      required: [id, projectId, report, score, status, gateBlock, runAt, createdAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        report:
+          $ref: "#/components/schemas/QaReportData"
+        score:
+          type: integer
+        status:
+          type: string
+          description: "pass | warn | fail"
+        gateBlock:
+          type: boolean
+        runAt:
+          type: string
+          format: date-time
+        runByUserId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     # ── Standards ─────────────────────────────────────────────────
     StandardsFramework:

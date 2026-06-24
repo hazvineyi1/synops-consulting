@@ -34,6 +34,7 @@ const COMPASS_ROOT_PATHS = [
   "/api/assessments/1",
   "/api/projects/1/ledger",
   "/api/projects/1/qa",
+  "/api/projects/1/qa/report",
   "/api/standards-frameworks",
   "/api/projects/1/intake-progress",
 ];
@@ -44,6 +45,7 @@ const COMPASS_GUARDED_PATHS = [
   "/api/compass/dashboard/summary",
   "/api/compass/clients",
   "/api/compass/projects",
+  "/api/compass/projects/1/qa/report",
   "/api/compass/standards-frameworks",
 ];
 

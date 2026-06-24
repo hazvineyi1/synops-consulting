@@ -1193,6 +1193,16 @@ export interface Objective {
   moduleId?: number | null;
   /** @nullable */
   masteryEvidence?: string | null;
+  /**
+     * Engine-derived Bloom's level (Remember..Create); null until first QA evaluation
+     * @nullable
+     */
+  cognitiveLevel?: string | null;
+  /**
+     * Engine-derived: measurable | vague | unmeasurable; null until first QA evaluation
+     * @nullable
+     */
+  measurabilityStatus?: string | null;
   alignedAssessmentCount?: number;
   alignedActivityCount?: number;
   isFlagged?: boolean;
@@ -1372,6 +1382,144 @@ export interface QACheckUpdate {
   gateBlock?: boolean;
   passedCount?: number;
   failedCount?: number;
+}
+
+export type QaVerbDetectionKind = typeof QaVerbDetectionKind[keyof typeof QaVerbDetectionKind];
+
+
+export const QaVerbDetectionKind = {
+  measurable: 'measurable',
+  vague: 'vague',
+  missing: 'missing',
+} as const;
+
+export interface QaVerbDetection {
+  /** @nullable */
+  verb: string | null;
+  /**
+     * Bloom's level: Remember | Understand | Apply | Analyze | Evaluate | Create
+     * @nullable
+     */
+  bloomLevel: string | null;
+  kind: QaVerbDetectionKind;
+  suggestion?: string;
+}
+
+export type QaObjectiveAnalysisMeasurability = typeof QaObjectiveAnalysisMeasurability[keyof typeof QaObjectiveAnalysisMeasurability];
+
+
+export const QaObjectiveAnalysisMeasurability = {
+  measurable: 'measurable',
+  vague: 'vague',
+  unmeasurable: 'unmeasurable',
+} as const;
+
+export interface QaObjectiveAnalysis {
+  objectiveId: string;
+  text: string;
+  detection: QaVerbDetection;
+  measurability: QaObjectiveAnalysisMeasurability;
+  wordCount: number;
+  hasCriterion: boolean;
+  compound: boolean;
+  aligned: boolean;
+  standardAlignmentIds: string[];
+  standardAlignmentLabel?: string;
+  assessmentCount: number;
+}
+
+export type QaFindingSeverity = typeof QaFindingSeverity[keyof typeof QaFindingSeverity];
+
+
+export const QaFindingSeverity = {
+  pass: 'pass',
+  warn: 'warn',
+  fail: 'fail',
+} as const;
+
+export type QaFindingCategory = typeof QaFindingCategory[keyof typeof QaFindingCategory];
+
+
+export const QaFindingCategory = {
+  measurability: 'measurability',
+  standards: 'standards',
+  assessment: 'assessment',
+  clarity: 'clarity',
+  structure: 'structure',
+} as const;
+
+export type QaFindingTargetType = typeof QaFindingTargetType[keyof typeof QaFindingTargetType];
+
+
+export const QaFindingTargetType = {
+  course: 'course',
+  objective: 'objective',
+  assessment: 'assessment',
+} as const;
+
+export interface QaFinding {
+  id: string;
+  severity: QaFindingSeverity;
+  category: QaFindingCategory;
+  targetType: QaFindingTargetType;
+  targetId?: string;
+  targetLabel: string;
+  message: string;
+  remediation?: string;
+}
+
+export type QaCategoryScoreCategory = typeof QaCategoryScoreCategory[keyof typeof QaCategoryScoreCategory];
+
+
+export const QaCategoryScoreCategory = {
+  measurability: 'measurability',
+  standards: 'standards',
+  assessment: 'assessment',
+  clarity: 'clarity',
+  structure: 'structure',
+} as const;
+
+export interface QaCategoryScore {
+  category: QaCategoryScoreCategory;
+  passed: number;
+  total: number;
+  score: number;
+}
+
+export interface QaReportCounts {
+  pass: number;
+  warn: number;
+  fail: number;
+}
+
+export interface QaBloomDistributionEntry {
+  /** Bloom's level: Remember | Understand | Apply | Analyze | Evaluate | Create */
+  level: string;
+  count: number;
+}
+
+export interface QaReportData {
+  findings: QaFinding[];
+  score: number;
+  categoryScores: QaCategoryScore[];
+  counts: QaReportCounts;
+  bloomDistribution: QaBloomDistributionEntry[];
+  objectiveAnalyses: QaObjectiveAnalysis[];
+}
+
+export interface QaReportRecord {
+  id: number;
+  projectId: number;
+  report: QaReportData;
+  score: number;
+  /** pass | warn | fail */
+  status: string;
+  gateBlock: boolean;
+  runAt: string;
+  /** @nullable */
+  runByUserId?: number | null;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface StandardsFramework {

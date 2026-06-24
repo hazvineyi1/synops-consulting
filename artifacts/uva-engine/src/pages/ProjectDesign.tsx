@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
+import { ObjectiveQualityBadge } from "@/components/engine/ObjectiveQualityBadge";
 import {
   INSTRUCTIONAL_METHODS, getMethod,
   ACTIVITY_TYPE_OPTIONS, ASSESSMENT_TYPE_OPTIONS,
@@ -381,6 +382,9 @@ function DesignWorkspace({
                                 LO{i + 1}
                               </span>
                               {obj.text}
+                              <span className="ml-2 inline-block align-middle">
+                                <ObjectiveQualityBadge text={obj.text} />
+                              </span>
                             </label>
                           </div>
                         );
@@ -734,6 +738,9 @@ function AlignmentMap({
                     <td className="px-4 py-3">
                       <span className="mr-1.5 rounded bg-muted px-1 py-0.5 font-mono text-xs text-muted-foreground">LO{i + 1}</span>
                       <span className="text-sm">{obj.text}</span>
+                      <div className="mt-1.5">
+                        <ObjectiveQualityBadge text={obj.text} />
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       {aa.length === 0 ? (

@@ -18,6 +18,16 @@ export interface Objective {
   moduleId?: number | null;
   /** @nullable */
   masteryEvidence?: string | null;
+  /**
+     * Engine-derived Bloom's level (Remember..Create); null until first QA evaluation
+     * @nullable
+     */
+  cognitiveLevel?: string | null;
+  /**
+     * Engine-derived: measurable | vague | unmeasurable; null until first QA evaluation
+     * @nullable
+     */
+  measurabilityStatus?: string | null;
   alignedAssessmentCount?: number;
   alignedActivityCount?: number;
   isFlagged?: boolean;

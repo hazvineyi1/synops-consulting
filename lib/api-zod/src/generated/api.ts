@@ -487,6 +487,8 @@ export const ListObjectivesResponseItem = zod.object({
   "parentId": zod.number().nullish(),
   "moduleId": zod.number().nullish(),
   "masteryEvidence": zod.string().nullish(),
+  "cognitiveLevel": zod.string().nullish().describe('Engine-derived Bloom\'s level (Remember..Create); null until first QA evaluation'),
+  "measurabilityStatus": zod.string().nullish().describe('Engine-derived: measurable | vague | unmeasurable; null until first QA evaluation'),
   "alignedAssessmentCount": zod.number().optional(),
   "alignedActivityCount": zod.number().optional(),
   "isFlagged": zod.boolean().optional(),
@@ -538,6 +540,8 @@ export const UpdateObjectiveResponse = zod.object({
   "parentId": zod.number().nullish(),
   "moduleId": zod.number().nullish(),
   "masteryEvidence": zod.string().nullish(),
+  "cognitiveLevel": zod.string().nullish().describe('Engine-derived Bloom\'s level (Remember..Create); null until first QA evaluation'),
+  "measurabilityStatus": zod.string().nullish().describe('Engine-derived: measurable | vague | unmeasurable; null until first QA evaluation'),
   "alignedAssessmentCount": zod.number().optional(),
   "alignedActivityCount": zod.number().optional(),
   "isFlagged": zod.boolean().optional(),
@@ -901,6 +905,80 @@ export const UpdateQACheckResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().optional()
 })
+
+
+/**
+ * @summary Run the curriculum engine on a project and persist a scored QA report
+ */
+export const EvaluateProjectQAParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Get the latest persisted QA report for a project
+ */
+export const GetLatestQAReportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetLatestQAReportResponse = zod.union([zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "report": zod.object({
+  "findings": zod.array(zod.object({
+  "id": zod.string(),
+  "severity": zod.enum(['pass', 'warn', 'fail']),
+  "category": zod.enum(['measurability', 'standards', 'assessment', 'clarity', 'structure']),
+  "targetType": zod.enum(['course', 'objective', 'assessment']),
+  "targetId": zod.string().optional(),
+  "targetLabel": zod.string(),
+  "message": zod.string(),
+  "remediation": zod.string().optional()
+})),
+  "score": zod.number(),
+  "categoryScores": zod.array(zod.object({
+  "category": zod.enum(['measurability', 'standards', 'assessment', 'clarity', 'structure']),
+  "passed": zod.number(),
+  "total": zod.number(),
+  "score": zod.number()
+})),
+  "counts": zod.object({
+  "pass": zod.number(),
+  "warn": zod.number(),
+  "fail": zod.number()
+}),
+  "bloomDistribution": zod.array(zod.object({
+  "level": zod.string().describe('Bloom\'s level: Remember | Understand | Apply | Analyze | Evaluate | Create'),
+  "count": zod.number()
+})),
+  "objectiveAnalyses": zod.array(zod.object({
+  "objectiveId": zod.string(),
+  "text": zod.string(),
+  "detection": zod.object({
+  "verb": zod.string().nullable(),
+  "bloomLevel": zod.string().nullable().describe('Bloom\'s level: Remember | Understand | Apply | Analyze | Evaluate | Create'),
+  "kind": zod.enum(['measurable', 'vague', 'missing']),
+  "suggestion": zod.string().optional()
+}),
+  "measurability": zod.enum(['measurable', 'vague', 'unmeasurable']),
+  "wordCount": zod.number(),
+  "hasCriterion": zod.boolean(),
+  "compound": zod.boolean(),
+  "aligned": zod.boolean(),
+  "standardAlignmentIds": zod.array(zod.string()),
+  "standardAlignmentLabel": zod.string().optional(),
+  "assessmentCount": zod.number()
+}))
+}),
+  "score": zod.number(),
+  "status": zod.string().describe('pass | warn | fail'),
+  "gateBlock": zod.boolean(),
+  "runAt": zod.coerce.date(),
+  "runByUserId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date().optional()
+}),zod.null()])
 
 
 /**

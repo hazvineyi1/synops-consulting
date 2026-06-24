@@ -113,6 +113,7 @@ import type {
   QACheck,
   QACheckInput,
   QACheckUpdate,
+  QaReportRecord,
   RegisterInput,
   ResetBuilderPasswordInput,
   SchoolReport,
@@ -3027,6 +3028,153 @@ export const useUpdateQACheck = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getUpdateQACheckMutationOptions(options));
     }
+
+export const getEvaluateProjectQAUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/projects/${id}/qa/evaluate`
+}
+
+/**
+ * @summary Run the curriculum engine on a project and persist a scored QA report
+ */
+export const evaluateProjectQA = async (id: number, options?: RequestInit): Promise<QaReportRecord> => {
+
+  return customFetch<QaReportRecord>(getEvaluateProjectQAUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getEvaluateProjectQAMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof evaluateProjectQA>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof evaluateProjectQA>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['evaluateProjectQA'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof evaluateProjectQA>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  evaluateProjectQA(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EvaluateProjectQAMutationResult = NonNullable<Awaited<ReturnType<typeof evaluateProjectQA>>>
+
+    export type EvaluateProjectQAMutationError = ErrorType<void>
+
+    /**
+ * @summary Run the curriculum engine on a project and persist a scored QA report
+ */
+export const useEvaluateProjectQA = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof evaluateProjectQA>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof evaluateProjectQA>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getEvaluateProjectQAMutationOptions(options));
+    }
+
+export const getGetLatestQAReportUrl = (id: number,) => {
+
+
+
+
+  return `/api/compass/projects/${id}/qa/report`
+}
+
+/**
+ * @summary Get the latest persisted QA report for a project
+ */
+export const getLatestQAReport = async (id: number, options?: RequestInit): Promise<QaReportRecord | null> => {
+
+  return customFetch<QaReportRecord | null>(getGetLatestQAReportUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLatestQAReportQueryKey = (id: number,) => {
+    return [
+    `/api/compass/projects/${id}/qa/report`
+    ] as const;
+    }
+
+
+export const getGetLatestQAReportQueryOptions = <TData = Awaited<ReturnType<typeof getLatestQAReport>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLatestQAReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLatestQAReportQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLatestQAReport>>> = ({ signal }) => getLatestQAReport(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLatestQAReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLatestQAReportQueryResult = NonNullable<Awaited<ReturnType<typeof getLatestQAReport>>>
+export type GetLatestQAReportQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the latest persisted QA report for a project
+ */
+
+export function useGetLatestQAReport<TData = Awaited<ReturnType<typeof getLatestQAReport>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLatestQAReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLatestQAReportQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListStandardsFrameworksUrl = () => {
 
