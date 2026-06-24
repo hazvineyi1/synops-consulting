@@ -95,7 +95,15 @@ beforeAll(async () => {
 
   const [orgA] = await db
     .insert(organizationsTable)
-    .values({ name: "Evidence School A", slug: `${SUFFIX}-a`, type: "school", accentColor: "#0b5fff" })
+    .values({
+      name: "Evidence School A",
+      slug: `${SUFFIX}-a`,
+      type: "school",
+      accentColor: "#0b5fff",
+      // Professional tier so the evidence packet (a Professional+ feature) is
+      // entitled; the gate itself is covered by billing-features.safeguard.test.ts.
+      planTier: "professional",
+    })
     .returning();
   const [orgB] = await db
     .insert(organizationsTable)

@@ -104,7 +104,11 @@ export function useAuth(): AuthContextValue {
 export function authErrorMessage(err: unknown): string {
   if (err && typeof err === "object" && "data" in err) {
     const data = (err as { data?: unknown }).data;
-    if (data && typeof data === "object" && "error" in data) {
+    if (data && typeof data === "object") {
+      // Prefer a human-readable `message` (for example the plan-tier upgrade
+      // prompts), then fall back to the short `error` code/string.
+      const m = (data as { message?: unknown }).message;
+      if (typeof m === "string" && m.length > 0) return m;
       const e = (data as { error?: unknown }).error;
       if (typeof e === "string") return e;
     }

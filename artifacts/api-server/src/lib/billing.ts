@@ -160,6 +160,45 @@ export function activeCourseLimit(org: OrgBilling): number | null {
   return planFor(org).activeCourseLimit;
 }
 
+export type PlanFeature = keyof PlanFeatures;
+
+/** The minimum tier that grants each feature, used for upgrade prompts. */
+export const FEATURE_REQUIRED_TIER: Record<PlanFeature, PlanTier> = {
+  whiteLabel: "professional",
+  multiAccreditorExport: "professional",
+  customDomain: "enterprise",
+};
+
+const FEATURE_UPGRADE_MESSAGE: Record<PlanFeature, string> = {
+  whiteLabel:
+    "White-label branding is available on the Professional plan. Upgrade to customize this organization's branding.",
+  multiAccreditorExport:
+    "Evidence packet export is available on the Professional plan. Upgrade to download accreditation evidence.",
+  customDomain:
+    "Custom domain is available on the Enterprise plan. Upgrade this organization to assign a custom domain.",
+};
+
+export interface UpgradeRequiredBody {
+  error: "upgrade_required";
+  feature: PlanFeature;
+  requiredTier: PlanTier;
+  message: string;
+}
+
+/**
+ * Standard 402 payload for a feature the actor's plan does not include. The
+ * `message` is human-readable (surfaced directly in the UI); `feature` and
+ * `requiredTier` let the client offer a targeted upgrade.
+ */
+export function upgradeRequiredBody(feature: PlanFeature): UpgradeRequiredBody {
+  return {
+    error: "upgrade_required",
+    feature,
+    requiredTier: FEATURE_REQUIRED_TIER[feature],
+    message: FEATURE_UPGRADE_MESSAGE[feature],
+  };
+}
+
 export function hasTrialExpired(org: OrgBilling): boolean {
   if (org.subscriptionStatus !== "trialing") return false;
   if (!org.trialEndsAt) return false;
@@ -185,7 +224,7 @@ export async function countActiveCourses(orgId: number, exec: Executor = db): Pr
   return Number(rows[0]?.c ?? 0);
 }
 
-async function loadOrgBilling(orgId: number, exec: Executor): Promise<OrgBilling | null> {
+export async function loadOrgBilling(orgId: number, exec: Executor = db): Promise<OrgBilling | null> {
   const [org] = await exec
     .select({
       id: organizationsTable.id,
@@ -198,6 +237,20 @@ async function loadOrgBilling(orgId: number, exec: Executor): Promise<OrgBilling
     .from(organizationsTable)
     .where(eq(organizationsTable.id, orgId));
   return org ?? null;
+}
+
+/**
+ * Whether an organization's effective plan tier includes a given feature. A
+ * read-only entitlement check (no advisory lock needed). Missing org => false.
+ */
+export async function orgHasFeature(
+  orgId: number,
+  feature: PlanFeature,
+  exec: Executor = db,
+): Promise<boolean> {
+  const org = await loadOrgBilling(orgId, exec);
+  if (!org) return false;
+  return planFor(org).features[feature];
 }
 
 export interface LimitExceeded {

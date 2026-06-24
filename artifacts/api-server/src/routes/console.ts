@@ -33,6 +33,7 @@ import {
 } from "../lib/tenancy";
 import { isValidAccentColor, isValidLogoUrl, isValidDomain, normalizeHost } from "../lib/branding";
 import { blockWhileImpersonating } from "../lib/auth";
+import { orgHasFeature, upgradeRequiredBody } from "../lib/billing";
 
 /**
  * Super-admin console + per-scope analytics + white-label branding management.
@@ -476,6 +477,7 @@ router.patch("/admin/organizations/:id/branding", blockWhileImpersonating, async
   };
 
   // No-op patch: return the current branding rather than issuing an empty UPDATE.
+  // Kept BEFORE the entitlement gate so a no-op save is never refused.
   if (Object.keys(update).length === 0) {
     const [current] = await db.select(selection).from(organizationsTable).where(eq(organizationsTable.id, orgId));
     if (!current) {
@@ -483,6 +485,30 @@ router.patch("/admin/organizations/:id/branding", blockWhileImpersonating, async
       return;
     }
     res.json(current);
+    return;
+  }
+
+  // Plan-tier feature gating. Cosmetic white-label fields require the whiteLabel
+  // entitlement for org-bound admins; globals configure on behalf of clients and
+  // bypass (consistent with quota bypass). Assigning a non-empty custom domain
+  // requires the customDomain entitlement on the TARGET org even for globals,
+  // since the domain is durable tenant config, not throughput; clearing a domain
+  // is always allowed (so a downgraded org can still remove its host).
+  const cosmeticChanging =
+    update.name !== undefined ||
+    update.tagline !== undefined ||
+    update.accentColor !== undefined ||
+    update.logoUrl !== undefined;
+  if (cosmeticChanging && !actor.isGlobal && !(await orgHasFeature(orgId, "whiteLabel"))) {
+    res.status(402).json(upgradeRequiredBody("whiteLabel"));
+    return;
+  }
+  if (
+    typeof update.domain === "string" &&
+    update.domain.length > 0 &&
+    !(await orgHasFeature(orgId, "customDomain"))
+  ) {
+    res.status(402).json(upgradeRequiredBody("customDomain"));
     return;
   }
 

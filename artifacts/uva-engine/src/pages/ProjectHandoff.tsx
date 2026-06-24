@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetLedgerReport,
@@ -197,6 +197,13 @@ function EntryRow({ entry }: { entry: LedgerEntry }) {
   );
 }
 
+/** Pull the server-suggested filename out of a Content-Disposition header. */
+function filenameFromDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const match = /filename="?([^"]+)"?/i.exec(header);
+  return match ? match[1] : null;
+}
+
 export default function ProjectHandoff() {
   const params = useParams();
   const projectId = parseInt(params.id || "0", 10);
@@ -219,6 +226,54 @@ export default function ProjectHandoff() {
 
   const pdfHref = `/api/compass/projects/${projectId}/evidence-packet.pdf`;
   const docxHref = `/api/compass/projects/${projectId}/evidence-packet.docx`;
+
+  const [, navigate] = useLocation();
+  const [downloading, setDownloading] = useState<"pdf" | "docx" | null>(null);
+  const [exportUpgrade, setExportUpgrade] = useState<string | null>(null);
+
+  // The export is a Professional+ feature. Fetch it (rather than a plain link) so
+  // a 402 can surface an upgrade prompt instead of navigating the browser to a
+  // raw error body; a 200 streams the binary into a client-triggered download.
+  async function downloadPacket(format: "pdf" | "docx") {
+    const href = format === "pdf" ? pdfHref : docxHref;
+    setDownloading(format);
+    try {
+      const res = await fetch(href, { credentials: "include" });
+      if (res.status === 402) {
+        let message =
+          "Evidence packet export is available on the Professional plan. Upgrade to download accreditation evidence.";
+        try {
+          const body = (await res.json()) as { message?: unknown };
+          if (typeof body.message === "string" && body.message.length > 0) message = body.message;
+        } catch {
+          // Keep the default upgrade message when the body is not JSON.
+        }
+        setExportUpgrade(message);
+        toast({ title: "Upgrade required", description: message, variant: "destructive" });
+        return;
+      }
+      if (!res.ok) {
+        toast({ title: "Could not download the packet", variant: "destructive" });
+        return;
+      }
+      setExportUpgrade(null);
+      const blob = await res.blob();
+      const filename =
+        filenameFromDisposition(res.headers.get("content-disposition")) ?? `evidence-packet.${format}`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Could not download the packet", variant: "destructive" });
+    } finally {
+      setDownloading(null);
+    }
+  }
 
   const [activeKey, setActiveKey] = useState<SectionKey | null>(null);
   const [content, setContent] = useState("");
@@ -320,17 +375,39 @@ export default function ProjectHandoff() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                <Button asChild>
-                  <a href={pdfHref} download aria-label="Download evidence packet as PDF">
-                    <FileText className="mr-2 h-4 w-4" aria-hidden="true" /> Download PDF
-                  </a>
+                <Button
+                  onClick={() => downloadPacket("pdf")}
+                  disabled={downloading !== null}
+                  aria-label="Download evidence packet as PDF"
+                >
+                  <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {downloading === "pdf" ? "Preparing PDF..." : "Download PDF"}
                 </Button>
-                <Button asChild variant="outline">
-                  <a href={docxHref} download aria-label="Download evidence packet as DOCX">
-                    <FileType2 className="mr-2 h-4 w-4" aria-hidden="true" /> Download DOCX
-                  </a>
+                <Button
+                  variant="outline"
+                  onClick={() => downloadPacket("docx")}
+                  disabled={downloading !== null}
+                  aria-label="Download evidence packet as DOCX"
+                >
+                  <FileType2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {downloading === "docx" ? "Preparing DOCX..." : "Download DOCX"}
                 </Button>
               </div>
+              {exportUpgrade && (
+                <div
+                  role="alert"
+                  className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                >
+                  <p>{exportUpgrade}</p>
+                  <Button
+                    variant="link"
+                    className="mt-1 h-auto p-0 text-amber-900 underline"
+                    onClick={() => navigate("/billing")}
+                  >
+                    View plans and upgrade
+                  </Button>
+                </div>
+              )}
               {!hasQaReport ? (
                 <p className="mt-3 text-sm text-muted-foreground">
                   QA has not been run for this project yet, so the packet's quality section will read
