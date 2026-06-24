@@ -5,12 +5,19 @@
  * UVA Production Engine API
  * OpenAPI spec version: 0.1.0
  */
+import type { PlanFeatures } from './planFeatures';
+import type { PlatformOverviewOrganizationTier } from './platformOverviewOrganizationTier';
 
 export interface PlatformOverviewOrganization {
   id: number;
   name: string;
   slug: string;
   type: string;
+  /** The org's effective entitlement tier (not the raw purchased planTier). */
+  tier: PlatformOverviewOrganizationTier;
+  planLabel: string;
+  subscriptionStatus: string;
+  features: PlanFeatures;
   /** @nullable */
   domain?: string | null;
   /** @nullable */

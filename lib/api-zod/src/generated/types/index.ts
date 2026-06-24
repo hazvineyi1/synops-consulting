@@ -152,6 +152,7 @@ export * from './planFeatures';
 export * from './platformCountByKey';
 export * from './platformOverview';
 export * from './platformOverviewOrganization';
+export * from './platformOverviewOrganizationTier';
 export * from './platformOverviewTotals';
 export * from './platformUser';
 export * from './processNotesInput';

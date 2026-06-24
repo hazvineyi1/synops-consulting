@@ -1995,11 +1995,29 @@ export interface PlatformOverviewTotals {
   activeAllocations: number;
 }
 
+/**
+ * The org's effective entitlement tier (not the raw purchased planTier).
+ */
+export type PlatformOverviewOrganizationTier = typeof PlatformOverviewOrganizationTier[keyof typeof PlatformOverviewOrganizationTier];
+
+
+export const PlatformOverviewOrganizationTier = {
+  trial: 'trial',
+  starter: 'starter',
+  professional: 'professional',
+  enterprise: 'enterprise',
+} as const;
+
 export interface PlatformOverviewOrganization {
   id: number;
   name: string;
   slug: string;
   type: string;
+  /** The org's effective entitlement tier (not the raw purchased planTier). */
+  tier: PlatformOverviewOrganizationTier;
+  planLabel: string;
+  subscriptionStatus: string;
+  features: PlanFeatures;
   /** @nullable */
   domain?: string | null;
   /** @nullable */

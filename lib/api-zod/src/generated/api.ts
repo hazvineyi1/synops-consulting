@@ -2715,6 +2715,14 @@ export const GetPlatformOverviewResponse = zod.object({
   "name": zod.string(),
   "slug": zod.string(),
   "type": zod.string(),
+  "tier": zod.enum(['trial', 'starter', 'professional', 'enterprise']).describe('The org\'s effective entitlement tier (not the raw purchased planTier).'),
+  "planLabel": zod.string(),
+  "subscriptionStatus": zod.string(),
+  "features": zod.object({
+  "whiteLabel": zod.boolean(),
+  "multiAccreditorExport": zod.boolean(),
+  "customDomain": zod.boolean()
+}),
   "domain": zod.string().nullish(),
   "accentColor": zod.string().nullish(),
   "tagline": zod.string().nullish(),

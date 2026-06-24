@@ -26,7 +26,9 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   const { data } = useGetBranding({
     query: {
       queryKey: getGetBrandingQueryKey(),
-      staleTime: 5 * 60_000,
+      // Short staleTime so a downgrade-driven branding revocation reaches an
+      // already-open session within ~1 minute (branding is cosmetic, never auth).
+      staleTime: 60_000,
       retry: false,
     },
   });

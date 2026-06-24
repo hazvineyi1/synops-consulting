@@ -5411,7 +5411,7 @@ components:
     PlatformOverviewOrganization:
       type: object
       required:
-        [id, name, slug, type, users, clients, projects, activeProjects, courses, classes, builders, activeAllocations]
+        [id, name, slug, type, tier, planLabel, subscriptionStatus, features, users, clients, projects, activeProjects, courses, classes, builders, activeAllocations]
       properties:
         id:
           type: integer
@@ -5421,6 +5421,16 @@ components:
           type: string
         type:
           type: string
+        tier:
+          type: string
+          description: The org's effective entitlement tier (not the raw purchased planTier).
+          enum: [trial, starter, professional, enterprise]
+        planLabel:
+          type: string
+        subscriptionStatus:
+          type: string
+        features:
+          $ref: "#/components/schemas/PlanFeatures"
         domain:
           type: ["string", "null"]
         accentColor:

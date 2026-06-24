@@ -10,6 +10,7 @@ import {
   useUpdateOrganizationBranding,
   type PlatformOverviewOrganization,
   type PlatformOverviewTotals,
+  type PlanFeatures,
   type UpdateBrandingInput,
 } from "@workspace/api-client-react";
 import { useAuth, authErrorMessage } from "@/lib/auth-context";
@@ -50,6 +51,8 @@ import {
   ArrowRight,
   UserCheck,
   Palette,
+  Check,
+  Minus,
 } from "lucide-react";
 
 function formatTimestamp(value: string): string {
@@ -382,6 +385,37 @@ function ImpersonationCard({
   );
 }
 
+const FEATURE_LABELS: Array<{ key: keyof PlanFeatures; label: string }> = [
+  { key: "whiteLabel", label: "Branding" },
+  { key: "multiAccreditorExport", label: "Evidence export" },
+  { key: "customDomain", label: "Custom domain" },
+];
+
+// Per-org feature availability. State is conveyed by icon AND text (not color
+// alone) so the indicator meets WCAG AA.
+function FeatureBadges({ features }: { features: PlanFeatures }) {
+  return (
+    <div className="flex flex-col gap-1">
+      {FEATURE_LABELS.map(({ key, label }) => {
+        const on = features[key];
+        const Icon = on ? Check : Minus;
+        return (
+          <span
+            key={key}
+            className={`inline-flex items-center gap-1 text-xs ${
+              on ? "text-foreground" : "text-muted-foreground"
+            }`}
+          >
+            <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
+            <span>{label}</span>
+            <span className="sr-only">{on ? "included" : "not included"}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function OrganizationsCard({
   organizations,
   onSaved,
@@ -404,6 +438,7 @@ function OrganizationsCard({
             <TableRow>
               <TableHead>Organization</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Plan</TableHead>
               <TableHead>Domain</TableHead>
               <TableHead>Accent</TableHead>
               <TableHead className="text-center">Users</TableHead>
@@ -421,6 +456,14 @@ function OrganizationsCard({
                   <Badge variant={org.type === "internal" ? "default" : "secondary"}>
                     {org.type}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col gap-1.5">
+                    <Badge variant="outline" className="w-fit">
+                      {org.planLabel}
+                    </Badge>
+                    <FeatureBadges features={org.features} />
+                  </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {org.domain ?? <span className="italic">none</span>}
@@ -537,6 +580,18 @@ function BrandingDialog({
                 {formError}
               </div>
             )}
+            {org && (
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                <span className="font-medium">Plan: {org.planLabel}</span>
+                {!org.features.whiteLabel && (
+                  <p className="mt-1 text-muted-foreground">
+                    This organization's plan does not include white-label branding (a
+                    Professional plan feature). As a platform administrator you can still
+                    set its name, tagline, accent, and logo.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="brand-name">Name</Label>
               <Input
@@ -593,6 +648,13 @@ function BrandingDialog({
                 onChange={(e) => update({ domain: e.target.value })}
                 placeholder="academy.example.org (empty to clear)"
               />
+              {org && !org.features.customDomain && (
+                <p className="text-xs text-muted-foreground">
+                  Custom domain is an Enterprise plan feature. Assigning a domain to this
+                  organization will be refused until it upgrades. Clearing the domain is
+                  always allowed.
+                </p>
+              )}
             </div>
           </div>
         )}

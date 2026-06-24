@@ -41,8 +41,23 @@ requiredTier, message }` (the `message` is human-readable, ASCII only).
 - Frontend surfaces the 402: prefer the response `message` over the short `error`
   code, and for binary/export links fetch the resource (not a plain `<a href>`) so
   a 402 becomes an upgrade prompt instead of navigating to a raw error body.
-- This implementation gates *assignment/edit/export* operations only. It does NOT
-  revoke already-configured branding/domain at read time after a downgrade. If
-  immediate revocation is ever required, gate the read path (`GET /branding`,
-  domain resolution) or clear the config on downgrade -- that is a separate
-  decision, intentionally out of the assignment-gating scope.
+- Assignment/edit/export gates and the read path are now BOTH enforced. The public
+  host-resolved branding read (`GET /branding`) performs **non-destructive read-time
+  revocation**: it folds billing state into the host-match query, computes the
+  effective plan, and returns the neutral `{ branded:false, organization:null }` when
+  `!features.customDomain || !features.whiteLabel`. The stored row is untouched, so a
+  re-upgrade restores branding automatically. Check BOTH features (customDomain implies
+  whiteLabel today, but a future tier reshuffle must not leak white-label fields).
+  **Why a downgraded org keeps serving without this:** branding is loaded once and
+  cached, so an assignment-time-only gate would let a lapsed org keep its white-label
+  look indefinitely.
+- **The branding read must never become a domain/tier oracle.** A matched-but-unentitled
+  host returns the SAME neutral body as an unmatched host: no 402, no "exists but needs
+  tier X" signal. Keep reading the raw `Host` header (never `X-Forwarded-Host`) so a
+  client cannot spoof another tenant's branding. The endpoint stays cosmetic and never
+  authorizes. Cache-Control is short (`public, max-age=60`) and the web
+  branding-context staleTime matches it so a downgrade propagates within ~1 minute.
+- **Surfacing entitlements in the global console:** the cross-org overview emits the
+  EFFECTIVE tier/planLabel/features (via `planFor`), never the raw `planTier`, so admins
+  see why an action is blocked. Feature availability in the UI must be conveyed by icon
+  AND text (not color alone) for WCAG AA.

@@ -33,7 +33,14 @@ import {
 } from "../lib/tenancy";
 import { isValidAccentColor, isValidLogoUrl, isValidDomain, normalizeHost } from "../lib/branding";
 import { blockWhileImpersonating } from "../lib/auth";
-import { orgHasFeature, upgradeRequiredBody } from "../lib/billing";
+import {
+  orgHasFeature,
+  upgradeRequiredBody,
+  planFor,
+  type OrgBilling,
+  type PlanFeatures,
+  type PlanTier,
+} from "../lib/billing";
 
 /**
  * Super-admin console + per-scope analytics + white-label branding management.
@@ -70,6 +77,12 @@ interface OrgOverview {
   name: string;
   slug: string;
   type: string;
+  // Effective entitlement view (derived from billing state, never the raw
+  // planTier) so admins can see why a tenant action is gated.
+  tier: PlanTier;
+  planLabel: string;
+  subscriptionStatus: string;
+  features: PlanFeatures;
   domain: string | null;
   accentColor: string | null;
   tagline: string | null;
@@ -124,6 +137,10 @@ async function buildPlatformOverview(): Promise<PlatformOverview> {
       accentColor: organizationsTable.accentColor,
       tagline: organizationsTable.tagline,
       logoUrl: organizationsTable.logoUrl,
+      planTier: organizationsTable.planTier,
+      subscriptionStatus: organizationsTable.subscriptionStatus,
+      trialEndsAt: organizationsTable.trialEndsAt,
+      currentPeriodEnd: organizationsTable.currentPeriodEnd,
     })
     .from(organizationsTable)
     .orderBy(organizationsTable.name);
@@ -158,11 +175,24 @@ async function buildPlatformOverview(): Promise<PlatformOverview> {
   const organizations: OrgOverview[] = orgs.map((org) => {
     const orgProjects = projects.filter((p) => projectOrg.get(p.id) === org.id);
     const orgCourseIds = new Set(courses.filter((c) => courseOrg.get(c.id) === org.id).map((c) => c.id));
+    const billing: OrgBilling = {
+      id: org.id,
+      type: org.type,
+      planTier: org.planTier,
+      subscriptionStatus: org.subscriptionStatus,
+      trialEndsAt: org.trialEndsAt,
+      currentPeriodEnd: org.currentPeriodEnd,
+    };
+    const plan = planFor(billing);
     return {
       id: org.id,
       name: org.name,
       slug: org.slug,
       type: org.type,
+      tier: plan.tier,
+      planLabel: plan.label,
+      subscriptionStatus: org.subscriptionStatus,
+      features: plan.features,
       domain: org.domain,
       accentColor: org.accentColor,
       tagline: org.tagline,
@@ -248,11 +278,11 @@ function renderPlatformMarkdown(o: PlatformOverview): string {
     "",
     "## Organizations",
     "",
-    "| Organization | Type | Users | Clients | Projects | Active | Courses | Classes | Builders | Active allocations |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Organization | Type | Plan | Users | Clients | Projects | Active | Courses | Classes | Builders | Active allocations |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...o.organizations.map(
       (org) =>
-        `| ${mdEscape(org.name)} | ${mdEscape(org.type)} | ${org.users} | ${org.clients} | ${org.projects} | ${org.activeProjects} | ${org.courses} | ${org.classes} | ${org.builders} | ${org.activeAllocations} |`,
+        `| ${mdEscape(org.name)} | ${mdEscape(org.type)} | ${mdEscape(org.planLabel)} | ${org.users} | ${org.clients} | ${org.projects} | ${org.activeProjects} | ${org.courses} | ${org.classes} | ${org.builders} | ${org.activeAllocations} |`,
     ),
     "",
   ];
