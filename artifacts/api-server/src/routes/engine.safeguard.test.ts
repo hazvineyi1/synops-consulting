@@ -85,3 +85,31 @@ describe("Compass engine namespace safeguard", () => {
     }
   });
 });
+
+/**
+ * Safeguard: the internal plan/price catalog must never be served to the public.
+ *
+ * A public `GET /billing/plans` endpoint used to expose internal plan tiers,
+ * prices, and selling points to anonymous visitors. It was removed; billing now
+ * lives ONLY inside the guarded /compass namespace. This test locks in that
+ * privacy boundary so a future change cannot silently reintroduce an anonymous
+ * plan/price feed: an unauthenticated request must be rejected (401/404), never
+ * answered with a 200 catalog of plans and prices.
+ */
+describe("Billing plan/price catalog privacy safeguard", () => {
+  const BILLING_PLAN_PATHS = ["/api/billing/plans", "/api/compass/billing/plans"];
+
+  it("never serves a plan/price catalog to an anonymous caller", async () => {
+    for (const path of BILLING_PLAN_PATHS) {
+      const res = await request(app).get(path);
+      expect(
+        [401, 404],
+        `${path} returned ${res.status} for an anonymous caller; the internal plan/price catalog must never be public (expected 401 or 404)`,
+      ).toContain(res.status);
+      expect(
+        res.status,
+        `${path} answered an anonymous caller with a 200; the internal plan/price catalog must never be served publicly`,
+      ).not.toBe(200);
+    }
+  });
+});
