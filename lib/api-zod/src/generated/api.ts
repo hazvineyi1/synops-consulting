@@ -3126,25 +3126,6 @@ export const GetStorageObjectParams = zod.object({
 
 
 /**
- * @summary Public catalog of subscription plans (presentational only)
- */
-export const ListPlansResponseItem = zod.object({
-  "tier": zod.enum(['trial', 'starter', 'professional', 'enterprise']),
-  "label": zod.string(),
-  "description": zod.string(),
-  "activeCourseLimit": zod.number().nullable().describe('Max simultaneously-active courses; null means unlimited.'),
-  "monthlyPriceCents": zod.number(),
-  "features": zod.object({
-  "whiteLabel": zod.boolean(),
-  "multiAccreditorExport": zod.boolean(),
-  "customDomain": zod.boolean()
-}),
-  "highlights": zod.array(zod.string())
-})
-export const ListPlansResponse = zod.array(ListPlansResponseItem)
-
-
-/**
  * @summary The acting organization's current plan, status, and usage
  */
 export const GetBillingSubscriptionResponse = zod.object({

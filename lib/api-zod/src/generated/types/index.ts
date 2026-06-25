@@ -146,8 +146,6 @@ export * from './okResponse';
 export * from './organizationBranding';
 export * from './organizationSummary';
 export * from './orgMember';
-export * from './planCatalogEntry';
-export * from './planCatalogEntryTier';
 export * from './planFeatures';
 export * from './platformCountByKey';
 export * from './platformOverview';

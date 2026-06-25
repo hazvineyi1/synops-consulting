@@ -96,30 +96,6 @@ export interface PlanFeatures {
   customDomain: boolean;
 }
 
-export type PlanCatalogEntryTier = typeof PlanCatalogEntryTier[keyof typeof PlanCatalogEntryTier];
-
-
-export const PlanCatalogEntryTier = {
-  trial: 'trial',
-  starter: 'starter',
-  professional: 'professional',
-  enterprise: 'enterprise',
-} as const;
-
-export interface PlanCatalogEntry {
-  tier: PlanCatalogEntryTier;
-  label: string;
-  description: string;
-  /**
-     * Max simultaneously-active courses; null means unlimited.
-     * @nullable
-     */
-  activeCourseLimit: number | null;
-  monthlyPriceCents: number;
-  features: PlanFeatures;
-  highlights: string[];
-}
-
 export type BillingCheckoutInputTier = typeof BillingCheckoutInputTier[keyof typeof BillingCheckoutInputTier];
 
 

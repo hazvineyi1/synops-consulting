@@ -50,78 +50,44 @@ export interface PlanFeatures {
 export interface PlanDef {
   tier: PlanTier;
   label: string;
-  /** Short marketing blurb for the pricing page. */
-  description: string;
   /** Max simultaneously-active courses; null means unlimited. */
   activeCourseLimit: number | null;
-  /** Monthly list price in cents (0 for trial). Display only; Stripe is truth. */
-  monthlyPriceCents: number;
   /** Stripe Price lookup_keys, set by the seed script (absent for trial). */
   monthlyLookupKey?: string;
   yearlyLookupKey?: string;
   features: PlanFeatures;
-  /** Human-readable selling points for the pricing page. */
-  highlights: string[];
 }
 
 export const PLANS: Record<PlanTier, PlanDef> = {
   trial: {
     tier: "trial",
     label: "Trial",
-    description: "Explore Curriculum Builder with a time-limited free trial.",
     activeCourseLimit: 2,
-    monthlyPriceCents: 0,
     features: { whiteLabel: false, multiAccreditorExport: false, customDomain: false },
-    highlights: [
-      "Up to 2 active courses",
-      "Full backward-design workflow",
-      "QA and accessibility checks",
-    ],
   },
   starter: {
     tier: "starter",
     label: "Starter",
-    description: "For a single program getting its first courses to handoff.",
     activeCourseLimit: 10,
-    monthlyPriceCents: 4900,
     monthlyLookupKey: "compass_starter_monthly",
     yearlyLookupKey: "compass_starter_yearly",
     features: { whiteLabel: false, multiAccreditorExport: false, customDomain: false },
-    highlights: [
-      "Up to 10 active courses",
-      "Standards crosswalk and gap analysis",
-      "Time tracking and ledger",
-    ],
   },
   professional: {
     tier: "professional",
     label: "Professional",
-    description: "For a department running many programs with its own brand.",
     activeCourseLimit: 50,
-    monthlyPriceCents: 14900,
     monthlyLookupKey: "compass_professional_monthly",
     yearlyLookupKey: "compass_professional_yearly",
     features: { whiteLabel: true, multiAccreditorExport: true, customDomain: false },
-    highlights: [
-      "Up to 50 active courses",
-      "White-label branding",
-      "Multi-accreditor evidence export",
-    ],
   },
   enterprise: {
     tier: "enterprise",
     label: "Enterprise",
-    description: "For an institution that needs scale, custom domain, and unlimited courses.",
     activeCourseLimit: null,
-    monthlyPriceCents: 39900,
     monthlyLookupKey: "compass_enterprise_monthly",
     yearlyLookupKey: "compass_enterprise_yearly",
     features: { whiteLabel: true, multiAccreditorExport: true, customDomain: true },
-    highlights: [
-      "Unlimited active courses",
-      "Custom domain white-labeling",
-      "All Professional features",
-    ],
   },
 };
 

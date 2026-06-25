@@ -2698,21 +2698,6 @@ paths:
           description: Not found or not accessible
 
   # ── Billing ───────────────────────────────────────────────────
-  /billing/plans:
-    get:
-      operationId: listPlans
-      tags: [billing]
-      summary: Public catalog of subscription plans (presentational only)
-      responses:
-        "200":
-          description: Plans
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/PlanCatalogEntry"
-
   /compass/billing/subscription:
     get:
       operationId: getBillingSubscription
@@ -2918,30 +2903,6 @@ components:
           type: boolean
         customDomain:
           type: boolean
-
-    PlanCatalogEntry:
-      type: object
-      required:
-        [tier, label, description, activeCourseLimit, monthlyPriceCents, features, highlights]
-      properties:
-        tier:
-          type: string
-          enum: [trial, starter, professional, enterprise]
-        label:
-          type: string
-        description:
-          type: string
-        activeCourseLimit:
-          type: ["integer", "null"]
-          description: Max simultaneously-active courses; null means unlimited.
-        monthlyPriceCents:
-          type: integer
-        features:
-          $ref: "#/components/schemas/PlanFeatures"
-        highlights:
-          type: array
-          items:
-            type: string
 
     BillingCheckoutInput:
       type: object

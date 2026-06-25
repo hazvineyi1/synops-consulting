@@ -5,7 +5,6 @@ import { db, organizationsTable, usersTable } from "@workspace/db";
 import { CreateBillingCheckoutBody, ReconcileBillingBody } from "@workspace/api-zod";
 import {
   PLANS,
-  PLAN_TIERS,
   effectiveTier,
   activeCourseLimit,
   countActiveCourses,
@@ -24,33 +23,12 @@ import { blockWhileImpersonating } from "../lib/auth";
 /**
  * Billing routes.
  *
- * Public: GET /billing/plans returns the presentational plan catalog (no Stripe
- * call, no secrets). Engine routes (mounted inside /compass, already
- * authenticated + product-gated + actor-loaded) let an org-bound school_admin
- * subscribe and manage billing for their OWN organization. We never accept an
- * organization id from the client: the billed org is always the actor's org.
- * Builders and global admins without an org cannot manage billing, and every
- * mutation is blocked while impersonating.
+ * Engine routes (mounted inside /compass, already authenticated + product-gated
+ * + actor-loaded) let an org-bound school_admin subscribe and manage billing for
+ * their OWN organization. We never accept an organization id from the client: the
+ * billed org is always the actor's org. Builders and global admins without an org
+ * cannot manage billing, and every mutation is blocked while impersonating.
  */
-
-// ── Public ──────────────────────────────────────────────────────
-export const billingPublicRouter: Router = Router();
-
-billingPublicRouter.get("/billing/plans", (_req, res): void => {
-  const plans = PLAN_TIERS.map((tier) => {
-    const plan = PLANS[tier];
-    return {
-      tier: plan.tier,
-      label: plan.label,
-      description: plan.description,
-      activeCourseLimit: plan.activeCourseLimit,
-      monthlyPriceCents: plan.monthlyPriceCents,
-      features: plan.features,
-      highlights: plan.highlights,
-    };
-  });
-  res.json(plans);
-});
 
 // ── Engine (inside /compass) ────────────────────────────────────
 const router: Router = Router();
