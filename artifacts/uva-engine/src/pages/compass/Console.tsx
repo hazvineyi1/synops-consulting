@@ -585,9 +585,9 @@ function BrandingDialog({
                 <span className="font-medium">Plan: {org.planLabel}</span>
                 {!org.features.whiteLabel && (
                   <p className="mt-1 text-muted-foreground">
-                    This organization's plan does not include white-label branding (a
-                    Professional plan feature). As a platform administrator you can still
-                    set its name, tagline, accent, and logo.
+                    This organization's plan does not include white-label branding. As a
+                    platform administrator you can still set its name, tagline, accent, and
+                    logo, or grant the feature by provisioning a plan that includes it.
                   </p>
                 )}
               </div>
@@ -650,9 +650,9 @@ function BrandingDialog({
               />
               {org && !org.features.customDomain && (
                 <p className="text-xs text-muted-foreground">
-                  Custom domain is an Enterprise plan feature. Assigning a domain to this
-                  organization will be refused until it upgrades. Clearing the domain is
-                  always allowed.
+                  This organization's plan does not include custom domains. Assigning a
+                  domain will be refused until it is provisioned a plan that includes the
+                  feature. Clearing the domain is always allowed.
                 </p>
               )}
             </div>
