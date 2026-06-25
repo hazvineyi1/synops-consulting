@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { usePageMeta } from "@/lib/seo";
 import { PRODUCTS, type Product, type ProductVertical } from "@/lib/products";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const VERTICALS: ProductVertical[] = [
   "Education",
@@ -29,7 +30,12 @@ function PortalCard({ product }: { product: Product }) {
       </CardHeader>
       <CardContent className="flex flex-1 flex-col justify-between gap-4">
         <p className="text-sm text-muted-foreground">{product.blurb}</p>
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          {product.hasRegister && (
+            <Button asChild>
+              <Link href={`/${product.key}/register`}>Start free trial</Link>
+            </Button>
+          )}
           <Link
             href={`/${product.key}/login`}
             className="text-sm font-medium hover:underline"
@@ -37,14 +43,6 @@ function PortalCard({ product }: { product: Product }) {
           >
             Sign in
           </Link>
-          {product.hasRegister && (
-            <Link
-              href={`/${product.key}/register`}
-              className="text-sm font-medium text-muted-foreground hover:text-foreground hover:underline"
-            >
-              Create account
-            </Link>
-          )}
         </div>
       </CardContent>
     </Card>
@@ -64,11 +62,12 @@ export default function Portals() {
           Platform access
         </p>
         <h1 className="text-4xl font-bold tracking-tight">
-          Sign in to Curriculum Builder
+          Curriculum Builder
         </h1>
         <p className="text-lg text-muted-foreground">
           A secure, branded workspace for standards-aligned curriculum design.
-          Access is provisioned by your engagement team.
+          Start a free 14 day trial, no credit card required, or sign in to your
+          account.
         </p>
       </div>
 

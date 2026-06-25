@@ -78,6 +78,9 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             >
               Curriculum Builder
             </Link>
+            <Button asChild variant="outline">
+              <Link href="/compass/register">Start free trial</Link>
+            </Button>
             <Button asChild>
               <Link href="/contact">Book a consultation</Link>
             </Button>
@@ -120,6 +123,11 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                 >
                   Curriculum Builder
                 </Link>
+                <Button asChild variant="outline" className="w-full">
+                  <Link href="/compass/register" onClick={() => setMobileOpen(false)}>
+                    Start free trial
+                  </Link>
+                </Button>
                 <Button asChild className="w-full">
                   <Link href="/contact" onClick={() => setMobileOpen(false)}>
                     Book a consultation
