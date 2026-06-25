@@ -68,7 +68,7 @@ export default function Home() {
       {/* Outcomes Band */}
       <section className="bg-muted py-12 px-4 border-y border-border">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-border/50">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center divide-y sm:divide-y-0 sm:divide-x divide-border/50">
             <div className="px-4">
               <p className="text-3xl font-bold text-primary mb-2">$1B+</p>
               <p className="text-sm text-muted-foreground">Managed-care provider relationships oversight</p>
@@ -80,10 +80,6 @@ export default function Home() {
             <div className="px-4">
               <p className="text-3xl font-bold text-primary mb-2">98%</p>
               <p className="text-sm text-muted-foreground">On-time delivery across projects</p>
-            </div>
-            <div className="px-4">
-              <p className="text-3xl font-bold text-primary mb-2">SWaM</p>
-              <p className="text-sm text-muted-foreground">Woman- & minority-owned, SAM.gov active</p>
             </div>
           </div>
         </div>
@@ -210,8 +206,7 @@ export default function Home() {
             <span>DBA(c)</span> • 
             <span>M.Ed</span> • 
             <span>PhD(c) Machine Learning</span> • 
-            <span>Quality Matters</span> • 
-            <span>SWaM</span>
+            <span>Quality Matters</span>
           </div>
         </div>
       </section>
@@ -225,15 +220,11 @@ export default function Home() {
           <div className="space-y-6">
             <div className="space-y-2">
               <h4 className="text-lg font-semibold">Do you only work with clients in Virginia?</h4>
-              <p className="text-muted-foreground">No. We serve clients nationwide across all U.S. time zones. While we hold Virginia SWaM certification and have a physical presence there, our delivery model is fully remote and federal-ready.</p>
+              <p className="text-muted-foreground">No. We serve clients nationwide across all U.S. time zones. While we have a physical presence in Virginia, our delivery model is fully remote.</p>
             </div>
             <div className="space-y-2">
               <h4 className="text-lg font-semibold">What is your typical engagement model?</h4>
               <p className="text-muted-foreground">We offer both strategic advisory (assessments, audits, planning) and hands-on execution (building courses, managing operations transitions, developing platforms). We structure engagements as distinct projects with clear deliverables and timelines.</p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-lg font-semibold">Are you registered for government contracting?</h4>
-              <p className="text-muted-foreground">Yes. We maintain an active federal SAM.gov registration, are eVA registered, and hold Virginia SWaM certification. See our <Link href="/government" className="text-primary hover:underline">Government</Link> page for specific NIGP codes and capabilities.</p>
             </div>
           </div>
         </div>

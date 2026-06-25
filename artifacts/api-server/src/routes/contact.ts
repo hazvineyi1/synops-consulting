@@ -18,7 +18,6 @@ const AREAS = [
   "Healthcare & Operations",
   "Learning, EdTech & AI",
   "Platforms & SaaS",
-  "Government & Public Sector",
   "Other",
 ] as const;
 

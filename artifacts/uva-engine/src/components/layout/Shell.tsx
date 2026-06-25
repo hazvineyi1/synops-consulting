@@ -47,7 +47,7 @@ function navForRole(role?: string | null): NavSection[] {
         { name: "Builders", href: "/builders", icon: UserCog },
         { name: "Allocations", href: "/allocations", icon: KeySquare },
         { name: "School report", href: "/school-report", icon: FileBarChart },
-        { name: "Plan and billing", href: "/billing", icon: CreditCard },
+        { name: "Plan status", href: "/billing", icon: CreditCard },
       ],
     });
   }

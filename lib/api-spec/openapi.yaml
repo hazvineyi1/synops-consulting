@@ -3048,7 +3048,6 @@ components:
             - "Healthcare & Operations"
             - "Learning, EdTech & AI"
             - "Platforms & SaaS"
-            - "Government & Public Sector"
             - "Other"
         message:
           type: string

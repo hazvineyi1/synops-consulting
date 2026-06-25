@@ -2999,7 +2999,7 @@ export const SubmitContactBody = zod.object({
   "organization": zod.string().optional(),
   "email": zod.string().email(),
   "phone": zod.string().optional(),
-  "areaOfInterest": zod.enum(['Healthcare & Operations', 'Learning, EdTech & AI', 'Platforms & SaaS', 'Government & Public Sector', 'Other']),
+  "areaOfInterest": zod.enum(['Healthcare & Operations', 'Learning, EdTech & AI', 'Platforms & SaaS', 'Other']),
   "message": zod.string(),
   "website": zod.string().optional().describe('Honeypot field, leave empty.')
 })

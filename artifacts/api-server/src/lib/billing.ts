@@ -171,11 +171,11 @@ export const FEATURE_REQUIRED_TIER: Record<PlanFeature, PlanTier> = {
 
 const FEATURE_UPGRADE_MESSAGE: Record<PlanFeature, string> = {
   whiteLabel:
-    "White-label branding is available on the Professional plan. Upgrade to customize this organization's branding.",
+    "White-label branding is not included in your current plan. Contact us to unlock it.",
   multiAccreditorExport:
-    "Evidence packet export is available on the Professional plan. Upgrade to download accreditation evidence.",
+    "Evidence packet export is not included in your current plan. Contact us to unlock it.",
   customDomain:
-    "Custom domain is available on the Enterprise plan. Upgrade this organization to assign a custom domain.",
+    "Custom domain is not included in your current plan. Contact us to assign a custom domain.",
 };
 
 export interface UpgradeRequiredBody {

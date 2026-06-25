@@ -23,7 +23,7 @@ import {
   resolveProjectScope,
 } from "../lib/tenancy";
 import { recordActorAudit } from "../lib/audit";
-import { createCourseWithLimit, PLANS } from "../lib/billing";
+import { createCourseWithLimit } from "../lib/billing";
 
 const router = Router();
 
@@ -115,7 +115,7 @@ router.post("/projects/:projectId/courses", async (req, res): Promise<void> => {
   if (result.status === "limit_exceeded") {
     res.status(402).json({
       error: "upgrade_required",
-      message: `Your ${PLANS[result.tier].label} plan allows ${result.limit} active ${result.limit === 1 ? "course" : "courses"}. Upgrade your plan to add more.`,
+      message: `Your plan allows ${result.limit} active ${result.limit === 1 ? "course" : "courses"}. Contact us to add more.`,
       tier: result.tier,
       limit: result.limit,
       current: result.current,

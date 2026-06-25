@@ -96,7 +96,7 @@ export default function NewProject() {
           className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
           <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
-          Your free trial has ended. Choose a plan from Plan and billing to create new projects.
+          Your free trial has ended. Contact us to continue creating projects.
         </div>
       )}
 

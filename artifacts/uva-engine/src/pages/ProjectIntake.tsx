@@ -239,14 +239,14 @@ export default function ProjectIntake() {
                 title: "Course limit reached",
                 description:
                   body?.message ??
-                  "Your plan's active course limit has been reached. Upgrade to add more.",
+                  "You have reached your active course limit. Contact us to add more.",
                 variant: "destructive",
                 action: (
                   <ToastAction
-                    altText="View plans and billing"
-                    onClick={() => navigate("/billing")}
+                    altText="Contact us"
+                    onClick={() => navigate("~/contact")}
                   >
-                    View plans
+                    Contact us
                   </ToastAction>
                 ),
               });

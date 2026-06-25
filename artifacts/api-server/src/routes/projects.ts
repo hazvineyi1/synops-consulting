@@ -28,7 +28,7 @@ import {
   loadBuilderScope,
   resolveProjectScope,
 } from "../lib/tenancy";
-import { activateProjectWithLimit, PLANS, type Executor } from "../lib/billing";
+import { activateProjectWithLimit, type Executor } from "../lib/billing";
 
 const router = Router();
 
@@ -269,7 +269,7 @@ router.patch("/projects/:id", async (req, res): Promise<void> => {
     if (activation.status === "limit_exceeded") {
       res.status(402).json({
         error: "upgrade_required",
-        message: `Your ${PLANS[activation.tier].label} plan allows ${activation.limit} active ${activation.limit === 1 ? "course" : "courses"}. Archive courses or upgrade your plan to activate this project.`,
+        message: `Your plan allows ${activation.limit} active ${activation.limit === 1 ? "course" : "courses"}. Archive courses or contact us to activate this project.`,
         tier: activation.tier,
         limit: activation.limit,
         current: activation.current,

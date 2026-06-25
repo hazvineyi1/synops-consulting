@@ -312,7 +312,7 @@ function GettingStartedCard({ readOnly, builder }: { readOnly: boolean; builder:
               role="status"
               className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
             >
-              Your free trial has ended, so creating is paused. Choose a plan from Plan and billing to start building.
+              Your free trial has ended, so creating is paused. Contact us to continue building.
             </div>
           )}
 

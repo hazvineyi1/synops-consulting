@@ -3,16 +3,13 @@ import { Link, useLocation } from "wouter";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import swamCertification from "@assets/IMG_0982_1782083035393.jpeg";
 
 const NAV = [
   { name: "About", href: "/about" },
   { name: "Healthcare", href: "/healthcare" },
   { name: "Learning & AI", href: "/learning" },
   { name: "Platforms", href: "/platforms" },
-  { name: "Government", href: "/government" },
   { name: "Insights", href: "/insights" },
-  { name: "Pricing", href: "/pricing" },
 ];
 
 function Brandmark() {
@@ -144,27 +141,9 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
             <Link href="/about" className="hover:text-foreground">About</Link>
             <Link href="/insights" className="hover:text-foreground">Insights</Link>
-            <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
             <Link href="/contact" className="hover:text-foreground">Contact</Link>
             <Link href="/portals" className="hover:text-foreground">Curriculum Builder</Link>
           </nav>
-        </div>
-        <div className="border-t border-border">
-          <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-8 text-center sm:flex-row sm:justify-center sm:text-left sm:px-6 lg:px-8">
-            <img
-              src={swamCertification}
-              alt="Certified SWaM business seal"
-              width={1320}
-              height={537}
-              loading="lazy"
-              className="h-auto w-full max-w-[200px] shrink-0 rounded border border-border bg-white"
-            />
-            <p className="max-w-md text-sm text-muted-foreground">
-              Synops Advisory Group is a certified Small, Women-owned, and
-              Minority-owned (SWaM) business, recognized by the Virginia
-              Department of Small Business and Supplier Diversity.
-            </p>
-          </div>
         </div>
         <div className="border-t border-border">
           <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 px-4 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:px-6 lg:px-8">

@@ -241,7 +241,7 @@ export default function ProjectHandoff() {
       const res = await fetch(href, { credentials: "include" });
       if (res.status === 402) {
         let message =
-          "Evidence packet export is available on the Professional plan. Upgrade to download accreditation evidence.";
+          "Evidence packet export is not included in your current plan. Contact us to unlock it.";
         try {
           const body = (await res.json()) as { message?: unknown };
           if (typeof body.message === "string" && body.message.length > 0) message = body.message;
@@ -402,9 +402,9 @@ export default function ProjectHandoff() {
                   <Button
                     variant="link"
                     className="mt-1 h-auto p-0 text-amber-900 underline"
-                    onClick={() => navigate("/billing")}
+                    onClick={() => navigate("~/contact")}
                   >
-                    View plans and upgrade
+                    Contact us
                   </Button>
                 </div>
               )}

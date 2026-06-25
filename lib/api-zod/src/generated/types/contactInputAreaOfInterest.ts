@@ -13,6 +13,5 @@ export const ContactInputAreaOfInterest = {
   'Healthcare_&_Operations': 'Healthcare & Operations',
   'Learning,_EdTech_&_AI': 'Learning, EdTech & AI',
   'Platforms_&_SaaS': 'Platforms & SaaS',
-  'Government_&_Public_Sector': 'Government & Public Sector',
   Other: 'Other',
 } as const;

@@ -30,12 +30,12 @@ export function TrialBanner() {
           <span className="font-medium">Your free trial has ended.</span>{" "}
           <span className="text-foreground/80">
             You can still view everything, but creating and editing are paused
-            {canUpgrade ? " until you choose a plan." : "."}
+            {canUpgrade ? ". Contact us to continue." : "."}
           </span>
         </p>
         {canUpgrade && (
           <Button asChild size="sm" variant="destructive" className="ml-auto">
-            <Link href="/billing">Choose a plan</Link>
+            <Link href="~/contact">Contact us</Link>
           </Button>
         )}
       </div>
@@ -57,11 +57,6 @@ export function TrialBanner() {
       <p className="text-muted-foreground">
         <span className="font-medium text-foreground">{daysLabel}</span> No credit card required.
       </p>
-      {canUpgrade && (
-        <Button asChild size="sm" variant="outline" className="ml-auto">
-          <Link href="/billing">View plans</Link>
-        </Button>
-      )}
     </div>
   );
 }
