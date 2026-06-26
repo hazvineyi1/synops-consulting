@@ -1,7 +1,7 @@
 [phases.setup]
 nixPkgs = ["nodejs_22", "pnpm-9_x", "openssl"]
 [phases.install]
-cmds = ["pnpm install --no-frozen-lockfile"]
+cmds = ["NODE_ENV=development pnpm install --no-frozen-lockfile"]
 [phases.build]
 cmds = ["PORT=5173 BASE_PATH=/ pnpm --filter @workspace/uva-engine run build", "pnpm --filter @workspace/api-server run build"]
 [start]
