@@ -1,0 +1,6 @@
+[phases.install]
+cmds = ["pnpm install --no-frozen-lockfile"]
+[phases.build]
+cmds = ["PORT=5173 BASE_PATH=/ pnpm --filter @workspace/uva-engine run build", "pnpm --filter @workspace/api-server run build"]
+[start]
+cmd = "node artifacts/api-server/dist/index.mjs"
