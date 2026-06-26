@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import authRouter from "./auth";
+import passwordResetRouter from "./password-reset";
 import contactRouter from "./contact";
 import demoRouter from "./demo";
 import brandingRouter from "./branding";
@@ -36,6 +37,7 @@ const router: IRouter = Router();
 // ── Public routes ───────────────────────────────────────────
 router.use(healthRouter);
 router.use(authRouter);
+router.use(passwordResetRouter);
 router.use(contactRouter);
 router.use(demoRouter);
 router.use(brandingRouter);

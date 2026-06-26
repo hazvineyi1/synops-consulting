@@ -162,7 +162,13 @@ export default function ProductLogin({ product }: { product: Product }) {
           {submitting ? "Signing in..." : "Sign in"}
         </Button>
         <p className="text-center text-xs text-muted-foreground">
-          Password reset is coming soon. Contact us if you are locked out.
+          <Link
+            href={`/${product.key}/reset-password`}
+            className="font-medium hover:underline"
+            style={{ color: accent }}
+          >
+            Forgot your password?
+          </Link>
         </p>
       </form>
     </AuthShell>

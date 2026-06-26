@@ -22,6 +22,7 @@ import Portals from "@/pages/public/Portals";
 import ProductLogin from "@/pages/auth/ProductLogin";
 import ProductRegister from "@/pages/auth/ProductRegister";
 import ProductVerifyEmail from "@/pages/auth/ProductVerifyEmail";
+import ProductResetPassword from "@/pages/auth/ProductResetPassword";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -73,6 +74,13 @@ function Router() {
       {PRODUCTS.map((p) => (
         <Route key={`login-${p.key}`} path={`/${p.key}/login`}>
           {() => <ProductLogin product={p} />}
+        </Route>
+      ))}
+
+      {/* Per-product password reset (request a link, then set a new password). */}
+      {PRODUCTS.map((p) => (
+        <Route key={`reset-${p.key}`} path={`/${p.key}/reset-password`}>
+          {() => <ProductResetPassword product={p} />}
         </Route>
       ))}
 
