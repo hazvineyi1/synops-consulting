@@ -1,4 +1,7 @@
-import { useListStandardsFrameworks, useCreateStandardsFramework, getListStandardsFrameworksQueryKey } from "@workspace/api-client-react";
+import {
+  useListStandardsFrameworks, useCreateStandardsFramework, getListStandardsFrameworksQueryKey,
+  useListCompetencies, useCreateCompetency, getListCompetenciesQueryKey,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +14,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
@@ -28,6 +31,9 @@ export default function Standards() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [manageFramework, setManageFramework] = useState<
+    { id: number; name: string; acronym?: string | null } | null
+  >(null);
 
   const form = useForm<z.infer<typeof frameworkSchema>>({
     resolver: zodResolver(frameworkSchema),
@@ -161,7 +167,18 @@ export default function Standards() {
                 <div className="text-sm font-medium">
                   {framework.competencyCount || 0} Competencies
                 </div>
-                <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-primary hover:bg-primary/10"
+                  onClick={() =>
+                    setManageFramework({
+                      id: framework.id,
+                      name: framework.name,
+                      acronym: framework.acronym,
+                    })
+                  }
+                >
                   Manage <ArrowRight className="ml-2 h-3 w-3" />
                 </Button>
               </div>
@@ -174,6 +191,113 @@ export default function Standards() {
           </div>
         )}
       </div>
+
+      <ManageCompetenciesDialog
+        framework={manageFramework}
+        onClose={() => setManageFramework(null)}
+      />
     </div>
+  );
+}
+
+function ManageCompetenciesDialog({
+  framework,
+  onClose,
+}: {
+  framework: { id: number; name: string; acronym?: string | null } | null;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const frameworkId = framework?.id ?? 0;
+  const { data: competencies, isLoading } = useListCompetencies(frameworkId, {
+    query: { enabled: !!framework },
+  });
+  const createCompetency = useCreateCompetency();
+  const [code, setCode] = useState("");
+  const [domain, setDomain] = useState("");
+  const [description, setDescription] = useState("");
+
+  function add(e: FormEvent) {
+    e.preventDefault();
+    if (!framework || !code.trim() || !description.trim()) return;
+    createCompetency.mutate(
+      {
+        id: framework.id,
+        data: { code: code.trim(), description: description.trim(), domain: domain.trim() || undefined },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListCompetenciesQueryKey(framework.id) });
+          queryClient.invalidateQueries({ queryKey: getListStandardsFrameworksQueryKey() });
+          setCode("");
+          setDomain("");
+          setDescription("");
+          toast({ title: "Competency added" });
+        },
+        onError: () => toast({ title: "Failed to add competency", variant: "destructive" }),
+      },
+    );
+  }
+
+  return (
+    <Dialog open={!!framework} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {framework
+              ? `${framework.acronym ? `${framework.acronym} — ` : ""}${framework.name}`
+              : "Framework"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="max-h-72 divide-y overflow-y-auto rounded-md border">
+            {isLoading ? (
+              <div className="p-4 text-sm text-muted-foreground">Loading…</div>
+            ) : (competencies ?? []).length === 0 ? (
+              <div className="p-4 text-sm text-muted-foreground">
+                No competencies yet. Add the first one below.
+              </div>
+            ) : (
+              (competencies ?? []).map((c) => (
+                <div key={c.id} className="p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{c.code}</span>
+                    {c.domain && (
+                      <Badge variant="secondary" className="text-xs">
+                        {c.domain}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">{c.description}</p>
+                </div>
+              ))
+            )}
+          </div>
+          <form onSubmit={add} className="space-y-3 rounded-md border p-3">
+            <div className="text-sm font-medium">Add a competency</div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input placeholder="Code (e.g. APA-1)" value={code} onChange={(e) => setCode(e.target.value)} />
+              <Input placeholder="Domain (optional)" value={domain} onChange={(e) => setDomain(e.target.value)} />
+            </div>
+            <Textarea
+              placeholder="Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="h-20"
+            />
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={createCompetency.isPending || !code.trim() || !description.trim()}
+              >
+                {createCompetency.isPending ? "Adding…" : "Add competency"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
