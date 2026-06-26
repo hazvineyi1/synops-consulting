@@ -13,6 +13,12 @@ export const projectsTable = pgTable("projects", {
   lms: text("lms"),
   designMethod: text("design_method"),
   description: text("description"),
+  // Whether this is a brand-new course build or a redesign of an existing course.
+  courseType: text("course_type").notNull().default("new_build"),
+  // Standard course identifier (e.g. SBS210, BUS301) for search/reporting.
+  courseCode: text("course_code"),
+  // For revamps: link to the existing shell + what is changing and why.
+  revampNotes: text("revamp_notes"),
   targetDeliveryDate: date("target_delivery_date", { mode: "string" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

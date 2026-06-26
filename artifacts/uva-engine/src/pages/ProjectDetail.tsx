@@ -170,6 +170,24 @@ export default function ProjectDetail() {
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
                   <div>
+                    <span className="mb-1 block text-xs uppercase text-muted-foreground">Course type</span>
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                        project.courseType === "revamp"
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-emerald-100 text-emerald-800"
+                      }`}
+                    >
+                      {project.courseType === "revamp" ? "Revamp" : "New build"}
+                    </span>
+                  </div>
+                  {project.courseCode && (
+                    <div>
+                      <span className="mb-1 block text-xs uppercase text-muted-foreground">Course code</span>
+                      <span className="font-medium">{project.courseCode}</span>
+                    </div>
+                  )}
+                  <div>
                     <span className="mb-1 block text-xs uppercase text-muted-foreground">Tier</span>
                     <span className="font-medium">{project.tier || "Unspecified"}</span>
                   </div>
@@ -185,6 +203,12 @@ export default function ProjectDetail() {
                       {project.lms?.replace(/_/g, " ") || "Not specified"}
                     </span>
                   </div>
+                  {project.courseType === "revamp" && project.revampNotes && (
+                    <div>
+                      <span className="mb-1 block text-xs uppercase text-muted-foreground">Revamp details</span>
+                      <p className="whitespace-pre-wrap">{project.revampNotes}</p>
+                    </div>
+                  )}
                   {project.description && (
                     <div>
                       <span className="mb-1 block text-xs uppercase text-muted-foreground">Description</span>

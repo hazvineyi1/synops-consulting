@@ -30,6 +30,9 @@ const LMS_OPTIONS = [
 const projectSchema = z.object({
   clientId: z.number().min(1, "Client is required"),
   title: z.string().min(1, "Title is required"),
+  courseCode: z.string().optional(),
+  courseType: z.string().optional(),
+  revampNotes: z.string().optional(),
   description: z.string().optional(),
   tier: z.string().optional(),
   modality: z.string().optional(),
@@ -54,6 +57,9 @@ export default function NewProject() {
     defaultValues: {
       clientId: defaultClientId || 0,
       title: "",
+      courseCode: "",
+      courseType: "new_build",
+      revampNotes: "",
       description: "",
       tier: "1",
       modality: "online",
@@ -142,6 +148,62 @@ export default function NewProject() {
                   </FormItem>
                 )}
               />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="courseType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Course type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Select course type" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="new_build">New build (from scratch)</SelectItem>
+                          <SelectItem value="revamp">Revamp (redesign existing)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        A revamp adds a content-audit capture to the workflow.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="courseCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Course code</FormLabel>
+                      <FormControl><Input {...field} placeholder="e.g. SBS210" /></FormControl>
+                      <FormDescription>The institution's course identifier, for search and reporting.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              {form.watch("courseType") === "revamp" && (
+                <FormField
+                  control={form.control}
+                  name="revampNotes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Revamp details</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          className="h-24"
+                          placeholder="Link to the existing course shell, what's changing and why, and what to preserve vs. replace."
+                        />
+                      </FormControl>
+                      <FormDescription>Captured for the content audit during Intake.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="description"

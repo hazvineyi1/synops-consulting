@@ -33,6 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 import { ObjectiveQualityBadge } from "@/components/engine/ObjectiveQualityBadge";
+import { StandardsAlignmentCard } from "@/components/engine/StandardsAlignmentCard";
 import {
   INSTRUCTIONAL_METHODS, getMethod,
   ACTIVITY_TYPE_OPTIONS, ASSESSMENT_TYPE_OPTIONS,
@@ -264,12 +265,13 @@ function DesignWorkspace({
         </TabsContent>
 
         {/* ALIGNMENT */}
-        <TabsContent value="alignment" className="mt-6">
+        <TabsContent value="alignment" className="mt-6 space-y-6">
           <AlignmentMap
             objectives={courseObjectives}
             assessments={(assessments ?? []) as Assessment[]}
             activities={(activities ?? []) as Activity[]}
           />
+          <StandardsAlignmentCard projectId={projectId} objectives={courseObjectives} />
         </TabsContent>
       </Tabs>
 

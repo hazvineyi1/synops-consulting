@@ -165,6 +165,18 @@ router.post("/projects", async (req, res): Promise<void> => {
     return;
   }
 
+  // Course type / code / revamp notes are read directly from the body (the
+  // generated CreateProjectBody zod strips unknown keys, so they don't appear in
+  // parsed.data). courseType is constrained to a known set here.
+  const body = req.body as Record<string, unknown>;
+  const courseType = body.courseType === "revamp" ? "revamp" : "new_build";
+  const courseCode =
+    typeof body.courseCode === "string" && body.courseCode.trim() ? body.courseCode.trim() : null;
+  const revampNotes =
+    courseType === "revamp" && typeof body.revampNotes === "string" && body.revampNotes.trim()
+      ? body.revampNotes.trim()
+      : null;
+
   const [project] = await db
     .insert(projectsTable)
     .values({
@@ -174,6 +186,9 @@ router.post("/projects", async (req, res): Promise<void> => {
       tier: parsed.data.tier ?? null,
       modality: parsed.data.modality ?? null,
       lms: parsed.data.lms ?? null,
+      courseType,
+      courseCode,
+      revampNotes,
       targetDeliveryDate: parsed.data.targetDeliveryDate
         ? parsed.data.targetDeliveryDate.toISOString().slice(0, 10)
         : null,
@@ -247,6 +262,16 @@ router.patch("/projects/:id", async (req, res): Promise<void> => {
     updates.targetDeliveryDate = parsed.data.targetDeliveryDate
       ? parsed.data.targetDeliveryDate.toISOString().slice(0, 10)
       : null;
+  // Course type / code / revamp notes are read straight from the body (not in
+  // the generated UpdateProjectBody zod). Only applied when explicitly present.
+  const ub = req.body as Record<string, unknown>;
+  if (ub.courseType !== undefined) updates.courseType = ub.courseType === "revamp" ? "revamp" : "new_build";
+  if (ub.courseCode !== undefined)
+    updates.courseCode =
+      typeof ub.courseCode === "string" && ub.courseCode.trim() ? ub.courseCode.trim() : null;
+  if (ub.revampNotes !== undefined)
+    updates.revampNotes =
+      typeof ub.revampNotes === "string" && ub.revampNotes.trim() ? ub.revampNotes.trim() : null;
 
   const applyUpdate = (exec: Executor) =>
     exec.update(projectsTable).set(updates).where(eq(projectsTable.id, params.data.id)).returning();
