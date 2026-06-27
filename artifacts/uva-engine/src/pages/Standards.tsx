@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Layers, ArrowRight } from "lucide-react";
+import { Plus, Layers, ArrowRight, Search } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,6 +26,22 @@ const frameworkSchema = z.object({
   description: z.string().optional(),
 });
 
+// Friendly labels + display order for the framework-type tabs.
+const TYPE_GROUPS: { value: string; label: string }[] = [
+  { value: "accreditor", label: "Accreditors" },
+  { value: "licensure_board", label: "Licensure & Exams" },
+  { value: "content_standards", label: "K-12 & Content Standards" },
+  { value: "learning_outcomes", label: "Learning Outcomes" },
+  { value: "workforce", label: "Workforce" },
+  { value: "accessibility", label: "Accessibility" },
+  { value: "qualifications_framework", label: "Qualifications" },
+];
+
+function typeLabel(value: string): string {
+  return TYPE_GROUPS.find((g) => g.value === value)?.label ??
+    value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function Standards() {
   const { data: frameworks, isLoading } = useListStandardsFrameworks();
   const createFramework = useCreateStandardsFramework();
@@ -34,6 +51,8 @@ export default function Standards() {
   const [manageFramework, setManageFramework] = useState<
     { id: number; name: string; acronym?: string | null } | null
   >(null);
+  const [category, setCategory] = useState<string>("all");
+  const [search, setSearch] = useState("");
 
   const form = useForm<z.infer<typeof frameworkSchema>>({
     resolver: zodResolver(frameworkSchema),
@@ -60,6 +79,19 @@ export default function Standards() {
   }
 
   if (isLoading) return <div className="p-8">Loading...</div>;
+
+  const all = frameworks ?? [];
+  const countFor = (value: string) =>
+    value === "all" ? all.length : all.filter((f) => f.frameworkType === value).length;
+  const q = search.trim().toLowerCase();
+  const visible = all.filter(
+    (f) =>
+      (category === "all" || f.frameworkType === category) &&
+      (q === "" ||
+        `${f.acronym ?? ""} ${f.name} ${f.description ?? ""}`.toLowerCase().includes(q)),
+  );
+  // Only show tabs for categories that actually have frameworks.
+  const activeGroups = TYPE_GROUPS.filter((g) => countFor(g.value) > 0);
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6">
@@ -144,25 +176,53 @@ export default function Standards() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {frameworks?.map((framework) => (
+      {/* Search + category tabs to cut the scrolling */}
+      <div className="space-y-4">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, acronym, or subject…"
+            className="pl-8"
+          />
+        </div>
+        <Tabs value={category} onValueChange={setCategory}>
+          <TabsList className="flex h-auto flex-wrap justify-start gap-1">
+            <TabsTrigger value="all">All ({countFor("all")})</TabsTrigger>
+            {activeGroups.map((g) => (
+              <TabsTrigger key={g.value} value={g.value}>
+                {g.label} ({countFor(g.value)})
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
+
+      <p className="text-sm text-muted-foreground">
+        Showing {visible.length} of {all.length} frameworks
+        {category !== "all" ? ` in ${typeLabel(category)}` : ""}.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {visible.map((framework) => (
           <Card key={framework.id} className="flex flex-col">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-xl">
-                  {framework.acronym ? `${framework.acronym} - ` : ''}{framework.name}
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-2">
+                <CardTitle className="text-base leading-snug">
+                  {framework.acronym ? `${framework.acronym} — ` : ''}{framework.name}
                 </CardTitle>
-                <Layers className="h-5 w-5 text-muted-foreground shrink-0 ml-2" />
+                <Layers className="h-4 w-4 text-muted-foreground shrink-0" />
               </div>
               <CardDescription className="mt-1 flex items-center gap-2">
-                 <Badge variant="secondary" className="capitalize">{framework.frameworkType.replace('_', ' ')}</Badge>
+                 <Badge variant="secondary" className="text-xs">{typeLabel(framework.frameworkType)}</Badge>
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col justify-between space-y-4">
-              <p className="text-sm text-muted-foreground line-clamp-3">
+            <CardContent className="flex-1 flex flex-col justify-between gap-3 pt-0">
+              <p className="text-sm text-muted-foreground line-clamp-2">
                 {framework.description || "No description provided."}
               </p>
-              
+
               <div className="pt-4 border-t flex items-center justify-between mt-auto">
                 <div className="text-sm font-medium">
                   {framework.competencyCount || 0} Competencies
@@ -185,9 +245,9 @@ export default function Standards() {
             </CardContent>
           </Card>
         ))}
-        {frameworks?.length === 0 && (
+        {visible.length === 0 && (
           <div className="col-span-full py-12 text-center text-muted-foreground border rounded-md">
-            No standards frameworks defined.
+            {all.length === 0 ? "No standards frameworks defined." : "No frameworks match your search."}
           </div>
         )}
       </div>
