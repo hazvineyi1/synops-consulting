@@ -7,13 +7,14 @@ import {
   useListActivities, getListActivitiesQueryKey,
   useListAssessments, getListAssessmentsQueryKey,
   useCreateActivity, useCreateAssessment,
+  useUpdateActivity, useUpdateAssessment,
   useDeleteActivity, useDeleteAssessment,
   useUpdateProject, getGetProjectQueryKey, getListProjectsQueryKey,
   getGetProjectGateStatusQueryKey,
   type Activity, type Assessment, type Objective, type ProjectUpdateDesignMethod,
 } from "@workspace/api-client-react";
 import {
-  Plus, Target, LayoutList, Map as MapIcon, Trash2, BookOpen, Lightbulb, ArrowRight, Check, Loader2,
+  Plus, Target, LayoutList, Map as MapIcon, Trash2, Pencil, BookOpen, Lightbulb, ArrowRight, Check, Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ interface DialogState {
   description: string;
   methodKey: string; // "" means none
   alignedIds: number[];
+  editId?: number; // set when editing an existing item
 }
 
 function typeLabel(kind: Kind, value: string): string {
@@ -101,11 +103,15 @@ function DesignWorkspace({
   const createAssessment = useCreateAssessment();
   const deleteActivity = useDeleteActivity();
   const deleteAssessment = useDeleteAssessment();
+  const updateActivity = useUpdateActivity();
+  const updateAssessment = useUpdateAssessment();
   const updateProject = useUpdateProject();
 
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [settingKey, setSettingKey] = useState<string | null>(null);
-  const isSaving = createActivity.isPending || createAssessment.isPending;
+  const isSaving =
+    createActivity.isPending || createAssessment.isPending ||
+    updateActivity.isPending || updateAssessment.isPending;
 
   function setProjectMethod(key: string) {
     setSettingKey(key);
@@ -137,6 +143,18 @@ function DesignWorkspace({
     });
   }
 
+  function openEdit(kind: Kind, item: Activity | Assessment) {
+    setDialog({
+      kind,
+      title: item.title,
+      type: kind === "activity" ? (item as Activity).activityType : (item as Assessment).assessmentType,
+      description: item.description ?? "",
+      methodKey: "",
+      alignedIds: item.alignedObjectiveIds ?? [],
+      editId: item.id,
+    });
+  }
+
   function invalidateList(kind: Kind) {
     queryClient.invalidateQueries({
       queryKey: kind === "activity" ? getListActivitiesQueryKey(courseId) : getListAssessmentsQueryKey(courseId),
@@ -146,6 +164,31 @@ function DesignWorkspace({
   function handleSubmit() {
     if (!dialog || !dialog.title.trim() || !courseId) return;
     const aligned = dialog.alignedIds;
+
+    // Edit existing item via PATCH.
+    if (dialog.editId != null) {
+      const title = dialog.title.trim();
+      const description = dialog.description.trim() || undefined;
+      if (dialog.kind === "activity") {
+        updateActivity.mutate(
+          { id: dialog.editId, data: { title, activityType: dialog.type, description, alignedObjectiveIds: aligned } },
+          {
+            onSuccess: () => { invalidateList("activity"); toast({ title: "Activity updated", description: title }); setDialog(null); },
+            onError: () => toast({ title: "Could not update activity", variant: "destructive" }),
+          },
+        );
+      } else {
+        updateAssessment.mutate(
+          { id: dialog.editId, data: { title, assessmentType: dialog.type, description, alignedObjectiveIds: aligned } },
+          {
+            onSuccess: () => { invalidateList("assessment"); toast({ title: "Assessment updated", description: title }); setDialog(null); },
+            onError: () => toast({ title: "Could not update assessment", variant: "destructive" }),
+          },
+        );
+      }
+      return;
+    }
+
     if (dialog.kind === "activity") {
       createActivity.mutate(
         {
@@ -234,6 +277,7 @@ function DesignWorkspace({
             objectives={courseObjectives}
             getType={(a) => (a as Assessment).assessmentType}
             onAdd={() => openAdd("assessment")}
+            onEdit={(item) => openEdit("assessment", item)}
             onDelete={(id) => handleDelete("assessment", id)}
             emptyText="No assessments defined yet. Define how students will prove mastery, or start from a method in the Methods tab."
           />
@@ -249,6 +293,7 @@ function DesignWorkspace({
             objectives={courseObjectives}
             getType={(a) => (a as Activity).activityType}
             onAdd={() => openAdd("activity")}
+            onEdit={(item) => openEdit("activity", item)}
             onDelete={(id) => handleDelete("activity", id)}
             emptyText="No activities defined yet. Add one, or start from an instructional design method in the Methods tab."
           />
@@ -281,7 +326,7 @@ function DesignWorkspace({
           {dialog && (
             <>
               <DialogHeader>
-                <DialogTitle>Add {dialog.kind === "activity" ? "activity" : "assessment"}</DialogTitle>
+                <DialogTitle>{dialog.editId != null ? "Edit" : "Add"} {dialog.kind === "activity" ? "activity" : "assessment"}</DialogTitle>
                 <DialogDescription>
                   Pick an instructional design method to start from a template, or build it from scratch.
                 </DialogDescription>
@@ -420,6 +465,8 @@ function DesignWorkspace({
                 <Button onClick={handleSubmit} disabled={!dialog.title.trim() || isSaving}>
                   {isSaving ? (
                     <><Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" /> Saving</>
+                  ) : dialog.editId != null ? (
+                    <>Save changes</>
                   ) : (
                     <>Add {dialog.kind === "activity" ? "activity" : "assessment"}</>
                   )}
@@ -619,7 +666,7 @@ function MethodTemplatePicker({
 }
 
 function ItemList({
-  kind, title, description, items, objectives, getType, onAdd, onDelete, emptyText,
+  kind, title, description, items, objectives, getType, onAdd, onEdit, onDelete, emptyText,
 }: {
   kind: Kind;
   title: string;
@@ -628,6 +675,7 @@ function ItemList({
   objectives: Objective[];
   getType: (item: Activity | Assessment) => string;
   onAdd: () => void;
+  onEdit: (item: Activity | Assessment) => void;
   onDelete: (id: number) => void;
   emptyText: string;
 }) {
@@ -676,13 +724,22 @@ function ItemList({
                         )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => onDelete(item.id)}
-                      className="shrink-0 text-muted-foreground/50 transition-colors hover:text-red-600"
-                      aria-label={`Remove ${item.title}`}
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        onClick={() => onEdit(item)}
+                        className="text-muted-foreground/50 transition-colors hover:text-primary"
+                        aria-label={`Edit ${item.title}`}
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(item.id)}
+                        className="text-muted-foreground/50 transition-colors hover:text-red-600"
+                        aria-label={`Remove ${item.title}`}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
                   </div>
                 </li>
               );

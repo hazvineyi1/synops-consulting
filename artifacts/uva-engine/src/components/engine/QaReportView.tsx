@@ -75,10 +75,12 @@ export function QaReportView({
             </div>
           </div>
           {gateBlock && (
-            <div className="mt-4 flex items-start gap-2 rounded-md border border-red-700/30 bg-red-50 p-3 text-sm text-red-800">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <div className="mt-4 flex items-start gap-2 rounded-md border border-amber-700/30 bg-amber-50 p-3 text-sm text-amber-900">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <span>
-                This course has blocking issues. Resolve every failing check before moving it to Handoff.
+                {report.counts.fail} automated {report.counts.fail === 1 ? "check is" : "checks are"} failing and
+                lowering the score. Resolve them to improve quality. Advancing to Handoff is governed by the gate
+                requirements on the project overview, not this automated score.
               </span>
             </div>
           )}

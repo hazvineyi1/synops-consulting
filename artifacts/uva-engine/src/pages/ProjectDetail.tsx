@@ -1,14 +1,34 @@
+import { useState } from "react";
 import { useParams, Link } from "wouter";
 import {
   useGetProjectGateStatus,
   useAdvanceProjectStage,
+  useUpdateProject,
   getGetProjectQueryKey,
   getGetProjectGateStatusQueryKey,
+  type Project,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Building2,
   Calendar,
@@ -18,11 +38,253 @@ import {
   ArrowRight,
   Clock,
   CalendarClock,
+  Pencil,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { ProjectWorkspace } from "@/components/engine/ProjectWorkspace";
 import { getStage, STAGE_COUNT } from "@/lib/stages";
+
+const LMS_OPTIONS = [
+  { value: "canvas", label: "Canvas (Instructure)" },
+  { value: "blackboard", label: "Blackboard Learn" },
+  { value: "moodle", label: "Moodle" },
+  { value: "d2l", label: "D2L Brightspace" },
+  { value: "schoology", label: "Schoology" },
+  { value: "sakai", label: "Sakai" },
+  { value: "google_classroom", label: "Google Classroom" },
+  { value: "microsoft_teams", label: "Microsoft Teams (Education)" },
+  { value: "other", label: "Other / Not yet determined" },
+];
+
+/** Editable "Project details" sidebar card. Reads values from the loaded
+ * project and patches them via PATCH /projects/:id. courseType/courseCode/
+ * revampNotes are sent as extra body fields (the server reads them directly). */
+function ProjectDetailsCard({ project }: { project: Project }) {
+  const p = project as Project & {
+    courseType?: string;
+    courseCode?: string | null;
+    revampNotes?: string | null;
+  };
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const updateProject = useUpdateProject();
+  const [open, setOpen] = useState(false);
+
+  const [title, setTitle] = useState("");
+  const [courseType, setCourseType] = useState("new_build");
+  const [courseCode, setCourseCode] = useState("");
+  const [tier, setTier] = useState("");
+  const [modality, setModality] = useState("");
+  const [lms, setLms] = useState("");
+  const [revampNotes, setRevampNotes] = useState("");
+  const [description, setDescription] = useState("");
+
+  function openDialog() {
+    setTitle(p.title ?? "");
+    setCourseType(p.courseType === "revamp" ? "revamp" : "new_build");
+    setCourseCode(p.courseCode ?? "");
+    setTier(p.tier ?? "");
+    setModality(p.modality ?? "");
+    setLms(p.lms ?? "");
+    setRevampNotes(p.revampNotes ?? "");
+    setDescription(p.description ?? "");
+    setOpen(true);
+  }
+
+  function handleSave() {
+    const data = {
+      title: title.trim(),
+      tier: tier || undefined,
+      modality: modality || undefined,
+      lms: lms || undefined,
+      description: description.trim() || undefined,
+      courseType,
+      courseCode: courseCode.trim() || null,
+      revampNotes: courseType === "revamp" ? revampNotes.trim() || null : null,
+    } as Record<string, unknown>;
+
+    updateProject.mutate(
+      { id: project.id, data: data as never },
+      {
+        onSuccess: () => {
+          toast({ title: "Project details updated" });
+          queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(project.id) });
+          setOpen(false);
+        },
+        onError: () => toast({ title: "Could not update project", variant: "destructive" }),
+      },
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-base">Project details</CardTitle>
+        <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2" onClick={openDialog}>
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+          Edit
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <div>
+          <span className="mb-1 block text-xs uppercase text-muted-foreground">Course type</span>
+          <span
+            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+              p.courseType === "revamp"
+                ? "bg-amber-100 text-amber-800"
+                : "bg-emerald-100 text-emerald-800"
+            }`}
+          >
+            {p.courseType === "revamp" ? "Revamp" : "New build"}
+          </span>
+        </div>
+        {p.courseCode && (
+          <div>
+            <span className="mb-1 block text-xs uppercase text-muted-foreground">Course code</span>
+            <span className="font-medium">{p.courseCode}</span>
+          </div>
+        )}
+        <div>
+          <span className="mb-1 block text-xs uppercase text-muted-foreground">Tier</span>
+          <span className="font-medium">{p.tier || "Unspecified"}</span>
+        </div>
+        <div>
+          <span className="mb-1 block text-xs uppercase text-muted-foreground">Modality</span>
+          <span className="font-medium capitalize">
+            {p.modality?.replace("_", " ") || "Unspecified"}
+          </span>
+        </div>
+        <div>
+          <span className="mb-1 block text-xs uppercase text-muted-foreground">LMS</span>
+          <span className="font-medium capitalize">{p.lms?.replace(/_/g, " ") || "Not specified"}</span>
+        </div>
+        {p.courseType === "revamp" && p.revampNotes && (
+          <div>
+            <span className="mb-1 block text-xs uppercase text-muted-foreground">Revamp details</span>
+            <p className="whitespace-pre-wrap">{p.revampNotes}</p>
+          </div>
+        )}
+        {p.description && (
+          <div>
+            <span className="mb-1 block text-xs uppercase text-muted-foreground">Description</span>
+            <p className="whitespace-pre-wrap">{p.description}</p>
+          </div>
+        )}
+      </CardContent>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit project details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="ep-title">Course title</Label>
+              <Input id="ep-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Course type</Label>
+                <Select value={courseType} onValueChange={setCourseType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new_build">New build</SelectItem>
+                    <SelectItem value="revamp">Revamp</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ep-code">Course code</Label>
+                <Input
+                  id="ep-code"
+                  value={courseCode}
+                  onChange={(e) => setCourseCode(e.target.value)}
+                  placeholder="e.g. NUR 201"
+                />
+              </div>
+            </div>
+            {courseType === "revamp" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="ep-revamp">Revamp details</Label>
+                <Textarea
+                  id="ep-revamp"
+                  value={revampNotes}
+                  onChange={(e) => setRevampNotes(e.target.value)}
+                  placeholder="What exists today and what needs to change."
+                  rows={3}
+                />
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Tier</Label>
+                <Select value={tier} onValueChange={setTier}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select tier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Tier 1 - Full Custom</SelectItem>
+                    <SelectItem value="2">Tier 2 - Template-Based</SelectItem>
+                    <SelectItem value="3">Tier 3 - Light Touch</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Modality</Label>
+                <Select value={modality} onValueChange={setModality}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select modality" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="online">Online Asynchronous</SelectItem>
+                    <SelectItem value="online_sync">Online Synchronous</SelectItem>
+                    <SelectItem value="hybrid">Hybrid</SelectItem>
+                    <SelectItem value="in_person">In Person</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>LMS</Label>
+              <Select value={lms} onValueChange={setLms}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select LMS" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LMS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ep-desc">Description</Label>
+              <Textarea
+                id="ep-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={!title.trim() || updateProject.isPending}>
+              {updateProject.isPending ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
 
 function statusVariant(status: string): "default" | "secondary" | "destructive" {
   if (status === "gate_blocked") return "destructive";
@@ -164,59 +426,7 @@ export default function ProjectDetail() {
             </div>
 
             <aside className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Project details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 text-sm">
-                  <div>
-                    <span className="mb-1 block text-xs uppercase text-muted-foreground">Course type</span>
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        project.courseType === "revamp"
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-emerald-100 text-emerald-800"
-                      }`}
-                    >
-                      {project.courseType === "revamp" ? "Revamp" : "New build"}
-                    </span>
-                  </div>
-                  {project.courseCode && (
-                    <div>
-                      <span className="mb-1 block text-xs uppercase text-muted-foreground">Course code</span>
-                      <span className="font-medium">{project.courseCode}</span>
-                    </div>
-                  )}
-                  <div>
-                    <span className="mb-1 block text-xs uppercase text-muted-foreground">Tier</span>
-                    <span className="font-medium">{project.tier || "Unspecified"}</span>
-                  </div>
-                  <div>
-                    <span className="mb-1 block text-xs uppercase text-muted-foreground">Modality</span>
-                    <span className="font-medium capitalize">
-                      {project.modality?.replace("_", " ") || "Unspecified"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="mb-1 block text-xs uppercase text-muted-foreground">LMS</span>
-                    <span className="font-medium capitalize">
-                      {project.lms?.replace(/_/g, " ") || "Not specified"}
-                    </span>
-                  </div>
-                  {project.courseType === "revamp" && project.revampNotes && (
-                    <div>
-                      <span className="mb-1 block text-xs uppercase text-muted-foreground">Revamp details</span>
-                      <p className="whitespace-pre-wrap">{project.revampNotes}</p>
-                    </div>
-                  )}
-                  {project.description && (
-                    <div>
-                      <span className="mb-1 block text-xs uppercase text-muted-foreground">Description</span>
-                      <p className="whitespace-pre-wrap">{project.description}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <ProjectDetailsCard project={project} />
 
               <Card>
                 <CardHeader>
